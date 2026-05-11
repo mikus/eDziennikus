@@ -4,9 +4,11 @@ A minimal manual checklist for verifying the app works end-to-end after meaningf
 
 ## When to run it
 
-- **Required** during fork cleanup: after commits #2 (identity change), #8 (login flow simplified), #13 (cleanup complete). See [the fork-customization design](superpowers/specs/2026-05-12-fork-customization-design.md) for context.
+- **Required** during fork cleanup: after commits #9 (Firebase stripped, build restored — first runnable state under new identity, covers all changes from #1–#9 including the HIGH-risk #8 UI cleanup) and #13 (cleanup complete). See [the fork-customization design](superpowers/specs/2026-05-12-fork-customization-design.md) for context.
 - **Strongly recommended** after any commit that touches: login flow, the Librus API client, the database schema, the navigation drawer, the profile model.
 - **Optional but useful** after any bugfix that targets a path the smoke test covers.
+
+Note: commits #3–#8 of the fork cleanup leave the build unbuildable (Firebase plugin validates `google-services.json` against `applicationId` mismatch). The app can't be installed to test during that range — the first runnable smoke test waits until the build is restored at commit #9.
 
 ## Prerequisites
 
