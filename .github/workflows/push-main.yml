@@ -1,7 +1,7 @@
-name: Push (master)
+name: Push (main)
 on:
   push:
-    branches: ["master"]
+    branches: ["main"]
 jobs:
   build:
     name: Build for Google Play (AAB)
