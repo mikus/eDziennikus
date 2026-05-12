@@ -39,7 +39,6 @@ import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import pl.droidsonroids.gif.GifDrawable
-import pl.szczodrzynski.edziennik.data.api.ERROR_VULCAN_API_DEPRECATED
 import pl.szczodrzynski.edziennik.data.api.edziennik.EdziennikTask
 import pl.szczodrzynski.edziennik.data.api.events.*
 import pl.szczodrzynski.edziennik.data.api.models.ApiError
@@ -634,11 +633,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
     fun onApiTaskErrorEvent(event: ApiTaskErrorEvent) {
         EventBus.getDefault().removeStickyEvent(event)
-        if (event.error.errorCode == ERROR_VULCAN_API_DEPRECATED) {
-            if (event.error.profileId != App.profileId)
-                return
-            ErrorDetailsDialog(this, listOf(event.error)).show()
-        }
         navView.toolbar.apply {
             subtitleFormat = R.string.toolbar_subtitle
             subtitleFormatWithUnread = R.plurals.toolbar_subtitle_with_unread

@@ -60,15 +60,6 @@ class ProfileArchiver(val app: App, val profile: Profile) {
                 profile.studentData.remove("enableDescriptiveGrades")
             }
             LoginType.MOBIDZIENNIK -> {}
-            LoginType.VULCAN -> {
-                // DataVulcan.isApiLoginValid() returns false so it will update the semester
-                profile.studentData.remove("currentSemesterEndDate")
-                profile.studentData.remove("studentSemesterId")
-                profile.studentData.remove("studentSemesterNumber")
-                profile.studentData.remove("semester1Id")
-                profile.studentData.remove("semester2Id")
-                profile.studentData.remove("studentClassId")
-            }
             LoginType.IDZIENNIK -> {
                 profile.studentData.remove("schoolYearId")
             }

@@ -63,39 +63,6 @@ const val LIBRUS_SYNERGIA_MESSAGES_ATTACHMENT_URL = "https://synergia.librus.pl/
 
 val MOBIDZIENNIK_USER_AGENT = SYSTEM_USER_AGENT
 
-const val VULCAN_HEBE_USER_AGENT = "Dart/2.10 (dart:io)"
-const val VULCAN_HEBE_APP_NAME = "DzienniczekPlus 2.0"
-const val VULCAN_HEBE_APP_VERSION = "22.09.02 (G)"
-private const val VULCAN_API_DEVICE_NAME_PREFIX = "Szkolny.eu "
-private const val VULCAN_API_DEVICE_NAME_SUFFIX = " - nie usuwać"
-val VULCAN_API_DEVICE_NAME by lazy {
-    val base = "$VULCAN_API_DEVICE_NAME_PREFIX${Build.MODEL}"
-    val baseMaxLength = 50 - VULCAN_API_DEVICE_NAME_SUFFIX.length
-    base.take(baseMaxLength) + VULCAN_API_DEVICE_NAME_SUFFIX
-}
-
-const val VULCAN_WEB_ENDPOINT_LUCKY_NUMBER = "Start.mvc/GetKidsLuckyNumbers"
-const val VULCAN_WEB_ENDPOINT_REGISTER_DEVICE = "RejestracjaUrzadzeniaToken.mvc/Get"
-const val VULCAN_HEBE_ENDPOINT_REGISTER_NEW = "api/mobile/register/new"
-const val VULCAN_HEBE_ENDPOINT_MAIN = "api/mobile/register/hebe"
-const val VULCAN_HEBE_ENDPOINT_PUSH_ALL = "api/mobile/push/all"
-const val VULCAN_HEBE_ENDPOINT_TIMETABLE = "api/mobile/schedule"
-const val VULCAN_HEBE_ENDPOINT_TIMETABLE_CHANGES = "api/mobile/schedule/changes"
-const val VULCAN_HEBE_ENDPOINT_ADDRESSBOOK = "api/mobile/addressbook"
-const val VULCAN_HEBE_ENDPOINT_TEACHERS = "api/mobile/teacher"
-const val VULCAN_HEBE_ENDPOINT_EXAMS = "api/mobile/exam"
-const val VULCAN_HEBE_ENDPOINT_GRADES = "api/mobile/grade"
-const val VULCAN_HEBE_ENDPOINT_GRADE_SUMMARY = "api/mobile/grade/summary"
-const val VULCAN_HEBE_ENDPOINT_HOMEWORK = "api/mobile/homework"
-const val VULCAN_HEBE_ENDPOINT_NOTICES = "api/mobile/note"
-const val VULCAN_HEBE_ENDPOINT_ATTENDANCE = "api/mobile/lesson"
-const val VULCAN_HEBE_ENDPOINT_MESSAGEBOX = "api/mobile/messagebox"
-const val VULCAN_HEBE_ENDPOINT_MESSAGEBOX_ADDRESSBOOK = "api/mobile/messagebox/addressbook"
-const val VULCAN_HEBE_ENDPOINT_MESSAGEBOX_MESSAGES = "api/mobile/messagebox/message"
-const val VULCAN_HEBE_ENDPOINT_MESSAGEBOX_STATUS = "api/mobile/messagebox/message/status"
-const val VULCAN_HEBE_ENDPOINT_MESSAGEBOX_SEND = "api/mobile/messagebox/message"
-const val VULCAN_HEBE_ENDPOINT_LUCKY_NUMBER = "api/mobile/school/lucky"
-
 const val PODLASIE_API_VERSION = "1.0.62"
 const val PODLASIE_API_URL = "https://cpdklaser.zeto.bialystok.pl/api"
 const val PODLASIE_API_USER_ENDPOINT = "/pobierzDaneUcznia"

@@ -79,7 +79,6 @@ class AppConfigMigrationV3(p: SharedPreferences, config: Config) {
                 val token = it.value.first
                 when (it.key) {
                     LoginType.MOBIDZIENNIK.id -> sync.tokenMobidziennik = token
-                    LoginType.VULCAN.id -> sync.tokenVulcan = token
                     LoginType.LIBRUS.id -> sync.tokenLibrus = token
                 }
             }

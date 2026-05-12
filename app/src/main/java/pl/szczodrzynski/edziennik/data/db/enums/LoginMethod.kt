@@ -56,16 +56,6 @@ enum class LoginMethod(
         isPossible = { _, loginStore -> !loginStore.hasLoginData("fakeLogin") },
         requiredLoginMethod = { _, _ -> LIBRUS_SYNERGIA },
     ),
-    VULCAN_WEB_MAIN(
-        loginType = LoginType.VULCAN,
-        id = 4100,
-        isPossible = { _, loginStore -> loginStore.getLoginData("webHost", null).isNotNullNorBlank() },
-    ),
-    VULCAN_HEBE(
-        loginType = LoginType.VULCAN,
-        id = 4600,
-        isPossible = { _, loginStore -> loginStore.mode != LoginMode.VULCAN_API },
-    ),
     PODLASIE_API(
         loginType = LoginType.PODLASIE,
         id = 6100,

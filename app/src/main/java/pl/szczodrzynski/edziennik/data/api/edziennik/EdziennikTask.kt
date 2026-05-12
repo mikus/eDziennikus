@@ -15,7 +15,6 @@ import pl.szczodrzynski.edziennik.data.api.edziennik.mobidziennik.Mobidziennik
 import pl.szczodrzynski.edziennik.data.api.edziennik.podlasie.Podlasie
 import pl.szczodrzynski.edziennik.data.api.edziennik.template.Template
 import pl.szczodrzynski.edziennik.data.api.edziennik.usos.Usos
-import pl.szczodrzynski.edziennik.data.api.edziennik.vulcan.Vulcan
 import pl.szczodrzynski.edziennik.data.api.events.RegisterAvailabilityEvent
 import pl.szczodrzynski.edziennik.data.api.interfaces.EdziennikCallback
 import pl.szczodrzynski.edziennik.data.api.interfaces.EdziennikInterface
@@ -122,7 +121,6 @@ open class EdziennikTask(override val profileId: Int, val request: Any) : IApiTa
         edziennikInterface = when (loginStore.type) {
             LoginType.LIBRUS -> Librus(app, profile, loginStore, taskCallback)
             LoginType.MOBIDZIENNIK -> Mobidziennik(app, profile, loginStore, taskCallback)
-            LoginType.VULCAN -> Vulcan(app, profile, loginStore, taskCallback)
             LoginType.PODLASIE -> Podlasie(app, profile, loginStore, taskCallback)
             LoginType.TEMPLATE -> Template(app, profile, loginStore, taskCallback)
             LoginType.USOS -> Usos(app, profile, loginStore, taskCallback)

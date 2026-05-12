@@ -51,28 +51,6 @@ internal val FEATURES_LIBRUS = setOf(
     PUSH_CONFIG,
 )
 
-internal val FEATURES_VULCAN = setOf(
-    TIMETABLE,
-    AGENDA,
-    GRADES,
-    HOMEWORK,
-    BEHAVIOUR,
-    ATTENDANCE,
-    MESSAGES_INBOX,
-    MESSAGES_SENT,
-
-    STUDENT_INFO,
-    STUDENT_NUMBER,
-    SCHOOL_INFO,
-    CLASS_INFO,
-    TEAM_INFO,
-    LUCKY_NUMBER,
-    TEACHERS,
-    SUBJECTS,
-    CLASSROOMS,
-    PUSH_CONFIG,
-)
-
 internal val FEATURES_PODLASIE = setOf(
     TIMETABLE,
     AGENDA,

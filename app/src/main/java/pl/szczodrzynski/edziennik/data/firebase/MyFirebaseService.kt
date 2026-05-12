@@ -41,7 +41,6 @@ class MyFirebaseService : FirebaseService(), CoroutineScope {
                 "640759989760" -> SzkolnyAppFirebase(app, profiles, message)
                 "747285019373" -> SzkolnyMobidziennikFirebase(app, profiles, message)
                 "513056078587" -> SzkolnyLibrusFirebase(app, profiles, message)
-                "987828170337" -> SzkolnyVulcanFirebase(app, profiles, message)
             }
         }
     }

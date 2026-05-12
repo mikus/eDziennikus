@@ -377,37 +377,6 @@ public class Utils {
         return resizedBitmap;
     }
 
-    public static class VulcanRequestEncryptionUtils {
-        private static final String ALGORITHM_NAME = "SHA1withRSA";
-        private static final String CERT_TYPE = "pkcs12";
-        private static final String CONTAINER_NAME = "LoginCert";
-        private static final String PASSWORD = "CE75EA598C7743AD9B0B7328DED85B06";
-
-        public static String signContent(byte[] contents, final InputStream cert) throws IOException, GeneralSecurityException, NullPointerException {
-            final KeyStore instance = KeyStore.getInstance(CERT_TYPE);
-            instance.load(cert, PASSWORD.toCharArray());
-            final PrivateKey privateKey = (PrivateKey) instance.getKey(CONTAINER_NAME, PASSWORD.toCharArray());
-            final Signature instance2 = Signature.getInstance(ALGORITHM_NAME);
-            instance2.initSign(privateKey);
-            instance2.update(contents);
-            return Base64.encodeToString(instance2.sign(), Base64.DEFAULT).replace("\n", "");
-        }
-    }
-
-    public static class VulcanQrEncryptionUtils {
-        private static final String PASSWORD = "tDVS4ykCBBAeN33h";
-
-        public static String decode(String content) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, ShortBufferException, BadPaddingException, IllegalBlockSizeException {
-            @SuppressLint("GetInstance") Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            byte[] input = Base64.decode(content, Base64.DEFAULT);
-            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(PASSWORD.getBytes(), "AES"));
-            byte[] plainText = new byte[cipher.getOutputSize(input.length)];
-            int ptLength = cipher.update(input, 0, input.length, plainText, 0);
-            ptLength += cipher.doFinal(plainText, ptLength);
-            return new String(plainText);
-        }
-    }
-
     public static class AESCrypt
     {
         private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
@@ -551,36 +520,6 @@ public class Utils {
         return 0.00f;
     }
     
-    public static int getVulcanGradeColor(String name) {
-        switch (name) {
-            case "1-":
-            case "1":
-            case "1+":
-                return 0xffd65757;
-            case "2-":
-            case "2":
-            case "2+":
-                return 0xff9071b3;
-            case "3-":
-            case "3":
-            case "3+":
-                return 0xffd2ab24;
-            case "4-":
-            case "4":
-            case "4+":
-                return 0xff50b6d6;
-            case "5-":
-            case "5":
-            case "5+":
-                return 0xff2cbd92;
-            case "6-":
-            case "6":
-            case "6+":
-                return 0xff91b43c;
-            default:
-                return 0xff3D5F9C;
-        }
-    }
 
     public static int getWordGradeValue(String grade) {
         switch (grade) {

@@ -16,7 +16,6 @@ import pl.szczodrzynski.edziennik.data.db.enums.LoginType
 import pl.szczodrzynski.edziennik.ui.grades.models.ExpandableItemModel
 import pl.szczodrzynski.edziennik.ui.login.qr.LoginLibrusQrDecoder
 import pl.szczodrzynski.edziennik.ui.login.qr.LoginQrDecoder
-import pl.szczodrzynski.edziennik.ui.login.qr.LoginVulcanQrDecoder
 import pl.szczodrzynski.fslogin.realm.RealmData
 
 object LoginInfo {
@@ -128,93 +127,6 @@ object LoginInfo {
                             ERROR_LOGIN_LIBRUS_API_INVALID_LOGIN to R.string.login_error_incorrect_code_or_pin,
                             ERROR_LOGIN_LIBRUS_API_INVALID_REQUEST to R.string.login_error_incorrect_code_or_pin
                         )
-                    )
-                )
-            ),
-            Register(
-                loginType = LoginType.VULCAN,
-                registerName = R.string.login_type_vulcan,
-                registerLogo = R.drawable.login_logo_vulcan,
-                loginModes = listOf(
-                    Mode(
-                        loginMode = LoginMode.VULCAN_HEBE,
-                        name = R.string.login_mode_vulcan_api,
-                        icon = R.drawable.login_mode_vulcan_hebe,
-                        hintText = R.string.login_mode_vulcan_api_hint,
-                        guideText = R.string.login_mode_vulcan_api_guide,
-                        isRecommended = true,
-                        credentials = listOf(
-                            FormField(
-                                keyName = "deviceToken",
-                                name = R.string.login_hint_token,
-                                icon = CommunityMaterial.Icon.cmd_code_braces,
-                                emptyText = R.string.login_error_no_token,
-                                invalidText = R.string.login_error_incorrect_token,
-                                errorCodes = mapOf(
-                                    ERROR_LOGIN_VULCAN_INVALID_TOKEN to R.string.login_error_incorrect_token,
-                                    ERROR_LOGIN_VULCAN_EXPIRED_TOKEN to R.string.login_error_expired_token
-                                ),
-                                isRequired = true,
-                                validationRegex = "[A-Z0-9]{5,12}",
-                                caseMode = FormField.CaseMode.UPPER_CASE,
-                                qrDecoderClass = LoginVulcanQrDecoder::class.java
-                            ),
-                            FormField(
-                                keyName = "symbol",
-                                name = R.string.login_hint_symbol,
-                                icon = CommunityMaterial.Icon3.cmd_school_outline,
-                                emptyText = R.string.login_error_no_symbol,
-                                invalidText = R.string.login_error_incorrect_symbol,
-                                errorCodes = mapOf(
-                                    ERROR_LOGIN_VULCAN_INVALID_SYMBOL to R.string.login_error_incorrect_symbol
-                                ),
-                                isRequired = true,
-                                validationRegex = "[a-z0-9_-]+",
-                                caseMode = FormField.CaseMode.LOWER_CASE
-                            ),
-                            FormField(
-                                keyName = "devicePin",
-                                name = R.string.login_hint_pin,
-                                icon = CommunityMaterial.Icon2.cmd_lock_outline,
-                                emptyText = R.string.login_error_no_pin,
-                                invalidText = R.string.login_error_incorrect_pin,
-                                errorCodes = mapOf(
-                                    ERROR_LOGIN_VULCAN_INVALID_PIN_0_REMAINING to R.string.error_310_reason,
-                                    ERROR_LOGIN_VULCAN_INVALID_PIN_1_REMAINING to R.string.error_311_reason,
-                                    ERROR_LOGIN_VULCAN_INVALID_PIN_2_REMAINING to R.string.error_312_reason
-                                ),
-                                isRequired = true,
-                                isNumber = true,
-                                validationRegex = "[0-9]+",
-                                caseMode = FormField.CaseMode.LOWER_CASE
-                            )
-                        ),
-                        errorCodes = mapOf()
-                    ),
-                    Mode(
-                        loginMode = LoginMode.VULCAN_WEB,
-                        name = R.string.login_mode_vulcan_web,
-                        icon = R.drawable.login_mode_vulcan_web,
-                        hintText = R.string.login_mode_vulcan_web_hint,
-                        guideText = R.string.login_mode_vulcan_web_guide,
-                        isTesting = true,
-                        isPlatformSelection = true,
-                        credentials = listOf(
-                            getEmailCredential("email"),
-                            FormField(
-                                keyName = "username",
-                                name = R.string.login_hint_username,
-                                icon = CommunityMaterial.Icon.cmd_account_outline,
-                                emptyText = R.string.login_error_no_username,
-                                invalidText = R.string.login_error_incorrect_username,
-                                errorCodes = mapOf(),
-                                isRequired = true,
-                                validationRegex = "[A-Z]{7}[0-9]+",
-                                caseMode = FormField.CaseMode.UPPER_CASE
-                            ),
-                            getPasswordCredential("password")
-                        ),
-                        errorCodes = mapOf()
                     )
                 )
             ),
