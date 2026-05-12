@@ -17,7 +17,6 @@ enum class LoginType(
     TEMPLATE(id = 21, features = setOf()),
 
     // the graveyard
-    VULCAN(id = 4, features = setOf()),
     EDUDZIENNIK(id = 5, features = FEATURES_EDUDZIENNIK),
     IDZIENNIK(id = 3, features = FEATURES_IDZIENNIK),
 }
