@@ -28,7 +28,7 @@ Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Te
 
 **Signed-release outputs** land in `app/release/` as `Edziennik_<versionName>_<flavor>.{apk,aab}` — a custom `rename<Task>` task is registered as a finalizer of every `assemble*Release` / `bundle*Release` / `sign*Release` and copies+renames the output.
 
-**There are no tests in this repo.** Neither `app/src/test/` nor `app/src/androidTest/` exist. Don't propose running test tasks; they have no source to compile.
+Test source sets (`app/src/test/`, `app/src/androidTest/`) are **not yet wired up** — see the "Testing & quality bar" section for the forward-looking policy and what needs to be set up the first time tests are added.
 
 ## Architecture
 
@@ -66,6 +66,87 @@ Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timet
 
 ### Version metadata
 `app/git-info.gradle` runs at Gradle configure time and uses JGit to inject git metadata (hash, branch, tag, dirty flag, rev-count) into `BuildConfig.GIT_INFO`. The `unofficial` flavor appends `${gitInfo.versionSuffix}` to its `versionName` so the running version reflects the branch and dirty state. Gradle configuration cache is intentionally disabled because this script reads live git state.
+
+## Coding conventions
+
+**Language**: Kotlin for all new code. Java files still exist (`utils/Utils.java`, `utils/Anim.java`, `utils/Colors.java`, `ui/announcements/AnnouncementsFragment.java`, several helpers) and may be edited in place, but don't write new `.java` files. **Don't opportunistically rewrite Java to Kotlin** as a side-effect of unrelated work — that's a refactor and must follow the refactor rule under "Testing & quality bar".
+
+**File header**: New Kotlin files start with the copyright block already in use across the repo:
+```kotlin
+/*
+ * Copyright (c) <Author> YYYY-M-D.
+ */
+```
+
+**Naming**:
+- Fragments end in `Fragment`, dialogs in `Dialog`, view models in `ViewModel`, renderers in `Renderer`, adapters in `Adapter`.
+- View bindings are conventionally held in a property named `b` (`private val b: Fragment<Name>Binding`). Don't rename to `binding` in files that already use `b`.
+- Per-file log tag: `companion object { private const val TAG = "<ClassName>" }`. Don't share a tag across files.
+
+**Null safety**:
+- Prefer non-null types and scope functions (`?.let`, `?.run`, `?:`) over `!!`.
+- `!!` is acceptable only when surrounding code already proves non-null and a check would obscure intent. Never use `!!` just to silence the compiler.
+- Treat platform types from Android APIs as nullable unless the doc explicitly guarantees otherwise.
+
+**Concurrency**:
+- New async code uses Kotlin coroutines. The repo idiom is to implement `CoroutineScope` directly on the Fragment/controller with `override val coroutineContext = Job() + Dispatchers.Main`, then `launch { withContext(Dispatchers.IO) { ... } }`. See [AgendaFragmentDefault.kt:43-52](app/src/main/java/pl/szczodrzynski/edziennik/ui/agenda/AgendaFragmentDefault.kt) for the canonical shape.
+- **Don't add new `AsyncTask` or raw `Thread { }`.** They still exist in legacy paths and should be migrated when the surrounding code is already being touched (with tests — see refactor rule).
+- Cancel the scope's `Job` in `onDestroyView` / `onCleared` when tied to a lifecycle.
+
+**Logging**:
+- Use `Utils.d(TAG, message)` (in `utils/Utils.java`). It forwards to `HyperLog` for persisted logs *and* Logcat. **Don't call `android.util.Log.d` directly** in new code — persisted logs are how user-submitted error reports become diagnosable.
+- Don't leave commented-out `Log.d` lines behind (the codebase already has too many).
+
+**Strings**:
+- All user-facing strings live in `res/values/strings.xml` (Polish, default), with translations in `res/values-en/` and `res/values-de/`.
+- **No hardcoded user-facing literals** in Kotlin/XML. Internal-only messages that are logged and never shown can be inline.
+- When adding a string: add the Polish source first; English/German translations can follow later.
+
+**Imports & style**: 4-space indent, no tabs. Wildcard imports are permitted (the codebase uses `kotlinx.coroutines.*`, `java.util.*`); follow the surrounding file. Trailing comma after the last constructor argument when multi-line. Use `data class` for value-like records (DTOs, UI state). Don't reformat unrelated lines while making functional changes.
+
+**`when` and control flow**: Prefer expression-form `when` and `if` over statement-form when returning a value. Use `?.let { ... } ?: run { ... }` instead of `if (x != null) ... else ...` for nullable-driven branching.
+
+## UI & view binding
+
+ViewBinding and DataBinding are both enabled. ViewBinding is dominant (~6:1 by file count) and is the **default for new screens**.
+
+- **New screens use ViewBinding.** Inflate via the generated `Fragment<Name>Binding.inflate(...)`; bind to a property named `b`; return `b.root` from `onCreateView`.
+- **Use DataBinding only when the layout genuinely needs it** — two-way binding (`@={}`), `<data>` expressions evaluated by the layout, or BR-class observability. A single one-shot `@{viewModel.title}` you can do imperatively in Kotlin is **not** a justification.
+- **When editing an existing screen, match its style.** Don't migrate DataBinding ↔ ViewBinding as a side-effect of unrelated work — it's a refactor and falls under the TDD-for-refactors rule below.
+- If the Fragment outlives its view, null out the binding in `onDestroyView` to avoid leaks.
+
+## Testing & quality bar
+
+**Current state**: No tests exist yet — neither `app/src/test/` nor `app/src/androidTest/`. Test dependencies (JUnit, MockK, Robolectric or `androidx.test`) are not yet declared in `app/build.gradle`. Running `./gradlew test` or `connectedAndroidTest` today does nothing useful. The **first** PR that adds a test is also responsible for wiring up the test source set and dependencies it needs.
+
+**Policy going forward** (the codebase has not yet adopted this — early PRs are setting the precedent):
+
+- **New features → TDD.** Write the failing test first in `app/src/test/` (JVM, preferred when no Android framework is required) or `app/src/androidTest/` (instrumented, only when needed). Implementation follows. The test should fail for the right reason before any production code is touched.
+- **Refactors → characterize first.** Before changing the structure of existing code, write tests that pin down its current observable behavior. These are a regression safety net — they don't need to be pretty, they need to be honest. Refactor against a green bar. **Refactor PRs that don't add coverage for the touched area should be rejected**, including Java → Kotlin migrations and DataBinding ↔ ViewBinding moves.
+- **Bug fixes → reproduce first.** Add a failing test that reproduces the bug, then fix it.
+
+**Definition of done for any change**:
+- `./gradlew assembleUnofficialDebug` builds clean.
+- `./gradlew lint` produces no new warnings for touched files (release builds skip lint by config, but local runs should still be clean).
+- Tests for the touched area exist and pass. If scaffolding isn't wired up yet, the scaffolding is part of the change.
+- No new `AsyncTask`, no new direct `Log.d` calls, no hardcoded user-facing strings.
+
+**Don't** add `./gradlew test` to any docs or instructions until at least one test source set is present in the repo — confirm with `ls app/src/test app/src/androidTest` before suggesting test commands.
+
+## Safe-change rules
+
+These changes have hidden coordination cost or break things in non-obvious ways. **Flag and confirm before doing any of them**, even if the diff looks small:
+
+- **`.github/workflows/_build.yml`** — CI doesn't use the local copy. All workflows reference `szkolny-eu/szkolny-android/.github/workflows/_build.yml@develop`. Editing the local file alone is a no-op for actual CI; coordinate with upstream.
+- **`app/schemas/pl.szczodrzynski.edziennik.data.db.AppDb/`** — these JSON files are *committed snapshots* of past Room schemas. Room uses them to verify migrations. Don't edit them. To change schema, bump `AppDb` version, write a new `Migration`, and let Room export the new snapshot on the next build.
+- **Shipped Room `Migration` objects** — never edit a migration after it has shipped (a user already ran it). Add a new migration instead.
+- **`app/src/main/cpp/`** (`aes.{c,h}`, `base64.cpp`, `szkolny-signing.cpp`) — native crypto and API request signing. Changes here can silently break provider authentication. Don't refactor unless the task explicitly requires it.
+- **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker on debug builds is the standard tool).
+- **Flavor source-set split** — `play` adds Firebase Messaging via `src/play/java`; `unofficial` and `official` share `src/play-not/java`. Code touching FCM/AdMob/any GMS API must stay in `src/play/java` only or be guarded by flavor at compile time. Don't move FCM code into `src/main/java`.
+- **`pl.szczodrzynski.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and Play Store identity depend on exact values. Don't change without coordinating with the release process.
+- **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
+- **Adding new dependencies** — many providers parse HTML using `jsoup` + `jspoon` already in deps. Don't add a second HTML parser, JSON library, or networking layer without justifying why the existing one is insufficient.
+- **`gradle.properties` flags** — `android.enableJetifier`, `android.enableR8.fullMode`, `android.ndk.suppressMinSdkVersionError` are set deliberately. Don't flip them as "cleanup".
 
 ## CI / release pipeline
 
