@@ -235,4 +235,9 @@ dependencies {
 
     // Debug-only dependencies
     debugImplementation "com.github.amitshekhariitbhu.Android-Debug-Database:debug-db:v1.0.6"
+
+    // JVM unit tests (app/src/test/) — Android framework available as stubs, do not
+    // call into it. Use androidTestImplementation + Robolectric/androidx.test for
+    // tests that need a real Android runtime.
+    testImplementation "junit:junit:4.13.2"
 }
