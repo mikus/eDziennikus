@@ -9,11 +9,11 @@
 
     <data>
 
-        <import type="pl.szczodrzynski.edziennik.BuildConfig" />
+        <import type="eu.mikus.edziennik.BuildConfig" />
 
         <variable
             name="update"
-            type="pl.szczodrzynski.edziennik.data.api.szkolny.response.Update" />
+            type="eu.mikus.edziennik.data.api.szkolny.response.Update" />
     </data>
 
     <LinearLayout

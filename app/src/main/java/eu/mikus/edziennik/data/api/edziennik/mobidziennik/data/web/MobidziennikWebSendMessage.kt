@@ -1,0 +1,55 @@
+/*
+ * Copyright (c) Kuba Szczodrzyński 2019-12-26.
+ */
+
+package eu.mikus.edziennik.data.api.edziennik.mobidziennik.data.web
+
+import org.greenrobot.eventbus.EventBus
+import eu.mikus.edziennik.data.api.POST
+import eu.mikus.edziennik.data.api.edziennik.mobidziennik.DataMobidziennik
+import eu.mikus.edziennik.data.api.edziennik.mobidziennik.data.MobidziennikWeb
+import eu.mikus.edziennik.data.api.events.MessageSentEvent
+import eu.mikus.edziennik.data.db.entity.Metadata
+import eu.mikus.edziennik.data.db.entity.Teacher
+import eu.mikus.edziennik.data.db.enums.MetadataType
+
+class MobidziennikWebSendMessage(override val data: DataMobidziennik,
+                                 val recipients: Set<Teacher>,
+                                 val subject: String,
+                                 val text: String,
+                                 val onSuccess: () -> Unit
+) : MobidziennikWeb(data, null) {
+    companion object {
+        private const val TAG = "MobidziennikWebSendMessage"
+    }
+
+    init {
+        val params = mutableListOf<Pair<String, Any>>(
+                "nazwa" to subject,
+                "tresc" to text
+        )
+        for (teacher in recipients) {
+            teacher.loginId?.let {
+                params += "odbiorcy[]" to it
+            }
+        }
+
+        webGet(TAG, endpoint = "/dziennik/dodajwiadomosc", method = POST, parameters = params) { text ->
+
+            if (!text.contains(">Wiadomość została wysłana.<")) {
+                // TODO error
+                return@webGet
+            }
+
+            // TODO create MobidziennikWebMessagesSent and replace this
+            MobidziennikWebMessagesAll(data, null) {
+                val message = data.messageList.firstOrNull { it.isSent && it.subject == subject }
+                val metadata = data.metadataList.firstOrNull { it.thingType == MetadataType.MESSAGE && it.thingId == message?.id }
+                val event = MessageSentEvent(data.profileId, message, message?.addedDate)
+
+                EventBus.getDefault().postSticky(event)
+                onSuccess()
+            }
+        }
+    }
+}

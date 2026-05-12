@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="pl.szczodrzynski.edziennik">
+    package="eu.mikus.edziennik">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -192,7 +192,7 @@
         <receiver android:name=".receivers.SzkolnyReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="pl.szczodrzynski.edziennik.SZKOLNY_MAIN" />
+                <action android:name="eu.mikus.edziennik.SZKOLNY_MAIN" />
             </intent-filter>
         </receiver>
 

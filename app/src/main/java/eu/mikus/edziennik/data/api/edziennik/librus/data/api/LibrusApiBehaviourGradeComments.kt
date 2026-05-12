@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) Kacper Ziubryniewicz 2019-12-7
+ */
+
+package eu.mikus.edziennik.data.api.edziennik.librus.data.api
+
+import eu.mikus.edziennik.*
+import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
+import eu.mikus.edziennik.data.api.edziennik.librus.ENDPOINT_LIBRUS_API_BEHAVIOUR_GRADE_COMMENTS
+import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusApi
+import eu.mikus.edziennik.data.db.entity.GradeCategory
+import eu.mikus.edziennik.data.db.entity.SYNC_ALWAYS
+import eu.mikus.edziennik.ext.*
+
+class LibrusApiBehaviourGradeComments(override val data: DataLibrus,
+                                      override val lastSync: Long?,
+                                      val onSuccess: (endpointId: Int) -> Unit
+) : LibrusApi(data, lastSync) {
+    companion object {
+        const val TAG = "LibrusApiBehaviourGradeComments"
+    }
+
+    init {
+        apiGet(TAG, "BehaviourGrades/Points/Comments") { json ->
+
+            json.getJsonArray("Comments")?.asJsonObjectList()?.forEach { comment ->
+                val id = comment.getLong("Id") ?: return@forEach
+                val text = comment.getString("Text")?.fixWhiteSpaces() ?: return@forEach
+
+                val gradeCategoryObject = GradeCategory(
+                        profileId,
+                        id,
+                        -1f,
+                        -1,
+                        text
+                ).apply {
+                    type = GradeCategory.TYPE_BEHAVIOUR_COMMENT
+                }
+
+                data.gradeCategories.put(id, gradeCategoryObject)
+            }
+
+            data.setSyncNext(ENDPOINT_LIBRUS_API_BEHAVIOUR_GRADE_COMMENTS, SYNC_ALWAYS)
+            onSuccess(ENDPOINT_LIBRUS_API_BEHAVIOUR_GRADE_COMMENTS)
+        }
+    }
+}

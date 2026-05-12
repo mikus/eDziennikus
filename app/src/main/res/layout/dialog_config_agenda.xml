@@ -11,7 +11,7 @@
 
         <variable
             name="config"
-            type="pl.szczodrzynski.edziennik.config.ProfileConfig" />
+            type="eu.mikus.edziennik.config.ProfileConfig" />
 
         <variable
             name="isAgendaMode"
@@ -150,7 +150,7 @@
                 android:enabled="@{elearningEnabled.checked}"
                 android:hint="@string/agenda_config_elearning_type">
 
-                <pl.szczodrzynski.edziennik.utils.TextInputDropDown
+                <eu.mikus.edziennik.utils.TextInputDropDown
                     android:id="@+id/elearningTypeDropdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

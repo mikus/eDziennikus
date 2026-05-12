@@ -11,7 +11,7 @@
 
         <variable
             name="app"
-            type="pl.szczodrzynski.edziennik.App" />
+            type="eu.mikus.edziennik.App" />
     </data>
 
     <ScrollView
@@ -35,7 +35,7 @@
                 app:tabSelectedTextColor="?colorPrimary"
                 app:tabTextColor="?android:textColorPrimary" />-->
 
-            <!--<pl.szczodrzynski.edziennik.ui.base.lazypager.LazyViewPager
+            <!--<eu.mikus.edziennik.ui.base.lazypager.LazyViewPager
                 android:id="@+id/viewPager"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -130,7 +130,7 @@
                 android:text="Unarchive this profile"
                 android:textAllCaps="false" />
 
-            <pl.szczodrzynski.edziennik.utils.TextInputDropDown
+            <eu.mikus.edziennik.utils.TextInputDropDown
                 android:id="@+id/profile"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -160,7 +160,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp">
 
-                <pl.szczodrzynski.edziennik.utils.TextInputKeyboardEdit
+                <eu.mikus.edziennik.utils.TextInputKeyboardEdit
                     android:id="@+id/apiKey"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

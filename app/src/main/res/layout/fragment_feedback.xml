@@ -14,7 +14,7 @@
             android:layout_margin="8dp"
             android:visibility="gone">
 
-            <pl.szczodrzynski.edziennik.utils.TextInputDropDown
+            <eu.mikus.edziennik.utils.TextInputDropDown
                 android:id="@+id/targetDeviceDropDown"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -8,10 +8,10 @@
 
     <data>
         <import type="android.view.View" />
-        <import type="pl.szczodrzynski.edziennik.utils.html.BetterHtml" />
+        <import type="eu.mikus.edziennik.utils.html.BetterHtml" />
         <variable
             name="message"
-            type="pl.szczodrzynski.edziennik.data.api.szkolny.response.RegisterAvailabilityStatus.Message" />
+            type="eu.mikus.edziennik.data.api.szkolny.response.RegisterAvailabilityStatus.Message" />
     </data>
 
     <ScrollView

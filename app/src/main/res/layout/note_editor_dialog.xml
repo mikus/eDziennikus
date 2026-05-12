@@ -9,7 +9,7 @@
 
     <data>
 
-        <import type="pl.szczodrzynski.edziennik.data.db.entity.Note" />
+        <import type="eu.mikus.edziennik.data.db.entity.Note" />
 
         <variable
             name="ownerType"
@@ -59,7 +59,7 @@
                     app:endIconMode="custom"
                     tools:endIconDrawable="@android:drawable/ic_menu_crop">
 
-                    <pl.szczodrzynski.edziennik.utils.TextInputKeyboardEdit
+                    <eu.mikus.edziennik.utils.TextInputKeyboardEdit
                         android:id="@+id/topic"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -78,7 +78,7 @@
                     app:endIconMode="custom"
                     tools:endIconDrawable="@android:drawable/ic_menu_crop">
 
-                    <pl.szczodrzynski.edziennik.utils.TextInputKeyboardEdit
+                    <eu.mikus.edziennik.utils.TextInputKeyboardEdit
                         android:id="@+id/body"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -130,7 +130,7 @@
                     android:layout_marginTop="8dp"
                     android:hint="@string/notes_editor_color">
 
-                    <pl.szczodrzynski.edziennik.utils.TextInputDropDown
+                    <eu.mikus.edziennik.utils.TextInputDropDown
                         android:id="@+id/color"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

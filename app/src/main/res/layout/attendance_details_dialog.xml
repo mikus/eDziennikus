@@ -8,12 +8,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <data>
         <import type="android.view.View"/>
-        <import type="pl.szczodrzynski.edziennik.utils.Utils"/>
-        <import type="pl.szczodrzynski.edziennik.utils.models.Date"/>
-        <import type="pl.szczodrzynski.edziennik.utils.models.Time"/>
+        <import type="eu.mikus.edziennik.utils.Utils"/>
+        <import type="eu.mikus.edziennik.utils.models.Date"/>
+        <import type="eu.mikus.edziennik.utils.models.Time"/>
         <variable
             name="attendance"
-            type="pl.szczodrzynski.edziennik.data.db.full.AttendanceFull" />
+            type="eu.mikus.edziennik.data.db.full.AttendanceFull" />
         <variable
             name="devMode"
             type="boolean" />

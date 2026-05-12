@@ -11,5 +11,5 @@
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen"
-    android:configure="pl.szczodrzynski.edziennik.ui.widgets.WidgetConfigActivity"
+    android:configure="eu.mikus.edziennik.ui.widgets.WidgetConfigActivity"
     tools:ignore="UnusedAttribute" />

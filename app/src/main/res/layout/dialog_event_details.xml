@@ -8,13 +8,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <data>
         <import type="android.view.View"/>
-        <import type="pl.szczodrzynski.edziennik.App"/>
+        <import type="eu.mikus.edziennik.App"/>
         <variable
             name="appCompanion"
-            type="pl.szczodrzynski.edziennik.App.Companion" />
+            type="eu.mikus.edziennik.App.Companion" />
         <variable
             name="event"
-            type="pl.szczodrzynski.edziennik.data.db.full.EventFull" />
+            type="eu.mikus.edziennik.data.db.full.EventFull" />
         <variable name="eventShared" type="boolean" />
         <variable name="eventOwn" type="boolean" />
         <variable name="name" type="java.lang.CharSequence" />
@@ -202,7 +202,7 @@
                 android:text="@string/dialog_event_details_attachments"
                 android:textAppearance="@style/NavView.TextView.Helper" />
 
-            <pl.szczodrzynski.edziennik.ui.views.AttachmentsView
+            <eu.mikus.edziennik.ui.views.AttachmentsView
                 android:id="@+id/attachmentsFragment"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"/>

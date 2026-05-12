@@ -21,20 +21,20 @@
 #-renamesourcefileattribute SourceFile
 -keep class android.support.v7.widget.** { *; }
 
--keep class pl.szczodrzynski.edziennik.utils.models.** { *; }
--keep class pl.szczodrzynski.edziennik.data.db.enums.* { *; }
--keep class pl.szczodrzynski.edziennik.data.db.entity.Event { *; }
--keep class pl.szczodrzynski.edziennik.data.db.full.EventFull { *; }
--keep class pl.szczodrzynski.edziennik.data.db.entity.FeedbackMessage { *; }
--keep class pl.szczodrzynski.edziennik.data.db.entity.Note { *; }
--keep class pl.szczodrzynski.edziennik.ui.home.HomeCardModel { *; }
--keepclassmembers class pl.szczodrzynski.edziennik.ui.widgets.WidgetConfig { public *; }
--keepnames class pl.szczodrzynski.edziennik.ui.widgets.timetable.WidgetTimetableProvider
--keepnames class pl.szczodrzynski.edziennik.ui.widgets.notifications.WidgetNotificationsProvider
--keepnames class pl.szczodrzynski.edziennik.ui.widgets.luckynumber.WidgetLuckyNumberProvider
--keep class pl.szczodrzynski.edziennik.config.AppData { *; }
--keep class pl.szczodrzynski.edziennik.config.AppData$** { *; }
--keep class pl.szczodrzynski.edziennik.utils.managers.TextStylingManager$HtmlMode { *; }
+-keep class eu.mikus.edziennik.utils.models.** { *; }
+-keep class eu.mikus.edziennik.data.db.enums.* { *; }
+-keep class eu.mikus.edziennik.data.db.entity.Event { *; }
+-keep class eu.mikus.edziennik.data.db.full.EventFull { *; }
+-keep class eu.mikus.edziennik.data.db.entity.FeedbackMessage { *; }
+-keep class eu.mikus.edziennik.data.db.entity.Note { *; }
+-keep class eu.mikus.edziennik.ui.home.HomeCardModel { *; }
+-keepclassmembers class eu.mikus.edziennik.ui.widgets.WidgetConfig { public *; }
+-keepnames class eu.mikus.edziennik.ui.widgets.timetable.WidgetTimetableProvider
+-keepnames class eu.mikus.edziennik.ui.widgets.notifications.WidgetNotificationsProvider
+-keepnames class eu.mikus.edziennik.ui.widgets.luckynumber.WidgetLuckyNumberProvider
+-keep class eu.mikus.edziennik.config.AppData { *; }
+-keep class eu.mikus.edziennik.config.AppData$** { *; }
+-keep class eu.mikus.edziennik.utils.managers.TextStylingManager$HtmlMode { *; }
 
 -keepnames class androidx.appcompat.view.menu.MenuBuilder { setHeaderTitleInt(java.lang.CharSequence); }
 -keepnames class androidx.appcompat.view.menu.MenuPopupHelper { showPopup(int, int, boolean, boolean); }
@@ -68,11 +68,11 @@
     native <methods>;
 }
 
--keep class pl.szczodrzynski.edziennik.data.api.szkolny.interceptor.Signing { public final byte[] pleaseStopRightNow(java.lang.String, long); }
+-keep class eu.mikus.edziennik.data.api.szkolny.interceptor.Signing { public final byte[] pleaseStopRightNow(java.lang.String, long); }
 
--keepclassmembers class pl.szczodrzynski.edziennik.data.api.szkolny.request.** { *; }
--keepclassmembers class pl.szczodrzynski.edziennik.data.api.szkolny.response.** { *; }
--keepclassmembernames class pl.szczodrzynski.edziennik.ui.login.LoginInfo$Platform { *; }
+-keepclassmembers class eu.mikus.edziennik.data.api.szkolny.request.** { *; }
+-keepclassmembers class eu.mikus.edziennik.data.api.szkolny.response.** { *; }
+-keepclassmembernames class eu.mikus.edziennik.ui.login.LoginInfo$Platform { *; }
 
 -keepclassmembernames class pl.szczodrzynski.fslogin.realm.RealmData { *; }
 -keepclassmembernames class pl.szczodrzynski.fslogin.realm.RealmData$Type { *; }

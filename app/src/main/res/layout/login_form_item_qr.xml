@@ -23,7 +23,7 @@
             app:hintEnabled="true"
             tools:hint="Hint">
 
-            <pl.szczodrzynski.edziennik.utils.TextInputKeyboardEdit
+            <eu.mikus.edziennik.utils.TextInputKeyboardEdit
                 android:id="@+id/textEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />

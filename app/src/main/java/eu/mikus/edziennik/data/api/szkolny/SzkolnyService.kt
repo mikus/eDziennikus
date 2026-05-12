@@ -1,0 +1,50 @@
+/*
+ * Copyright (c) Kacper Ziubryniewicz 2019-12-8
+ */
+
+package eu.mikus.edziennik.data.api.szkolny
+
+import eu.mikus.edziennik.data.api.szkolny.request.*
+import eu.mikus.edziennik.data.api.szkolny.response.*
+import eu.mikus.edziennik.ui.login.LoginInfo
+import retrofit2.Call
+import retrofit2.http.*
+
+interface SzkolnyService {
+
+    @POST("appSync")
+    fun serverSync(@Body request: ServerSyncRequest): Call<ApiResponse<ServerSyncResponse>>
+
+    @POST("share")
+    fun shareEvent(@Body request: EventShareRequest): Call<ApiResponse<Unit>>
+
+    @POST("share")
+    fun shareNote(@Body request: NoteShareRequest): Call<ApiResponse<Unit>>
+
+    @POST("webPush")
+    fun webPush(@Body request: WebPushRequest): Call<ApiResponse<WebPushResponse>>
+
+    @POST("errorReport")
+    fun errorReport(@Body request: ErrorReportRequest): Call<ApiResponse<Unit>>
+
+    @POST("appUser")
+    fun appUser(@Body request: AppUserRequest): Call<ApiResponse<Unit>>
+
+    @GET("contributors/android")
+    fun contributors(): Call<ApiResponse<ContributorsResponse>>
+
+    @GET("updates/app")
+    fun updates(@Query("channel") channel: String = "release"): Call<ApiResponse<List<Update>>>
+
+    @POST("feedbackMessage")
+    fun feedbackMessage(@Body request: FeedbackMessageRequest): Call<ApiResponse<FeedbackMessageResponse>>
+
+    @GET("firebase/token/{registerName}")
+    fun firebaseToken(@Path("registerName") registerName: String): Call<ApiResponse<String>>
+
+    @GET("registerAvailability")
+    fun registerAvailability(): Call<ApiResponse<Map<String, RegisterAvailabilityStatus>>>
+
+    @GET("platforms/{registerName}")
+    fun platforms(@Path("registerName") registerName: String): Call<ApiResponse<List<LoginInfo.Platform>>>
+}

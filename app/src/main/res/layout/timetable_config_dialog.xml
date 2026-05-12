@@ -7,11 +7,11 @@
 
     <data>
 
-        <import type="pl.szczodrzynski.edziennik.data.db.enums.FeatureType" />
+        <import type="eu.mikus.edziennik.data.db.enums.FeatureType" />
 
         <variable
             name="config"
-            type="pl.szczodrzynski.edziennik.config.ProfileConfigUI" />
+            type="eu.mikus.edziennik.config.ProfileConfigUI" />
 
         <variable
             name="features"

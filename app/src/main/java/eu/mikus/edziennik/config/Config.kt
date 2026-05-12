@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) Kuba Szczodrzyński 2019-11-26.
+ */
+
+package eu.mikus.edziennik.config
+
+import com.google.gson.JsonObject
+import eu.mikus.edziennik.App
+import eu.mikus.edziennik.BuildConfig
+import eu.mikus.edziennik.config.utils.*
+import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.db.AppDb
+
+@Suppress("RemoveExplicitTypeArguments")
+class Config(db: AppDb) : BaseConfig(db) {
+    companion object {
+        const val DATA_VERSION = 12
+    }
+
+    private val profileConfigs: HashMap<Int, ProfileConfig> = hashMapOf()
+
+    val ui by lazy { ConfigUI(this) }
+    val sync by lazy { ConfigSync(this) }
+    val timetable by lazy { ConfigTimetable(this) }
+    val grades by lazy { ConfigGrades(this) }
+
+    var dataVersion by config<Int>(DATA_VERSION)
+    var hash by config<String>("")
+
+    var lastProfileId by config<Int>(0)
+    var loginFinished by config<Boolean>(false)
+    var privacyPolicyAccepted by config<Boolean>(false)
+    var update by config<Update?>(null)
+    var updatesChannel by config<String>("release")
+
+    var devMode by config<Boolean?>("debugMode", null)
+    var devModePassword by config<String?>(null)
+    var enableChucker by config<Boolean?>(null)
+
+    var apiAvailabilityCheck by config<Boolean>(true)
+    var apiInvalidCert by config<String?>(null)
+    var apiKeyCustom by config<String?>(null)
+    var appInstalledTime by config<Long>(0L)
+    var appRateSnackbarTime by config<Long>(0L)
+    var appVersion by config<Int>(BuildConfig.VERSION_CODE)
+    var appVersionCore by config<Int>(0)
+    var validation by config<String?>(null, "buildValidation")
+
+    var archiverEnabled by config<Boolean>(true)
+    var runSync by config<Boolean>(false)
+    var widgetConfigs by config<JsonObject> { JsonObject() }
+
+    fun migrate(app: App) {
+        if (dataVersion < DATA_VERSION || hash == "")
+            // migrate old data version OR freshly installed app (or updated from 3.x)
+            ConfigMigration(app, this)
+    }
+
+    operator fun get(profileId: Int): ProfileConfig {
+        return profileConfigs[profileId] ?: ProfileConfig(db, profileId, entries).also {
+            profileConfigs[profileId] = it
+        }
+    }
+}

@@ -7,7 +7,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <pl.szczodrzynski.edziennik.utils.SwipeRefreshLayoutNoIndicator
+    <eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator
         android:id="@+id/refreshLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -53,7 +53,7 @@
                     android:visibility="gone"
                     tools:visibility="visible">
 
-                    <pl.szczodrzynski.edziennik.utils.TextInputDropDown
+                    <eu.mikus.edziennik.utils.TextInputDropDown
                         android:id="@+id/semesterDropdown"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -71,5 +71,5 @@
                     tools:visibility="visible" />
             </LinearLayout>
         </FrameLayout>
-    </pl.szczodrzynski.edziennik.utils.SwipeRefreshLayoutNoIndicator>
+    </eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator>
 </layout>

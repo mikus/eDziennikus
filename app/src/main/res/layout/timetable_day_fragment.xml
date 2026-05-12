@@ -8,7 +8,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <pl.szczodrzynski.edziennik.utils.ListenerScrollView
+    <eu.mikus.edziennik.utils.ListenerScrollView
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -37,7 +37,7 @@
                 android:background="@color/md_red_500"
                 tools:layout_marginTop="100dp" />
         </FrameLayout>
-    </pl.szczodrzynski.edziennik.utils.ListenerScrollView>
+    </eu.mikus.edziennik.utils.ListenerScrollView>
 
     <ProgressBar
         android:id="@+id/progressBar"

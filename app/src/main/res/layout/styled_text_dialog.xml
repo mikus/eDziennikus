@@ -21,7 +21,7 @@
             android:minHeight="250dp"
             app:counterEnabled="true">
 
-            <pl.szczodrzynski.edziennik.utils.TextInputKeyboardEdit
+            <eu.mikus.edziennik.utils.TextInputKeyboardEdit
                 android:id="@+id/editText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

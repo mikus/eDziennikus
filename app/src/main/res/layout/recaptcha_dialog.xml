@@ -60,7 +60,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image0"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -74,7 +74,7 @@
                         android:layout_height="match_parent"
                         android:background="?colorSurface" />
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image1"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -88,7 +88,7 @@
                         android:layout_height="match_parent"
                         android:background="?colorSurface" />
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image2"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -108,7 +108,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image3"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -122,7 +122,7 @@
                         android:layout_height="match_parent"
                         android:background="?colorSurface" />
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image4"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -136,7 +136,7 @@
                         android:layout_height="match_parent"
                         android:background="?colorSurface" />
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image5"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -156,7 +156,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image6"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -170,7 +170,7 @@
                         android:layout_height="match_parent"
                         android:background="?colorSurface" />
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image7"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"
@@ -184,7 +184,7 @@
                         android:layout_height="match_parent"
                         android:background="?colorSurface" />
 
-                    <pl.szczodrzynski.edziennik.utils.CheckableImageView
+                    <eu.mikus.edziennik.utils.CheckableImageView
                         android:id="@+id/image8"
                         android:layout_width="126dp"
                         android:layout_height="wrap_content"

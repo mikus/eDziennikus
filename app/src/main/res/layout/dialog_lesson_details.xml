@@ -8,13 +8,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <data>
         <import type="android.view.View"/>
-        <import type="pl.szczodrzynski.edziennik.App"/>
+        <import type="eu.mikus.edziennik.App"/>
         <variable
             name="annotationVisible"
             type="boolean"/>
         <variable
             name="lesson"
-            type="pl.szczodrzynski.edziennik.data.db.full.LessonFull" />
+            type="eu.mikus.edziennik.data.db.full.LessonFull" />
         <variable name="oldSubjectName" type="String" />
         <variable name="subjectName" type="String" />
         <variable name="oldTeacherName" type="String" />
@@ -315,7 +315,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <pl.szczodrzynski.edziennik.ui.attendance.AttendanceView
+                <eu.mikus.edziennik.ui.attendance.AttendanceView
                     android:id="@+id/attendanceView"
                     android:layout_width="36dp"
                     android:layout_height="36dp"

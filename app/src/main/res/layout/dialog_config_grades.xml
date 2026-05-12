@@ -110,7 +110,7 @@
                 android:enabled="@{dontCountGrades.checked}"
                 android:isVisible="@{!isUniversity}">
 
-                <pl.szczodrzynski.edziennik.utils.TextInputKeyboardEdit
+                <eu.mikus.edziennik.utils.TextInputKeyboardEdit
                     android:id="@+id/dontCountGradesText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

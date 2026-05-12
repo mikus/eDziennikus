@@ -9,7 +9,7 @@
 
     <data>
 
-        <import type="pl.szczodrzynski.edziennik.data.db.entity.Note" />
+        <import type="eu.mikus.edziennik.data.db.entity.Note" />
 
         <variable
             name="note"

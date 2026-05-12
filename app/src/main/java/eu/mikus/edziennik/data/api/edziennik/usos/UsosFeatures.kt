@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) Kuba Szczodrzyński 2022-10-11.
+ */
+
+package eu.mikus.edziennik.data.api.edziennik.usos
+
+import eu.mikus.edziennik.data.api.*
+import eu.mikus.edziennik.data.api.models.Feature
+import eu.mikus.edziennik.data.db.enums.FeatureType
+import eu.mikus.edziennik.data.db.enums.LoginMethod
+import eu.mikus.edziennik.data.db.enums.LoginType
+
+const val ENDPOINT_USOS_API_USER            = 7000
+const val ENDPOINT_USOS_API_TERMS           = 7010
+const val ENDPOINT_USOS_API_COURSES         = 7020
+const val ENDPOINT_USOS_API_TIMETABLE       = 7030
+const val ENDPOINT_USOS_API_ECTS_POINTS     = 7040
+const val ENDPOINT_USOS_API_EXAM_REPORTS    = 7050
+const val ENDPOINT_USOS_API_EXAMS           = 7060
+
+val UsosFeatures = listOf(
+    /*
+    * Student information
+    */
+    Feature(LoginType.USOS, FeatureType.STUDENT_INFO, listOf(
+        ENDPOINT_USOS_API_USER to LoginMethod.USOS_API,
+    )),
+
+    /*
+    * Terms & courses
+    */
+    Feature(LoginType.USOS, FeatureType.SCHOOL_INFO, listOf(
+        ENDPOINT_USOS_API_TERMS to LoginMethod.USOS_API,
+    )),
+    Feature(LoginType.USOS, FeatureType.TEAM_INFO, listOf(
+        ENDPOINT_USOS_API_COURSES to LoginMethod.USOS_API,
+    )),
+
+    /*
+     * Timetable
+     */
+    Feature(LoginType.USOS, FeatureType.TIMETABLE, listOf(
+        ENDPOINT_USOS_API_TIMETABLE to LoginMethod.USOS_API,
+    )),
+
+    /*
+     * Agenda
+     */
+    Feature(LoginType.USOS, FeatureType.AGENDA, listOf(
+        ENDPOINT_USOS_API_EXAMS to LoginMethod.USOS_API,
+    )),
+
+    /*
+     * Grades
+     */
+    Feature(LoginType.USOS, FeatureType.GRADES, listOf(
+        ENDPOINT_USOS_API_ECTS_POINTS to LoginMethod.USOS_API,
+        ENDPOINT_USOS_API_EXAM_REPORTS to LoginMethod.USOS_API,
+    )),
+)
