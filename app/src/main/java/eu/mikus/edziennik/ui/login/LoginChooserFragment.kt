@@ -25,7 +25,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.*
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.db.enums.LoginMode
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.databinding.LoginChooserFragmentBinding
 import eu.mikus.edziennik.ext.*
@@ -81,30 +80,6 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
         )
         b.versionText.onClick {
             app.buildManager.showVersionDialog(activity)
-            if (!App.devMode)
-                return@onClick
-            if (adapter.items.firstOrNull { it is LoginInfo.Register && it.loginType == LoginType.TEMPLATE } != null)
-                return@onClick
-            adapter.items.add(
-                index = 0,
-                element = LoginInfo.Register(
-                    loginType = LoginType.TEMPLATE,
-                    registerName = R.string.menu_lab,
-                    registerLogo = R.drawable.face_2,
-                    loginModes = listOf(
-                        LoginInfo.Mode(
-                            loginMode = LoginMode.PODLASIE_API,
-                            name = 0,
-                            icon = 0,
-                            guideText = 0,
-                            credentials = listOf(),
-                            errorCodes = mapOf()
-                        )
-                    )
-                )
-            )
-            adapter.notifyItemInserted(0)
-            b.list.smoothScrollToPosition(0)
         }
 
         LoginInfo.chooserList = LoginInfo.chooserList
@@ -195,25 +170,7 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
             activity.getRootView().startAnimation(anim)
 
             adapter.items.removeAll { it !is LoginInfo.Register }
-            adapter.items.add(
-                    LoginInfo.Register(
-                            loginType = LoginType.TEMPLATE,
-                            registerName = R.string.eggs,
-                            registerLogo = R.drawable.face_1,
-                            loginModes = listOf(
-                                    LoginInfo.Mode(
-                                            loginMode = LoginMode.PODLASIE_API,
-                                            name = 0,
-                                            icon = 0,
-                                            guideText = 0,
-                                            credentials = listOf(),
-                                            errorCodes = mapOf()
-                                    )
-                            )
-                    )
-            )
             adapter.notifyDataSetChanged()
-            b.list.smoothScrollToPosition(adapter.items.size - 1)
         }
 
         when {
@@ -241,16 +198,6 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
             loginType: LoginInfo.Register,
             loginMode: LoginInfo.Mode
     ) {
-        if (loginType.loginType == LoginType.TEMPLATE) {
-            when (loginType.registerName) {
-                R.string.eggs ->
-                    nav.navigate(R.id.loginEggsFragment, null, activity.navOptions)
-                R.string.menu_lab ->
-                    nav.navigate(R.id.labFragment, null, activity.navOptions)
-            }
-            return
-        }
-
         if (!app.config.privacyPolicyAccepted) {
             MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.privacy_policy)

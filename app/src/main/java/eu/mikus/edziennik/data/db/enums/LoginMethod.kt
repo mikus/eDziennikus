@@ -64,13 +64,4 @@ enum class LoginMethod(
         loginType = LoginType.USOS,
         id = 7100,
     ),
-    TEMPLATE_WEB(
-        loginType = LoginType.TEMPLATE,
-        id = 21100,
-    ),
-    TEMPLATE_API(
-        loginType = LoginType.TEMPLATE,
-        id = 21200,
-        requiredLoginMethod = { _, _ -> TEMPLATE_WEB },
-    ),
 }

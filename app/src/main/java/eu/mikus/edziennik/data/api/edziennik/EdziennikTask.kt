@@ -13,7 +13,6 @@ import eu.mikus.edziennik.data.api.edziennik.demo.Demo
 import eu.mikus.edziennik.data.api.edziennik.librus.Librus
 import eu.mikus.edziennik.data.api.edziennik.mobidziennik.Mobidziennik
 import eu.mikus.edziennik.data.api.edziennik.podlasie.Podlasie
-import eu.mikus.edziennik.data.api.edziennik.template.Template
 import eu.mikus.edziennik.data.api.edziennik.usos.Usos
 import eu.mikus.edziennik.data.api.events.RegisterAvailabilityEvent
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
@@ -122,7 +121,6 @@ open class EdziennikTask(override val profileId: Int, val request: Any) : IApiTa
             LoginType.LIBRUS -> Librus(app, profile, loginStore, taskCallback)
             LoginType.MOBIDZIENNIK -> Mobidziennik(app, profile, loginStore, taskCallback)
             LoginType.PODLASIE -> Podlasie(app, profile, loginStore, taskCallback)
-            LoginType.TEMPLATE -> Template(app, profile, loginStore, taskCallback)
             LoginType.USOS -> Usos(app, profile, loginStore, taskCallback)
             LoginType.DEMO -> Demo(app, profile, loginStore, taskCallback)
             else -> null

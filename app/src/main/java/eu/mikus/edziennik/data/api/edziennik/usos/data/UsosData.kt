@@ -5,7 +5,6 @@
 package eu.mikus.edziennik.data.api.edziennik.usos.data
 
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.api.edziennik.template.data.web.TemplateWebSample
 import eu.mikus.edziennik.data.api.edziennik.usos.*
 import eu.mikus.edziennik.data.api.edziennik.usos.data.api.UsosApiCourses
 import eu.mikus.edziennik.data.api.edziennik.usos.data.api.UsosApiEctsPoints

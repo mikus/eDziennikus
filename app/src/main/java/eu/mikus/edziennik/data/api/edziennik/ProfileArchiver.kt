@@ -67,7 +67,6 @@ class ProfileArchiver(val app: App, val profile: Profile) {
             LoginType.PODLASIE -> {}
             LoginType.USOS -> {}
             LoginType.DEMO -> {}
-            LoginType.TEMPLATE -> {}
         }
 
         d(TAG, "Processed student data: ${profile.studentData}")

@@ -103,7 +103,7 @@ public class WidgetConfigActivity extends Activity {
             profileList.add(
                     new Profile(-1,
                             0,
-                            LoginType.TEMPLATE,
+                            LoginType.LIBRUS,
                             getString(R.string.widget_config_all_profiles),
                             null,
                             "",

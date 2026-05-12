@@ -313,8 +313,6 @@
     <string name="edziennik_progress_login_mobidziennik_api">Logging in to MobiDziennik…</string>
     <string name="edziennik_progress_login_mobidziennik_api2">Logging in to MobiDziennik…</string>
     <string name="edziennik_progress_login_mobidziennik_web">Logging in to MobiDziennik…</string>
-    <string name="edziennik_progress_login_template_api">Logging in to Template API…</string>
-    <string name="edziennik_progress_login_template_web">Logging in to Template WEB…</string>
     <string name="edziennik_szkolny_api_sync_title">Syncing shared events…</string>
     <string name="edziennik_szkolny_creating_notifications">Creating notifications…</string>
     <string name="error">Error</string>

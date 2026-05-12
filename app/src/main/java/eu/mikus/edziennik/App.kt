@@ -224,7 +224,7 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
         if (!profileLoadById(config.lastProfileId)) {
             val success = db.profileDao().firstId?.let { profileLoadById(it) }
             if (success != true)
-                profileLoad(Profile(0, 0, LoginType.TEMPLATE, ""))
+                profileLoad(Profile(0, 0, LoginType.LIBRUS, ""))
         }
 
         buildHttp()

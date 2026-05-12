@@ -14,7 +14,6 @@ enum class LoginType(
     PODLASIE(id = 6, features = FEATURES_PODLASIE),
     USOS(id = 7, features = FEATURES_USOS, schoolType = SchoolType.UNIVERSITY),
     DEMO(id = 8, features = setOf()),
-    TEMPLATE(id = 21, features = setOf()),
 
     // the graveyard
     EDUDZIENNIK(id = 5, features = FEATURES_EDUDZIENNIK),

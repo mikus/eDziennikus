@@ -149,8 +149,6 @@
     <string name="error_705" translatable="false">ERROR_USOS_API_INCOMPLETE_RESPONSE</string>
     <string name="error_706" translatable="false">ERROR_USOS_API_MISSING_RESPONSE</string>
 
-    <string name="error_801" translatable="false">ERROR_TEMPLATE_WEB_OTHER</string>
-
     <string name="error_900" translatable="false">EXCEPTION_API_TASK</string>
     <string name="error_901" translatable="false">EXCEPTION_LOGIN_LIBRUS_API_TOKEN</string>
     <string name="error_902" translatable="false">EXCEPTION_LOGIN_LIBRUS_PORTAL_TOKEN</string>
@@ -321,8 +319,6 @@
     <string name="error_704_reason">Student nie jest zapisany na żaden kierunek</string>
     <string name="error_705_reason">Brakujące dane w odpowiedzi serwera</string>
     <string name="error_706_reason">Brakująca odpowiedź serwera</string>
-
-    <string name="error_801_reason">ERROR_TEMPLATE_WEB_OTHER</string>
 
     <string name="error_900_reason">Błąd synchronizacji. Upewnij się, że masz połączenie z internetem, a następnie zgłoś błąd.</string>
     <string name="error_901_reason">EXCEPTION_LOGIN_LIBRUS_API_TOKEN</string>

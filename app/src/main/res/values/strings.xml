@@ -347,8 +347,6 @@
     <string name="edziennik_progress_login_mobidziennik_api">Logowanie do API MobiDziennika…</string>
     <string name="edziennik_progress_login_mobidziennik_api2">Logowanie do API MobiDziennika…</string>
     <string name="edziennik_progress_login_mobidziennik_web">Logowanie do MobiDziennika…</string>
-    <string name="edziennik_progress_login_template_api">Logowanie do Template API…</string>
-    <string name="edziennik_progress_login_template_web">Logowanie do Template WEB…</string>
     <string name="edziennik_szkolny_api_sync_title">Synchronizowanie udostępnionych ereignień…</string>
     <string name="edziennik_szkolny_creating_notifications">Tworzenie powiadomień…</string>
     <string name="ellipsis" translatable="false">…</string>

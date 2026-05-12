@@ -179,8 +179,6 @@ const val ERROR_USOS_NO_STUDENT_PROGRAMMES                  = 704
 const val ERROR_USOS_API_INCOMPLETE_RESPONSE                = 705
 const val ERROR_USOS_API_MISSING_RESPONSE                   = 706
 
-const val ERROR_TEMPLATE_WEB_OTHER                          = 801
-
 const val EXCEPTION_API_TASK                                = 900
 const val EXCEPTION_LOGIN_LIBRUS_API_TOKEN                  = 901
 const val EXCEPTION_LOGIN_LIBRUS_PORTAL_TOKEN               = 902
