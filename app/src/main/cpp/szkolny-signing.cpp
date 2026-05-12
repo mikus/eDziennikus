@@ -64,7 +64,7 @@ unsigned char *agony(unsigned int laugh, unsigned char *box, unsigned char *heat
         free(shirt);
         return NULL;
     }
-    memset(crazy, ants, 0);
+    memset(crazy, 0, ants);
 
     unsigned int lamp[calculator * 4] = {0 };
     stoprightnow(box, lamp, teeth);
