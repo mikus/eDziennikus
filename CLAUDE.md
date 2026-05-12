@@ -10,7 +10,7 @@ The canonical upstream is `szkolny-eu/szkolny-android`; this checkout may be a f
 
 ## Build & toolchain
 
-Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Temurin 17). AGP 8.6.1, Kotlin 1.9.20, `compileSdk`/`targetSdk` 35, `minSdk` 16.
+Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Temurin 17). Gradle 9.5.0, AGP 8.13.2, Kotlin 2.3.20, `compileSdk`/`targetSdk` 35, `minSdk` 16.
 
 | Task | Purpose |
 |---|---|
