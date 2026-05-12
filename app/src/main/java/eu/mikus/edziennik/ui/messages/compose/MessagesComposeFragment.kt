@@ -42,7 +42,6 @@ import eu.mikus.edziennik.ui.messages.list.MessagesFragment
 import eu.mikus.edziennik.utils.DefaultTextStyles
 import eu.mikus.edziennik.utils.Themes
 import eu.mikus.edziennik.utils.managers.MessageManager.UIConfig
-import eu.mikus.edziennik.utils.managers.TextStylingManager.HtmlMode.COMPATIBLE
 import eu.mikus.edziennik.utils.managers.TextStylingManager.HtmlMode.ORIGINAL
 import eu.mikus.edziennik.utils.managers.TextStylingManager.StylingConfig
 import eu.mikus.edziennik.utils.span.*
@@ -190,14 +189,12 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         })
 
         b.subjectLayout.counterMaxLength = when (app.profile.loginStoreType) {
-            LoginType.MOBIDZIENNIK -> 100
             LoginType.LIBRUS -> 150
             LoginType.IDZIENNIK -> 180
             LoginType.EDUDZIENNIK -> 0
             else -> -1
         }
         b.textLayout.counterMaxLength = when (app.profile.loginStoreType) {
-            LoginType.MOBIDZIENNIK -> -1
             LoginType.LIBRUS -> 20000
             LoginType.IDZIENNIK -> 1983
             LoginType.EDUDZIENNIK -> 0
@@ -250,10 +247,7 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             fontStyleClear = b.fontStyle.clear,
             styles = styles,
             textHtml = if (App.devMode) b.textHtml else null,
-            htmlMode = when (app.profile.loginStoreType) {
-                LoginType.MOBIDZIENNIK -> COMPATIBLE
-                else -> ORIGINAL
-            },
+            htmlMode = ORIGINAL,
         )
 
         b.fontStyle.root.isVisible = app.data.messagesConfig.textStyling

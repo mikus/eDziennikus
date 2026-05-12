@@ -78,7 +78,7 @@ class AppConfigMigrationV3(p: SharedPreferences, config: Config) {
             tokens?.forEach {
                 val token = it.value.first
                 when (it.key) {
-                    LoginType.MOBIDZIENNIK.id -> sync.tokenMobidziennik = token
+                    1 -> sync.tokenMobidziennik = token // formerly LoginType.MOBIDZIENNIK.id; provider removed, FCM cleanup deferred to Task 9
                     LoginType.LIBRUS.id -> sync.tokenLibrus = token
                 }
             }

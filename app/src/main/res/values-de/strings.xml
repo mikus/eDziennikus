@@ -310,9 +310,6 @@
     <string name="edziennik_progress_login_librus_messages">Einloggen bei LIBRUS® nachrichten…</string>
     <string name="edziennik_progress_login_librus_portal">Einloggen bei LIBRUS® Rodzina…</string>
     <string name="edziennik_progress_login_librus_synergia">Einloggen bei LIBRUS® Synergia…</string>
-    <string name="edziennik_progress_login_mobidziennik_api">Einloggen bei MobiDziennik…</string>
-    <string name="edziennik_progress_login_mobidziennik_api2">Einloggen bei MobiDziennik…</string>
-    <string name="edziennik_progress_login_mobidziennik_web">Einloggen bei MobiDziennik API…</string>
     <string name="edziennik_szkolny_api_sync_title">Gemeinsame Ereignisse synchronisieren…</string>
     <string name="edziennik_szkolny_creating_notifications">Erstellen von Benachrichtigungen…</string>
     <string name="error">Fehler</string>
@@ -568,12 +565,6 @@
     <string name="login_migration_subtitle">Die App hat ein großes Update erhalten. Wenn bei der Operation Probleme auftreten, können Sie mich über die Hilfe und das Feedback im Menü kontaktieren.</string>
     <string name="login_migration_title">Szkolny.eu wurde aktualisiert</string>
     <string name="login_migration_toast">Migration…</string>
-    <string name="login_mobidziennik_help_address">Adresse:</string>
-    <string name="login_mobidziennik_help_login">Login und Passwort:</string>
-    <string name="login_mobidziennik_help_subtitle">Verwenden Sie die Daten, mit denen Sie sich in die Desktop-Version von Mobidziennik oder in die offizielle mobile App einloggen</string>
-    <string name="login_mobidziennik_help_title">Hilfe - MobiDziennik</string>
-    <string name="login_mobidziennik_subtitle">Melden Sie sich mit den Daten an, die Sie von Ihrer Schule erhalten haben. Bei Problemen verwenden Sie die Schaltfläche unter dem Formular.</string>
-    <string name="login_mobidziennik_title">Einloggen - MobiDziennik</string>
     <string name="login_progress_title">Anmelden…</string>
     <string name="login_startpage_subtitle">Wählen Sie aus, welches E-Klassenbuch Ihre Schule verwendet. In späteren Phasen können Sie mehrere Konten aus verschiedenen E-Klassenbuchen hinzufügen.</string>
     <string name="login_startpage_title">Welches E-Klassenbuch benutzen Sie?</string>

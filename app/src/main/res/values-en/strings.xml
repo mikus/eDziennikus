@@ -310,9 +310,6 @@
     <string name="edziennik_progress_login_librus_messages">Logging in to LIBRUS® messages…</string>
     <string name="edziennik_progress_login_librus_portal">Logging in to LIBRUS® Rodzina…</string>
     <string name="edziennik_progress_login_librus_synergia">Logging in to LIBRUS® Synergia…</string>
-    <string name="edziennik_progress_login_mobidziennik_api">Logging in to MobiDziennik…</string>
-    <string name="edziennik_progress_login_mobidziennik_api2">Logging in to MobiDziennik…</string>
-    <string name="edziennik_progress_login_mobidziennik_web">Logging in to MobiDziennik…</string>
     <string name="edziennik_szkolny_api_sync_title">Syncing shared events…</string>
     <string name="edziennik_szkolny_creating_notifications">Creating notifications…</string>
     <string name="error">Error</string>
@@ -568,12 +565,6 @@
     <string name="login_migration_subtitle">The app got a huge update. If you encounter any problems, feel free to contact me using the Feedback option in the menu.</string>
     <string name="login_migration_title">Szkolny.eu has been updated</string>
     <string name="login_migration_toast">Migration…</string>
-    <string name="login_mobidziennik_help_address">Address:</string>
-    <string name="login_mobidziennik_help_login">Login and password:</string>
-    <string name="login_mobidziennik_help_subtitle">Use the data you use to log in to desktop version of Mobidziennik or to the official mobile app.</string>
-    <string name="login_mobidziennik_help_title">Help - MobiDziennik</string>
-    <string name="login_mobidziennik_subtitle">Log in using the data you got from your school. In case of any problems, use the button below the form.</string>
-    <string name="login_mobidziennik_title">Log in - MobiDziennik</string>
     <string name="login_progress_title">Logging in…</string>
     <string name="login_startpage_subtitle">Choose the e-register which your school uses. Later you\'ll be able to add more accounts using different e-registers.</string>
     <string name="login_startpage_title">Which e-register do you use?</string>
@@ -1298,8 +1289,6 @@
     <string name="login_mode_librus_jst">Login via VULCAN® platform</string>
     <string name="login_mode_librus_email">Log in using e-mail</string>
     <string name="attendance_details_id">Attendance ID</string>
-    <string name="login_mode_mobidziennik_web">Log in with the server name, login and password</string>
-    <string name="login_mode_mobidziennik_web_hint">Provide data, that you use on e-register website</string>
     <string name="attendance_details_type_id">Base type ID</string>
     <string name="attendance_details_is_counted">Counted to the stats?</string>
     <string name="login_chooser_subtitle">Choose which e-register your school uses. If you have several accounts in different e-registers, you will be able to add them later.</string>
@@ -1335,7 +1324,6 @@
     <string name="build_invalid_no_commit_hash">The hash of the current commit was not found. Check Gradle configuration.</string>
     <string name="home_archive_close_no_target_text">Child %s does not have a profile on this account in the current school year. Probably this profile has been deleted or the student no longer attends this class.\n\nTo go to the current profile, select a student from the list or log in to their account with the Add student button.</string>
     <string name="build_invalid_no_remote_repo">A reference to a remote repository was not found. Make sure you are using the official repository fork and verify your Gradle configuration.</string>
-    <string name="login_mode_mobidziennik_web_guide">"Enter the data you use to log in to the MobiDziennik website. As the server address, you can enter the address of the website where you have MobiDziennik. "</string>
     <string name="login_summary_account_child">(Child)</string>
     <string name="login_summary_account_parent">(Parent)</string>
     <string name="menu_teachers">Teachers</string>

@@ -344,9 +344,6 @@
     <string name="edziennik_progress_login_librus_messages">Logowanie do wiadomości LIBRUS®</string>
     <string name="edziennik_progress_login_librus_portal">Logowanie do Portalu LIBRUS® Rodzina</string>
     <string name="edziennik_progress_login_librus_synergia">Logowanie do LIBRUS® Synergia</string>
-    <string name="edziennik_progress_login_mobidziennik_api">Logowanie do API MobiDziennika…</string>
-    <string name="edziennik_progress_login_mobidziennik_api2">Logowanie do API MobiDziennika…</string>
-    <string name="edziennik_progress_login_mobidziennik_web">Logowanie do MobiDziennika…</string>
     <string name="edziennik_szkolny_api_sync_title">Synchronizowanie udostępnionych ereignień…</string>
     <string name="edziennik_szkolny_creating_notifications">Tworzenie powiadomień…</string>
     <string name="ellipsis" translatable="false">…</string>
@@ -626,12 +623,6 @@
     <string name="login_migration_subtitle">Aplikacja otrzymała dużą aktualizację. Jeżeli będą występować jakieś problemy w działaniu, możesz się ze mną skontaktować używając pozycji Pomoc i opinie w menu.</string>
     <string name="login_migration_title">Szkolny.eu został zaktualizowany</string>
     <string name="login_migration_toast">Migracja…</string>
-    <string name="login_mobidziennik_help_address">Adres:</string>
-    <string name="login_mobidziennik_help_login">Login i hasło:</string>
-    <string name="login_mobidziennik_help_subtitle">Użyj danych, którymi logujesz się do wersji komputerowej Mobidziennika lub do oficjalnej aplikacji mobilnej.</string>
-    <string name="login_mobidziennik_help_title">Pomoc - MobiDziennik</string>
-    <string name="login_mobidziennik_subtitle">Zaloguj się danymi, które otrzymałeś od swojej szkoły. W razie problemów skorzystaj z przycisku pod formularzem.</string>
-    <string name="login_mobidziennik_title">Zaloguj się - MobiDziennik</string>
     <string name="login_progress_title">Loguję…</string>
     <string name="login_startpage_subtitle">Wybierz z jakiego e-dziennika korzysta Twoja szkoła. W późniejszych etapach będziesz mógł dodać kilka kont z różnych e-dzienników.</string>
     <string name="login_startpage_title">Z jakiego e-dziennika korzystasz?</string>
@@ -1112,7 +1103,6 @@
     <string name="sync_error_invalid_device">Nieprawidłowe urządzenie</string>
     <string name="sync_error_invalid_login">Nieprawidłowe dane logowania\n\nSprawdź wpisane dane i spróbuj ponownie.</string>
     <string name="sync_error_invalid_school_name">Podano nieprawidłową nazwę szkoły lub zawiera niedozwolone znaki.</string>
-    <string name="sync_error_invalid_server_address">Podany adres serwera jest nieprawidłowy. Upewnij się, że jest wpisany poprawnie oraz nie zawiera żadnych spacji.\n\nWpisywany adres nie powinien zawierać części http://…mobidziennik.pl.</string>
     <string name="sync_error_invalid_token">Podano nieprawidłowy token.</string>
     <string name="sync_error_librus_disconnected">Konto LIBRUS® Rodzina utraciło połączenie z kontem LIBRUS® Synergia. Zaloguj się na stronie portal.librus.pl lub w oficjalnej aplikacji "LIBRUS®" i postępuj zgodnie z instrukcją, aby naprawić konto.</string>
     <string name="sync_error_librus_not_activated">Konto LIBRUS® Rodzina nie zostało aktywowane. Aktywuj konto korzystając z otrzymanego e-maila.</string>
@@ -1321,9 +1311,6 @@
     <string name="login_mode_librus_synergia_hint">Użyj loginu w postaci \"9874123u\"</string>
     <string name="login_mode_librus_jst">Logowanie przez platformę VULCAN®</string>
     <string name="login_mode_librus_jst_hint">Tylko Oświata w Radomiu oraz Innowacyjny Tarnobrzeg</string>
-    <string name="login_type_mobidziennik" translatable="false">MobiDziennik</string>
-    <string name="login_mode_mobidziennik_web">Zaloguj nazwą serwera, loginem i hasłem</string>
-    <string name="login_mode_mobidziennik_web_hint">Podaj dane, których używasz na stronie e-dziennika</string>
     <string name="login_platform_list_title">W jaki sposób się logujesz do dziennika?</string>
     <string name="login_platform_list_subtitle">Wybierz, który obrazek odpowiada temu, który widzisz podczas logowania na stronie internetowej swojego dziennika.\n\nJeżeli Twoja szkoła nie korzysta z żadnej z tych platform miejskich, wybierz pierwszą opcję.</string>
     <string name="login_platform_list_loading">Ładowanie listy e-dzienników…</string>
@@ -1332,7 +1319,6 @@
     <string name="login_mode_librus_email_guide">Zaloguj się swoim kontem LIBRUS® Rodzina, które działa w oficjalnej aplikacji "LIBRUS®" oraz na stronie portal.librus.pl, w niebieskim formularzu.\n\nJeśli nie masz konta LIBRUS® Rodzina, możesz je założyć na stronie https://portal.librus.pl/rodzina/register.</string>
     <string name="login_mode_librus_synergia_guide">Podaj login otrzymany od szkoły, którym logujesz się do LIBRUS® Synergia (fioletowy formularz).\n\nZalecane jest logowanie kontem LIBRUS® Rodzina (używając e-maila) w poprzednim kroku.</string>
     <string name="login_mode_librus_jst_guide">Zaloguj się do LIBRUS® Synergia na komputerze, wybierz zakładkę Aplikacje Mobilne, następnie wpisz otrzymany Token i PIN poniżej.</string>
-    <string name="login_mode_mobidziennik_web_guide">Podaj dane, których używasz do logowania na stronie MobiDziennika. Jako adres serwera możesz wpisać adres strony internetowej, na której masz MobiDziennik.</string>
     <string name="login_type_podlasie">Podlaska Platforma Edukacyjna</string>
     <string name="login_mode_podlasie_api">Zaloguj używając tokenu</string>
     <string name="login_mode_podlasie_api_guide">Podaj token aplikacji mobilnej.</string>
@@ -1469,8 +1455,6 @@
     <string name="messages_compose_draft_discarded">Usunięto wersję roboczą</string>
     <string name="messages_compose_discard_draft_title">Usuń wersję roboczą</string>
     <string name="messages_compose_discard_draft_text">Czy chcesz odrzucić zapisaną wersję wiadomości? Spowoduje to również anulowanie wprowadzonych zmian i usunięcie wiadomości.</string>
-    <string name="login_mobidziennik_server_prefix">https://</string>
-    <string name="login_mobidziennik_server_suffix">.mobidziennik.pl/</string>
     <string name="styled_text_dialog_title">Edytuj tekst</string>
     <string name="send_message">Wyślij wiadomość</string>
     <string name="login_qr_decoding_error">Kod QR nie wygląda na prawidłowy</string>

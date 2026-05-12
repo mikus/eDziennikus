@@ -8,7 +8,6 @@ enum class LoginMode(
     val loginType: LoginType,
     val id: Int,
 ) {
-    MOBIDZIENNIK_WEB(LoginType.MOBIDZIENNIK, id = 100),
     LIBRUS_EMAIL(LoginType.LIBRUS, id = 200),
     LIBRUS_SYNERGIA(LoginType.LIBRUS, id = 201),
     LIBRUS_JST(LoginType.LIBRUS, id = 202),

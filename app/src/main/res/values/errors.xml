@@ -122,21 +122,6 @@
     <string name="error_189" translatable="false">ERROR_LOGIN_LIBRUS_MESSAGES_TIMEOUT</string>
     <string name="error_190" translatable="false">ERROR_LIBRUS_API_TEACHER_FREE_DAYS_NOT_PUBLIC</string>
 
-    <string name="error_201" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_INVALID_LOGIN</string>
-    <string name="error_202" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_OLD_PASSWORD</string>
-    <string name="error_203" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_INVALID_DEVICE</string>
-    <string name="error_204" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_ARCHIVED</string>
-    <string name="error_205" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_MAINTENANCE</string>
-    <string name="error_206" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_INVALID_ADDRESS</string>
-    <string name="error_210" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_OTHER</string>
-    <string name="error_211" translatable="false">ERROR_MOBIDZIENNIK_WEB_ACCESS_DENIED</string>
-    <string name="error_212" translatable="false">ERROR_MOBIDZIENNIK_WEB_NO_SESSION_KEY</string>
-    <string name="error_216" translatable="false">ERROR_MOBIDZIENNIK_WEB_NO_SESSION_VALUE</string>
-    <string name="error_213" translatable="false">ERROR_MOBIDZIENNIK_WEB_NO_SERVER_ID</string>
-    <string name="error_214" translatable="false">ERROR_MOBIDZIENNIK_WEB_INVALID_RESPONSE</string>
-    <string name="error_215" translatable="false">ERROR_LOGIN_MOBIDZIENNIK_WEB_NO_SESSION_ID</string>
-    <string name="error_218" translatable="false">ERROR_MOBIDZIENNIK_WEB_SERVER_PROBLEM</string>
-
     <string name="error_601" translatable="false">ERROR_LOGIN_PODLASIE_API_INVALID_TOKEN</string>
     <string name="error_602" translatable="false">ERROR_LOGIN_PODLASIE_API_DEVICE_LIMIT</string>
     <string name="error_630" translatable="false">ERROR_PODLASIE_API_NO_TOKEN</string>
@@ -155,8 +140,6 @@
     <string name="error_903" translatable="false">EXCEPTION_LIBRUS_PORTAL_SYNERGIA_TOKEN</string>
     <string name="error_904" translatable="false">EXCEPTION_LIBRUS_API_REQUEST</string>
     <string name="error_905" translatable="false">EXCEPTION_LIBRUS_SYNERGIA_REQUEST</string>
-    <string name="error_906" translatable="false">EXCEPTION_MOBIDZIENNIK_WEB_REQUEST</string>
-    <string name="error_908" translatable="false">EXCEPTION_MOBIDZIENNIK_WEB_FILE_REQUEST</string>
     <string name="error_909" translatable="false">EXCEPTION_LIBRUS_MESSAGES_FILE_REQUEST</string>
     <string name="error_910" translatable="false">EXCEPTION_NOTIFY</string>
     <string name="error_911" translatable="false">EXCEPTION_LIBRUS_MESSAGES_REQUEST</string>
@@ -282,21 +265,6 @@
     <string name="error_188_reason">Nie znaleziono załącznika. Mógł zostać usunięty.</string>
     <string name="error_189_reason">Logowanie LIBRUS® Wiadomości: ReCaptcha przekroczono czas oczekiwania.</string>
 
-    <string name="error_201_reason">Nieprawidłowy login lub hasło</string>
-    <string name="error_202_reason">Podano stare hasło</string>
-    <string name="error_203_reason">Nieprawidłowe urządzenie - zgłoś błąd programiście</string>
-    <string name="error_204_reason">Dziennik jest archiwalny - logowanie nie jest możliwe</string>
-    <string name="error_205_reason">Chwilowa przerwa techniczna MobiDziennika, lub inny problem z serwerem</string>
-    <string name="error_206_reason">Nieprawidłowy adres szkoły</string>
-    <string name="error_210_reason">Nieznany błąd logowania do MobiDziennika</string>
-    <string name="error_211_reason">MobiDziennik: brak dostępu</string>
-    <string name="error_212_reason">MobiDziennik: brak klucza sesji</string>
-    <string name="error_216_reason">MobiDziennik: brak wartości sesji</string>
-    <string name="error_213_reason">MobiDziennik: brak identyfikatora serwera</string>
-    <string name="error_214_reason">MobiDziennik: błąd odpowiedzi serwera</string>
-    <string name="error_215_reason">Brak identyfikatora sesji przy logowaniu</string>
-    <string name="error_218_reason">MobiDziennik: problemy z wydajnością serwerów. Spróbuj ponownie później.</string>
-
     <string name="error_301_reason">Nieprawidłowy symbol</string>
     <string name="error_302_reason">Nieprawidłowy token</string>
     <string name="error_310_reason">Nieprawidłowy PIN. Wygeneruj nowy token.</string>
@@ -326,8 +294,6 @@
     <string name="error_903_reason">EXCEPTION_LIBRUS_PORTAL_SYNERGIA_TOKEN</string>
     <string name="error_904_reason">Zgłoś błąd: wyjątek w API LIBRUS®</string>
     <string name="error_905_reason">EXCEPTION_LIBRUS_SYNERGIA_REQUEST</string>
-    <string name="error_906_reason">EXCEPTION_MOBIDZIENNIK_WEB_REQUEST</string>
-    <string name="error_908_reason">EXCEPTION_MOBIDZIENNIK_WEB_FILE_REQUEST</string>
     <string name="error_909_reason">EXCEPTION_LIBRUS_MESSAGES_FILE_REQUEST</string>
     <string name="error_910_reason">EXCEPTION_NOTIFY</string>
     <string name="error_911_reason">Zgłoś błąd: pobieranie wiadomości LIBRUS®</string>

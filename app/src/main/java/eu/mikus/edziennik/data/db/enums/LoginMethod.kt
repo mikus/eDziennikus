@@ -21,15 +21,6 @@ enum class LoginMethod(
         loginStore: LoginStore,
     ) -> LoginMethod?)? = null,
 ) {
-    MOBIDZIENNIK_WEB(
-        loginType = LoginType.MOBIDZIENNIK,
-        id = 1100,
-    ),
-    MOBIDZIENNIK_API2(
-        loginType = LoginType.MOBIDZIENNIK,
-        id = 1300,
-        isPossible = { profile, _ -> profile?.studentData?.getString("email").isNotNullNorBlank() },
-    ),
     LIBRUS_PORTAL(
         loginType = LoginType.LIBRUS,
         id = 2100,

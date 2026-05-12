@@ -42,7 +42,7 @@
                 android:padding="16dp"
                 android:textAppearance="@style/NavView.TextView.Title"
                 tools:ignore="HardcodedText"
-                tools:text="mobiDziennik - raport dzienny." />
+                tools:text="LIBRUS - raport dzienny." />
         </LinearLayout>
 
         <View
