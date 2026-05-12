@@ -13,7 +13,7 @@ android {
     namespace 'eu.mikus.edziennik'
 
     defaultConfig {
-        applicationId 'pl.szczodrzynski.edziennik'
+        applicationId 'eu.mikus.edziennik'
         minSdkVersion setup.minSdk
         targetSdkVersion setup.targetSdk
 

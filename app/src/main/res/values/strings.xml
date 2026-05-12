@@ -54,7 +54,7 @@
     <string name="app_manager_dialog_text">Na urządzeniu prawdopodobnie zainstalowany jest menedżer aplikacji, który może powodować problemy z synchronizacją automatyczną.\n\nNależy wyłączyć w ustawieniach telefonu optymalizację baterii dla aplikacji Szkolny.eu.\n\nKliknij OK, aby przejść do ustawień telefonu.</string>
     <string name="app_manager_dialog_title">Wykryto problem z synchronizacją</string>
     <string name="app_manager_open_failed">Nie udało się otworzyć ustawień</string>
-    <string name="app_name" translatable="false">Szkolny.eu</string>
+    <string name="app_name" translatable="false">eDziennikus</string>
     <string name="app_task_format" translatable="false">Szkolny.eu | %s</string>
     <string name="are_you_sure">Czy na pewno?</string>
     <string name="attendance_absent" translatable="false">nb</string>
