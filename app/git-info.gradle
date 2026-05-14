@@ -29,10 +29,8 @@ private def getGit() {
                 .readEnvironment()
                 .findGitDir(project.projectDir)
                 .build()
-    } catch (IllegalArgumentException | RepositoryNotFoundException ignore) {
-        def logger = LoggerFactory.getLogger("androidGitVersion")
-        logger.error("No git repository reachable from ${project.projectDir}")
-        return results
+    } catch (IllegalArgumentException | RepositoryNotFoundException e) {
+        throw new GradleException("No git repository reachable from ${project.projectDir}", e)
     }
     return Git.wrap(repo)
 }
@@ -57,21 +55,28 @@ private static def getLastTag(Repository repo, Git git, Ref head) {
     def tags = getTags(repo, git)
 
     RevWalk revs = new RevWalk(repo)
-    revs.markStart(revs.parseCommit(head.getObjectId()))
-    def revCount = 0
-    Collection<List> commitTags = null
-    for (RevCommit commit : revs) {
-        def tagsHere = tags.findAll { (it[0] == commit.id) }
-        if (tagsHere) {
-            commitTags = tagsHere.stream().map {
-                [it[0].name, it[1], revCount]
-            }.toArray()
-            break
+    try {
+        revs.markStart(revs.parseCommit(head.getObjectId()))
+        def revCount = 0
+        Collection<List> commitTags = null
+        for (RevCommit commit : revs) {
+            def tagsHere = tags.findAll { (it[0] == commit.id) }
+            if (tagsHere) {
+                commitTags = tagsHere.stream().map {
+                    [it[0].name, it[1], revCount]
+                }.toArray()
+                break
+            }
+            revCount++
         }
-        revCount++
-    }
 
-    return commitTags.last()
+        if (commitTags == null) {
+            return [null, "untagged", revCount]
+        }
+        return commitTags.last()
+    } finally {
+        revs.close()
+    }
 }
 
 private def buildGitInfo() {
