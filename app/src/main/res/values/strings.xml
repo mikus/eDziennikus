@@ -1319,10 +1319,6 @@
     <string name="login_mode_librus_email_guide">Zaloguj się swoim kontem LIBRUS® Rodzina, które działa w oficjalnej aplikacji "LIBRUS®" oraz na stronie portal.librus.pl, w niebieskim formularzu.\n\nJeśli nie masz konta LIBRUS® Rodzina, możesz je założyć na stronie https://portal.librus.pl/rodzina/register.</string>
     <string name="login_mode_librus_synergia_guide">Podaj login otrzymany od szkoły, którym logujesz się do LIBRUS® Synergia (fioletowy formularz).\n\nZalecane jest logowanie kontem LIBRUS® Rodzina (używając e-maila) w poprzednim kroku.</string>
     <string name="login_mode_librus_jst_guide">Zaloguj się do LIBRUS® Synergia na komputerze, wybierz zakładkę Aplikacje Mobilne, następnie wpisz otrzymany Token i PIN poniżej.</string>
-    <string name="login_type_podlasie">Podlaska Platforma Edukacyjna</string>
-    <string name="login_mode_podlasie_api">Zaloguj używając tokenu</string>
-    <string name="login_mode_podlasie_api_guide">Podaj token aplikacji mobilnej.</string>
-    <string name="edziennik_progress_login_podlasie_api">Logowanie do PPE…</string>
     <string name="profile_archived_title">Profil jest archiwalny</string>
     <string name="profile_archived_text">Przeglądasz dane ucznia z poprzedniego roku szkolnego (%d/%d). Synchronizacja oraz pobieranie wiadomości i niektórych zadań domowych zostały wyłączone.\n\nAby otworzyć profil ucznia z aktualnego roku, wybierz "Zamknij archiwum" na stronie głównej.</string>
     <string name="profile_year_not_started_title">Wakacje ;)</string>
@@ -1346,7 +1342,6 @@
     <string name="home_availability_update">Aktualizuj</string>
     <string name="register_unavailable_read_more">Dowiedz się więcej</string>
     <string name="settings_register_hide_sticks_from_old">Stara nie zobaczy pał</string>
-    <string name="login_podlasie_logout_devices">Wyloguj z pozostałych urządzeń</string>
     <string name="login_chooser_testing_title">Wersja testowa</string>
     <string name="login_chooser_testing_text">Wybrany sposób logowania jest jeszcze w fazie testów i może nie działać poprawnie.\n\nJeśli masz problemy z aplikacją, wybierz zalecany sposób logowania.</string>
     <string name="login_chooser_mode_recommended">{cmd-information-outline} Zalecane</string>

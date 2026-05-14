@@ -10,7 +10,6 @@ enum class LoginType(
     val schoolType: SchoolType = SchoolType.STANDARD,
 ) {
     LIBRUS(id = 2, features = FEATURES_LIBRUS),
-    PODLASIE(id = 6, features = FEATURES_PODLASIE),
     USOS(id = 7, features = FEATURES_USOS, schoolType = SchoolType.UNIVERSITY),
     DEMO(id = 8, features = setOf()),
 

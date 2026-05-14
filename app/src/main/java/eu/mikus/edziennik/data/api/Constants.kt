@@ -61,11 +61,6 @@ const val LIBRUS_SYNERGIA_HOMEWORK_ATTACHMENT_URL = "https://synergia.librus.pl/
 const val LIBRUS_SYNERGIA_MESSAGES_ATTACHMENT_URL = "https://synergia.librus.pl/wiadomosci/pobierz_zalacznik"
 
 
-const val PODLASIE_API_VERSION = "1.0.62"
-const val PODLASIE_API_URL = "https://cpdklaser.zeto.bialystok.pl/api"
-const val PODLASIE_API_USER_ENDPOINT = "/pobierzDaneUcznia"
-const val PODLASIE_API_LOGOUT_DEVICES_ENDPOINT = "/wyczyscUrzadzenia"
-
 const val USOS_API_OAUTH_REDIRECT_URL = "szkolny://redirect/usos"
 
 val USOS_API_SCOPES by lazy { listOf(

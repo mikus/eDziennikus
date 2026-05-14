@@ -11,7 +11,6 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.ERROR_PROFILE_ARCHIVED
 import eu.mikus.edziennik.data.api.edziennik.demo.Demo
 import eu.mikus.edziennik.data.api.edziennik.librus.Librus
-import eu.mikus.edziennik.data.api.edziennik.podlasie.Podlasie
 import eu.mikus.edziennik.data.api.edziennik.usos.Usos
 import eu.mikus.edziennik.data.api.events.RegisterAvailabilityEvent
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
@@ -118,7 +117,6 @@ open class EdziennikTask(override val profileId: Int, val request: Any) : IApiTa
 
         edziennikInterface = when (loginStore.type) {
             LoginType.LIBRUS -> Librus(app, profile, loginStore, taskCallback)
-            LoginType.PODLASIE -> Podlasie(app, profile, loginStore, taskCallback)
             LoginType.USOS -> Usos(app, profile, loginStore, taskCallback)
             LoginType.DEMO -> Demo(app, profile, loginStore, taskCallback)
             else -> null

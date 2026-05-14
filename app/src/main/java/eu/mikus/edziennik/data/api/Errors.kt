@@ -150,12 +150,6 @@ const val ERROR_LIBRUS_MESSAGES_ATTACHMENT_NOT_FOUND        = 188
 const val ERROR_LOGIN_LIBRUS_MESSAGES_TIMEOUT               = 189
 const val ERROR_LIBRUS_API_TEACHER_FREE_DAYS_NOT_PUBLIC     = 190
 
-const val ERROR_LOGIN_PODLASIE_API_INVALID_TOKEN            = 601
-const val ERROR_LOGIN_PODLASIE_API_DEVICE_LIMIT             = 602
-const val ERROR_PODLASIE_API_NO_TOKEN                       = 630
-const val ERROR_PODLASIE_API_OTHER                          = 631
-const val ERROR_PODLASIE_API_DATA_MISSING                   = 632
-
 const val ERROR_USOS_OAUTH_GOT_DIFFERENT_TOKEN              = 702
 const val ERROR_USOS_OAUTH_INCOMPLETE_RESPONSE              = 703
 const val ERROR_USOS_NO_STUDENT_PROGRAMMES                  = 704
@@ -172,6 +166,5 @@ const val EXCEPTION_LIBRUS_MESSAGES_FILE_REQUEST            = 909
 const val EXCEPTION_NOTIFY                                  = 910
 const val EXCEPTION_LIBRUS_MESSAGES_REQUEST                 = 911
 const val ERROR_ONEDRIVE_DOWNLOAD                           = 930
-const val EXCEPTION_PODLASIE_API_REQUEST                    = 940
 
 const val LOGIN_NO_ARGUMENTS                                = 1201

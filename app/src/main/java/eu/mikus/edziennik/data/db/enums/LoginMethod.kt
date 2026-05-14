@@ -47,10 +47,6 @@ enum class LoginMethod(
         isPossible = { _, loginStore -> !loginStore.hasLoginData("fakeLogin") },
         requiredLoginMethod = { _, _ -> LIBRUS_SYNERGIA },
     ),
-    PODLASIE_API(
-        loginType = LoginType.PODLASIE,
-        id = 6100,
-    ),
     USOS_API(
         loginType = LoginType.USOS,
         id = 7100,

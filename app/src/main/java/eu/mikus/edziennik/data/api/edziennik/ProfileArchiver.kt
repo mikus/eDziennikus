@@ -63,7 +63,6 @@ class ProfileArchiver(val app: App, val profile: Profile) {
                 profile.studentData.remove("schoolYearId")
             }
             LoginType.EDUDZIENNIK -> {}
-            LoginType.PODLASIE -> {}
             LoginType.USOS -> {}
             LoginType.DEMO -> {}
         }

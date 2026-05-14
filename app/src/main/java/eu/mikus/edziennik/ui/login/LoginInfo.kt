@@ -131,41 +131,6 @@ object LoginInfo {
                 )
             ),
             Register(
-                loginType = LoginType.PODLASIE,
-                registerName = R.string.login_type_podlasie,
-                registerLogo = R.drawable.login_logo_podlasie,
-                loginModes = listOf(
-                    Mode(
-                        loginMode = LoginMode.PODLASIE_API,
-                        name = R.string.login_mode_podlasie_api,
-                        icon = R.drawable.login_mode_podlasie_api,
-                        guideText = R.string.login_mode_podlasie_api_guide,
-                        credentials = listOf(
-                            FormField(
-                                keyName = "apiToken",
-                                name = R.string.login_hint_token,
-                                icon = CommunityMaterial.Icon2.cmd_lock_outline,
-                                emptyText = R.string.login_error_no_token,
-                                invalidText = R.string.login_error_incorrect_token,
-                                errorCodes = mapOf(),
-                                isRequired = true,
-                                validationRegex = "[a-zA-Z0-9]{10}",
-                                caseMode = FormField.CaseMode.UNCHANGED
-                            ),
-                            FormCheckbox(
-                                keyName = "logoutDevices",
-                                name = R.string.login_podlasie_logout_devices,
-                                checked = false,
-                                errorCodes = mapOf(
-                                    ERROR_LOGIN_PODLASIE_API_DEVICE_LIMIT to R.string.error_602_reason
-                                )
-                            )
-                        ),
-                        errorCodes = mapOf()
-                    )
-                )
-            ),
-            Register(
                 loginType = LoginType.USOS,
                 registerName = R.string.login_type_usos,
                 registerLogo = R.drawable.login_logo_usos,

@@ -105,7 +105,7 @@ class LoginFormFragment : Fragment(), CoroutineScope {
         b.text.text = platformGuideText ?: app.getString(mode.guideText)
 
         // eggs
-        isEggs = register.loginType == LoginType.PODLASIE
+        isEggs = false
 
         for (credential in mode.credentials) {
             if (platformFormFields?.contains(credential.keyName) == false)
