@@ -59,7 +59,7 @@ eDziennikus publikowany jest na licencji [GNU GPLv3](LICENSE). W szczególności
 Dodatkowo:
 - Zabronione jest modyfikowanie lub usuwanie kodu odpowiedzialnego za zgodność wersji produkcyjnych z licencją.
 
-- **Wersje skompilowane nie mogą być dystrybuowane za pomocą Google Play oraz żadnej platformy, na której istnieje oficjalna wersja aplikacji**.
+- **Wersje skompilowane nie mogą być dystrybuowane za pomocą Google Play oraz żadnej innej platformy poza oryginalnym repozytorium**.
 
 **Autorzy aplikacji nie biorą odpowiedzialności za używanie aplikacji, modyfikowanie oraz dystrybuowanie.**
 
