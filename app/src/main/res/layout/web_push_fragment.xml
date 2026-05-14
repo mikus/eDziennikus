@@ -18,7 +18,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Przekazywanie powiadomień pozwala na połączenie komputera, na którym będą pokazywane powiadomienia otrzymane w aplikacji Szkolny.eu na telefonie.\n\nDzięki temu będziesz zawsze wiedział wszystko na bieżąco, nie patrząc nawet na swój telefon."/>
+                android:text="Przekazywanie powiadomień pozwala na połączenie komputera, na którym będą pokazywane powiadomienia otrzymane w aplikacji eDziennikus na telefonie.\n\nDzięki temu będziesz zawsze wiedział wszystko na bieżąco, nie patrząc nawet na swój telefon."/>
 
             <TextView
                 android:layout_width="wrap_content"

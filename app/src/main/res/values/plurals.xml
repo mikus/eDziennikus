@@ -83,9 +83,9 @@
     </plurals>
 
     <plurals name="notification_count_format">
-        <item quantity="one">Szkolny.eu: %d nowe powiadomienie</item> <!-- 1 -->
-        <item quantity="few">Szkolny.eu: %d nowe powiadomienia</item> <!-- 2, 3, 4, 32, 33, 34 -->
-        <item quantity="other">Szkolny.eu: %d nowych powiadomień</item> <!-- 5, 10, 12, 13, 21, 25 -->
+        <item quantity="one">eDziennikus: %d nowe powiadomienie</item> <!-- 1 -->
+        <item quantity="few">eDziennikus: %d nowe powiadomienia</item> <!-- 2, 3, 4, 32, 33, 34 -->
+        <item quantity="other">eDziennikus: %d nowych powiadomień</item> <!-- 5, 10, 12, 13, 21, 25 -->
     </plurals>
     <plurals name="notification_count_short_format">
         <item quantity="one">%d nowe powiadomienie</item> <!-- 1 -->

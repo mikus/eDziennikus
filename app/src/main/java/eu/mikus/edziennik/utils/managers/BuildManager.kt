@@ -71,12 +71,12 @@ class BuildManager(val app: App) : CoroutineScope {
 
     val isSigned = Signing.appCertificate.md5() == "f98c600d6ea0cb5bc40ffc8e6f7824ac"
 
-    val isPlayRelease = isRelease && buildFlavor == "play"
-    val isApkRelease = isRelease && buildFlavor == "official"
-    val isOfficial = isSigned && (isPlayRelease || isApkRelease)
+    // The fork has no `play`/`official` flavors any more — every build is
+    // unofficial from upstream's perspective. The previous `isPlayRelease`,
+    // `isApkRelease`, and `isOfficial` properties were permanently false
+    // since the flavor drop and have been removed.
 
     val versionName = when {
-        isOfficial -> BuildConfig.VERSION_NAME + ", " + BuildConfig.BUILD_TYPE
         isRelease -> "$gitVersion\n$gitBranch"
         else -> BuildConfig.VERSION_NAME
     }
@@ -88,9 +88,8 @@ class BuildManager(val app: App) : CoroutineScope {
             "Daily\n" + BuildConfig.VERSION_NAME.substringAfterLast('.')
         isDebug ->
             "Debug\n" + BuildConfig.VERSION_BASE
-        !isOfficial ->
+        else ->
             "Unofficial\n" + BuildConfig.VERSION_BASE
-        else -> null
     }
 
     val releaseType = when {
@@ -106,14 +105,12 @@ class BuildManager(val app: App) : CoroutineScope {
         val no = activity.getString(R.string.no)
 
         val colorOnBackground = R.attr.colorOnBackground.resolveAttr(activity)
-        val mtrlGreen = R.color.md_green_500.resolveColor(activity)
         val mtrlYellow = R.color.md_yellow_700.resolveColor(activity)
         val mtrlRed = R.color.md_red_500.resolveColor(activity)
 
         val fields = mapOf(
             R.string.build_version to BuildConfig.VERSION_BASE,
             R.string.build_official to when {
-                isOfficial -> yes.asColoredSpannable(mtrlGreen)
                 isSigned -> TextUtils.concat(
                     yes.asColoredSpannable(mtrlYellow),
                     when {
@@ -128,13 +125,9 @@ class BuildManager(val app: App) : CoroutineScope {
                     if (gitAuthor.isNotNullNorBlank()) " ($gitAuthor)" else ""
                 )
             },
-            R.string.build_platform to when {
-                isPlayRelease -> activity.getString(R.string.build_platform_play)
-                isApkRelease -> activity.getString(R.string.build_platform_apk)
-                else -> activity
-                    .getString(R.string.build_platform_unofficial)
-                    .asColoredSpannable(mtrlYellow)
-            },
+            R.string.build_platform to activity
+                .getString(R.string.build_platform_unofficial)
+                .asColoredSpannable(mtrlYellow),
             R.string.build_date to ZonedDateTime
                 .ofInstant(Instant.ofEpochMilli(buildTimestamp), ZoneId.systemDefault())
                 .format(DateTimeFormatter.RFC_1123_DATE_TIME),
@@ -166,7 +159,7 @@ class BuildManager(val app: App) : CoroutineScope {
             .setPositiveButton(R.string.ok, null)
             .setNeutralButton(R.string.build_dialog_open_repo) { _, _ ->
                 val url = if (gitRemote == null)
-                    "https://szkolny.eu/github/android"
+                    "https://github.com/mikus/szkolny-android"
                 else
                     "https://github.com/$gitRemote/tree/$gitHash"
                 Utils.openUrl(activity, url)
@@ -182,7 +175,6 @@ class BuildManager(val app: App) : CoroutineScope {
         NO_REMOTE_REPO(R.string.build_invalid_no_remote_repo, R.color.md_orange_500),
         NO_COMMIT_HASH(R.string.build_invalid_no_commit_hash, R.color.md_orange_500),
         REMOTE_NO_COMMIT(R.string.build_invalid_remote_no_commit, R.color.md_red_500),
-        OFFICIAL_UNSIGNED(R.string.build_invalid_official_unsigned, R.color.md_red_500),
         UNSTAGED_CHANGES(R.string.build_invalid_unstaged_changes, R.color.md_amber_800),
         DEBUG(R.string.build_invalid_debug, R.color.md_yellow_500, false),
         VALID(R.string.build_valid_unofficial, R.color.md_yellow_500, false)
@@ -240,12 +232,6 @@ class BuildManager(val app: App) : CoroutineScope {
             // officially signed package
             if (isSigned)
                 return@launch
-
-            // seems official, but unsigned
-            if (isPlayRelease || isApkRelease) {
-                invalidateBuild(activity, null, InvalidBuildReason.OFFICIAL_UNSIGNED)
-                return@launch
-            }
 
             // probably no git repository, disabled on debug
             if (gitRemote == null && !isDebug) {

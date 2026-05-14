@@ -51,7 +51,7 @@
     <string name="agenda_lesson_changes">Timetable changes</string>
     <string name="agenda_teacher_absence">Absent teachers</string>
     <string name="ago_format">%s ago</string>
-    <string name="app_manager_dialog_text">There may be an app manager running on this device, which could cause issues with automatic synchronisation.\n\nIn order to prevent this issue, turn off battery optimization for Szkolny.eu.\n\nPress OK to go to system settings.</string>
+    <string name="app_manager_dialog_text">There may be an app manager running on this device, which could cause issues with automatic synchronisation.\n\nIn order to prevent this issue, turn off battery optimization for eDziennikus.\n\nPress OK to go to system settings.</string>
     <string name="app_manager_dialog_title">There was a problem with synchronization</string>
     <string name="app_manager_open_failed">Couldn\'t open settings</string>
     <string name="are_you_sure">Are you sure?</string>
@@ -265,7 +265,7 @@
     <string name="edziennik_notification_api_first_login_title">First login</string>
     <string name="edziennik_notification_api_notify_title">Creating notifications</string>
     <string name="edziennik_notification_api_sync_title_format">Synchronizing profile %s…</string>
-    <string name="edziennik_notification_api_text">Thanks to it, Szkolny.eu can synchronize data with an e-journal. You can close it because it isn\'t doing anything right now.</string>
+    <string name="edziennik_notification_api_text">Thanks to it, eDziennikus can synchronize data with an e-journal. You can close it because it isn\'t doing anything right now.</string>
     <string name="edziennik_notification_api_title">Synchronization service</string>
     <string name="edziennik_progress_endpoint_account_details">Syncing account details…</string>
     <string name="edziennik_progress_endpoint_announcements">Syncing announcements…</string>
@@ -366,7 +366,7 @@
     <string name="faq_back_title">Did you find an answer?</string>
     <string name="faq_text">If you have a question, you can open the FAQ database first. Do you want to check that website?</string>
     <string name="feedback_ask_a_question">Ask a question</string>
-    <string name="feedback_faq">Frequently asked questions - <a href="http://szkolny.eu/pomoc/">open</a></string>
+    <string name="feedback_faq">Bug reports and questions - <a href="https://github.com/mikus/szkolny-android/issues">GitHub Issues</a></string>
     <string name="feedback_faq_button">Open FAQ database</string>
     <string name="feedback_history">Conversation history</string>
     <string name="feedback_send">Send</string>
@@ -554,7 +554,7 @@
     <string name="login_librus_title">Log in to LIBRUS® Synergia</string>
     <string name="login_migration_error_format">A migration error has occurred. It\'s already reported, which means I\'ll try to fix it.\n\nYou can continue using the app. In case of any problems try to remove the profile and create it again.</string>
     <string name="login_migration_subtitle">The app got a huge update. If you encounter any problems, feel free to contact me using the Feedback option in the menu.</string>
-    <string name="login_migration_title">Szkolny.eu has been updated</string>
+    <string name="login_migration_title">eDziennikus has been updated</string>
     <string name="login_migration_toast">Migration…</string>
     <string name="login_progress_title">Logging in…</string>
     <string name="login_startpage_subtitle">Choose the e-register which your school uses. Later you\'ll be able to add more accounts using different e-registers.</string>
@@ -715,10 +715,10 @@
     <string name="notification_event_no_subject_format">%1$s on %2$s</string>
     <string name="notification_filter_warning">Are you sure you want to apply these settings?\n\nYou won\'t see information about some data, so you may miss important messages or grades.\n\nThe settings will be applied to the currently selected profile.</string>
     <string name="notification_get_data_cancel">Cancel</string>
-    <string name="notification_get_data_error_summary">Szkolny.eu: error</string>
+    <string name="notification_get_data_error_summary">eDziennikus: error</string>
     <string name="notification_get_data_error_title">Error while getting data for profile %s</string>
     <string name="notification_get_data_once_again">Try again</string>
-    <string name="notification_get_data_summary">Szkolny.eu: downloading</string>
+    <string name="notification_get_data_summary">eDziennikus: downloading</string>
     <string name="notification_get_data_text">Downloading data</string>
     <string name="notification_get_data_title">Update</string>
     <string name="notification_grade_format">New grade (%s) from %s</string>
@@ -763,7 +763,7 @@
     <string name="notification_type_timetable_change">Timetable change</string>
     <string name="notification_type_timetable_lesson_change">Lesson change</string>
     <string name="notification_type_update">Update</string>
-    <string name="notification_updates_summary">Szkolny.eu: update</string>
+    <string name="notification_updates_summary">eDziennikus: update</string>
     <string name="notification_updates_text">Click to download version %s</string>
     <string name="notification_updates_title">Update available</string>
     <string name="notification_user_action_required_captcha_librus">LIBRUS® Rodzina login: Captcha verification required. Click to continue logging into the e-journal.</string>
@@ -791,15 +791,15 @@
     <string name="rate_snackbar_negative">Never</string>
     <string name="rate_snackbar_neutral">Later</string>
     <string name="rate_snackbar_positive">Rate now</string>
-    <string name="rate_snackbar_text">Show that you like Szkolny.eu - rate the app and make it even better!</string>
+    <string name="rate_snackbar_text">Show that you like eDziennikus - rate the app and make it even better!</string>
     <string name="refresh">Refresh</string>
     <string name="registration_config_disable_progress_text">Unregistering the user…</string>
     <string name="registration_config_disable_text">You won\'t be able to use some functions anymore, like Event sharing and Notification forwarding.\n\nThis feature may be enabled/disabled depending on the active profile.</string>
     <string name="registration_config_enable_progress_text">Syncing shared events…</string>
-    <string name="registration_config_enable_text">Registration is automatic if this option is enabled. It allows you to create and receive events shared with other students in your class. Thanks to this, you can add items not saved by the teacher to the journal.\n\nContinuing means reading and accepting the <a href="https://szkolny.eu/privacy-policy">Privacy policy</a>.</string>
-    <string name="registration_config_event_sharing_text">You need to turn on server registration, in order to share an event. This option lets you create and receive shared events in your class.\n\nIt will be turned on automatically by pressing OK.\n\nContinuing means reading and accepting the <a href="https://szkolny.eu/privacy-policy">Privacy policy</a>.</string>
+    <string name="registration_config_enable_text">Registration is automatic if this option is enabled. It allows you to create and receive events shared with other students in your class. Thanks to this, you can add items not saved by the teacher to the journal.</string>
+    <string name="registration_config_event_sharing_text">You need to turn on server registration, in order to share an event. This option lets you create and receive shared events in your class.\n\nIt will be turned on automatically by pressing OK.</string>
     <string name="registration_config_event_sharing_title">Sharing events</string>
-    <string name="registration_config_title">Szkolny.eu server registration</string>
+    <string name="registration_config_title">eDziennikus server registration</string>
     <string name="remove">Remove</string>
     <string name="removed">Removed</string>
     <string name="report">Report</string>
@@ -1012,7 +1012,6 @@
     <string name="sync_error_invalid_device">Invalid device</string>
     <string name="sync_error_invalid_login">Invalid login data</string>
     <string name="sync_error_invalid_school_name">Invalid school name or forbidden characters</string>
-    <string name="sync_error_invalid_server_address">Server address is invalid. Make sure it\'s entered correctly and doesn\'t contain whitespaces.</string>
     <string name="sync_error_invalid_token">Invalid token specified.</string>
     <string name="sync_error_librus_disconnected">LIBRUS® Rodzina account has lost connection with the LIBRUS® Synergia account. Login on portal.librus.pl or in the "LIBRUS®" mobile app and follow the instructions to fix the problem.</string>
     <string name="sync_error_librus_not_activated">LIBRUS® account is not activated. Activate it using a link in the received e-mail.</string>
@@ -1105,7 +1104,7 @@
     <string name="timetable_generate_selected_week">For selected week</string>
     <string name="timetable_generate_show_profile_name">Show profile name</string>
     <string name="timetable_generate_show_teachers_names">Show names of teachers</string>
-    <string name="timetable_generate_success_text">The timetable was saved in Szkolny.eu directory as an image file.\n\nYou can open or share it right away.</string>
+    <string name="timetable_generate_success_text">The timetable was saved in eDziennikus directory as an image file.\n\nYou can open or share it right away.</string>
     <string name="timetable_generate_success_title">Done</string>
     <string name="timetable_lesson_cancelled">Lesson cancelled</string>
     <string name="timetable_lesson_change">Lesson change</string>
@@ -1195,15 +1194,14 @@
     <string name="you_are_offline_text">You\'re offline. Try enabling Wi-Fi or mobile data.</string>
     <string name="you_are_offline_title">Internet connection</string>
     <string name="permissions_attachment">In order to download the file, you have to grant file storage permission for the application.\n\nClick OK to grant the permission.</string>
-    <string name="permissions_denied">You denied the required permissions for the application.\n\nIn order to grant the permission, open the Permissions screen for Szkolny.eu in phone settings.\n\nClick OK to open app settings now.</string>
+    <string name="permissions_denied">You denied the required permissions for the application.\n\nIn order to grant the permission, open the Permissions screen for eDziennikus in phone settings.\n\nClick OK to open app settings now.</string>
     <string name="permissions_required">Required permissions</string>
     <string name="settings_about_contributors_text">App contributors</string>
-    <string name="settings_about_contributors_subtext">List of Szkolny.eu contributors</string>
+    <string name="settings_about_contributors_subtext">List of eDziennikus contributors</string>
     <string name="contributors">Contributors</string>
     <string name="translators">Translators</string>
     <string name="settings_register_hide_sticks_from_old">Hide sticks from old</string>
     <string name="build_official">Official build</string>
-    <string name="build_platform_play">Google Play</string>
     <string name="login_chooser_testing_title">Testing version</string>
     <string name="login_chooser_mode_recommended">{cmd-information-outline} Recommended</string>
     <string name="login_chooser_mode_dev_only">{cmd-android-studio} Developer version</string>
@@ -1211,7 +1209,6 @@
     <string name="see_also">See also</string>
     <string name="settings_about_github_text">Source code</string>
     <string name="build_branch">Git branch</string>
-    <string name="build_platform_apk">.APK</string>
     <string name="build_platform_unofficial">Unofficial (.APK)</string>
     <string name="build_commit">Commit hash</string>
     <string name="build_dirty">Unsaved changes</string>
@@ -1289,16 +1286,15 @@
     <string name="permissions_qr_scanner">To be able to scan the QR code, you need to grant access to the camera.\n\nClick OK to grant permissions.</string>
     <string name="rate_snackbar_negative_message">It\'s a pity, the opinions of others help me develop the application.</string>
     <string name="login_chooser_testing_text">The selected login method is still being tested and may not work properly. If you have problems with the app, please choose the recommended login method.</string>
-    <string name="update_available_fallback">You have an outdated version of the Szkolny.eu application. You need to update the app to continue to sync data.</string>
-    <string name="update_available_format">You are using an old version of the Szkolny.eu application (%s). To use the app and ensure the best performance, please upgrade to %s. Change log: %s</string>
+    <string name="update_available_fallback">You have an outdated version of the eDziennikus application. You need to update the app to continue to sync data.</string>
+    <string name="update_available_format">You are using an old version of the eDziennikus application (%s). To use the app and ensure the best performance, please upgrade to %s. Change log: %s</string>
     <string name="profile_archived_text">You are viewing a student\'s data from the previous school year (%d /%d). Syncing and downloading of messages and some homework have been disabled. To open a student\'s profile for the current year, select Close Archive on the home page.</string>
     <string name="login_mode_librus_synergia_guide">Enter the login received from the school with which you log into LIBRUS® Synergia (purple form).\n\nIt is recommended to log in with the LIBRUS® Family account (using e-mail) in the previous step.</string>
     <string name="login_mode_librus_email_guide">Log in with your LIBRUS® Rodzina account, which works in the official LIBRUS® application and on the website portal.librus.pl, in the blue form. \n\nIf you do not have a LIBRUS® Rodzina account, you can create one at https://portal.librus.pl/rodzina/register.</string>
     <string name="build_invalid_remote_no_commit">You have an application build with unpublished changes. The build is in the repository:\n%1$s (%2$s)\nwhich is private or does not contain the latest changes.\n\nFor security reasons and compliance with the license, the use of the application has been blocked.</string>
-    <string name="build_invalid_official_unsigned">You cannot modify this type of compilation of the Szkolny.eu application.\n\nTo make your own changes, please use the source code available on GitHub and see the README and license information.\n\nhttps://szkolny.eu/github/android</string>
     <string name="build_invalid_unstaged_changes">This build contains changes not committed to any revision. Save and publish all changes before \"release\".\n\nFor security reasons and for compliance with the license, the use of the application has been blocked.</string>
     <string name="build_invalid_debug">You are using a \"debug\" build. This information will only be displayed once for the current device.</string>
-    <string name="build_valid_unofficial">You are using an unofficial compilation of the Szkolny.eu application. We recommend that you use only the official versions of the application.\n\nLast changes in this version were made by:\n%3$s\nin the repository:\n%1$s (%2$s).\n\nThis window will not reappear.</string>
+    <string name="build_valid_unofficial">You are using an unofficial compilation of the eDziennikus application.\n\nLast changes in this version were made by:\n%3$s\nin the repository:\n%1$s (%2$s).\n\nThis window will not reappear.</string>
     <string name="build_invalid_no_commit_hash">The hash of the current commit was not found. Check Gradle configuration.</string>
     <string name="home_archive_close_no_target_text">Child %s does not have a profile on this account in the current school year. Probably this profile has been deleted or the student no longer attends this class.\n\nTo go to the current profile, select a student from the list or log in to their account with the Add student button.</string>
     <string name="build_invalid_no_remote_repo">A reference to a remote repository was not found. Make sure you are using the official repository fork and verify your Gradle configuration.</string>
@@ -1325,8 +1321,8 @@
     <string name="color_red">Red</string>
     <string name="notes_action_add">Add note</string>
     <string name="notes_type_grade">Grade</string>
-    <string name="privacy_policy_dialog_html"><![CDATA[By using the application, you confirm that you have <a href="https://szkolny.eu/privacy-policy">read the Privacy Policy</a> and accept its provisions.<br /><br />The authors of the application are not responsible for the use of the Szkolny.eu application.]]></string>
-    <string name="login_chooser_version_format">Szkolny.eu v%s\n%s</string>
+    <string name="privacy_policy_dialog_html"><![CDATA[By using the application, you confirm that you do so at your own risk.<br /><br />The authors of the application are not responsible for the use of the eDziennikus application.]]></string>
+    <string name="login_chooser_version_format">eDziennikus v%s\n%s</string>
     <string name="config_appearance">Appearance</string>
     <string name="agenda_config_elearning">Online learning</string>
     <string name="event_type_elearning">online lesson</string>

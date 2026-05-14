@@ -83,7 +83,7 @@ class HomeAvailabilityCard(
         else if (update != null && update.versionCode > BuildConfig.VERSION_CODE) {
             b.homeAvailabilityTitle.setText(R.string.home_availability_title)
             b.homeAvailabilityText.setText(R.string.home_availability_text, update.versionName)
-            b.homeAvailabilityUpdate.isVisible = !app.buildManager.isPlayRelease
+            b.homeAvailabilityUpdate.isVisible = true
             b.homeAvailabilityIcon.setImageResource(R.drawable.ic_update)
             onInfoClick = {
                 UpdateAvailableDialog(activity, update).show()

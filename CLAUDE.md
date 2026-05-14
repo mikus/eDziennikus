@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Szkolny.eu (`pl.szczodrzynski.edziennik`) is an Android app that aggregates multiple Polish school e-diary backends — Librus Synergia, Vulcan UONET+, Mobidziennik, USOS, Podlasie — behind a single UI. README is in Polish. Licensed GPLv3 with an addendum forbidding redistribution of compiled builds through Google Play or any store hosting the official app.
+eDziennikus (`eu.mikus.edziennik`) is an Android app for the Librus Synergia e-diary, derived from the upstream Szkolny.eu codebase. README is in Polish. Licensed GPLv3 with an addendum forbidding redistribution of compiled builds through Google Play or any store hosting the official app.
 
-The canonical upstream is `szkolny-eu/szkolny-android`; this checkout may be a fork or downstream copy. CI workflows reference the upstream repo by full path (see CI section).
+The canonical upstream is `szkolny-eu/szkolny-android`; this checkout is a fork (`mikus/szkolny-android`) that has been narrowed to a single backend, repackaged under `eu.mikus.edziennik`, and rewired to its own CI (see CI section). The Librus provider code (`data/api/edziennik/librus/`) is the only live e-diary backend; a `demo/` provider exists for offline screenshots and tests.
 
 ## Build & toolchain
 
@@ -31,20 +31,20 @@ Test source sets (`app/src/test/`, `app/src/androidTest/`) are **not yet wired u
 
 ## Architecture
 
-Single Gradle module `:app`. All code under `app/src/main/java/pl/szczodrzynski/edziennik/`.
+Single Gradle module `:app`. All code under `app/src/main/java/eu/mikus/edziennik/`.
 
-### Multi-backend e-diary layer (`data/api/edziennik/`)
-The core abstraction. Each subpackage implements one backend:
-- `librus/`, `vulcan/`, `mobidziennik/`, `podlasie/`, `usos/`, `demo/` — concrete providers
-- `template/` — boilerplate for new providers
+### E-diary backend (`data/api/edziennik/`)
+The provider abstraction is kept from upstream even though the fork ships a single backend, so the multi-provider scaffolding can be re-used if more providers come back later.
+- `librus/` — the only live provider (Librus Synergia, mostly HTML-scrape backed)
+- `demo/` — offline sample provider, useful for screenshots and tests
 - `EdziennikTask.kt` — task orchestrator entry point at this layer
-- `ProfileArchiver.kt` — cross-provider profile archiving
-- `helper/` — shared helpers used by multiple providers
+- `ProfileArchiver.kt` — profile archiving (still parameterised over provider IDs)
+- `helper/` — shared helpers
 
-When changing provider behavior, scope changes to the provider's subpackage; cross-cutting changes to the task contract belong in `helper/` or the database layer.
+When changing Librus behavior, scope changes to `librus/`; cross-cutting changes to the task contract belong in `helper/` or the database layer.
 
 ### Persistence
-Single Room database `AppDb` (`data/db/`). Migration schemas are committed under `app/schemas/pl.szczodrzynski.edziennik.data.db.AppDb/` — every schema change requires a new committed JSON schema and a written migration. Two kapt processors generate DAO code: `androidx.room:room-compiler` and `eu.szkolny.selective-dao:codegen` (the latter generates selective-update DAOs from annotations).
+Single Room database `AppDb` (`data/db/`). Migration schemas are committed under `app/schemas/eu.mikus.edziennik.data.db.AppDb/` — every schema change requires a new committed JSON schema and a written migration. Two kapt processors generate DAO code: `androidx.room:room-compiler` and `eu.szkolny.selective-dao:codegen` (the latter generates selective-update DAOs from annotations).
 
 ### UI
 Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timetable, widgets, etc.). Shared scaffolding in `ui/base/`, `ui/dialogs/`, `ui/views/`. Both **DataBinding and ViewBinding are enabled** — existing code mixes the two. AndroidX Navigation (`navigation-fragment-ktx`) is used for fragment graphs.
@@ -87,7 +87,7 @@ Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timet
 - Treat platform types from Android APIs as nullable unless the doc explicitly guarantees otherwise.
 
 **Concurrency**:
-- New async code uses Kotlin coroutines. The repo idiom is to implement `CoroutineScope` directly on the Fragment/controller with `override val coroutineContext = Job() + Dispatchers.Main`, then `launch { withContext(Dispatchers.IO) { ... } }`. See [AgendaFragmentDefault.kt:43-52](app/src/main/java/pl/szczodrzynski/edziennik/ui/agenda/AgendaFragmentDefault.kt) for the canonical shape.
+- New async code uses Kotlin coroutines. The repo idiom is to implement `CoroutineScope` directly on the Fragment/controller with `override val coroutineContext = Job() + Dispatchers.Main`, then `launch { withContext(Dispatchers.IO) { ... } }`. See [AgendaFragmentDefault.kt:43-52](app/src/main/java/eu/mikus/edziennik/ui/agenda/AgendaFragmentDefault.kt) for the canonical shape.
 - **Don't add new `AsyncTask` or raw `Thread { }`.** They still exist in legacy paths and should be migrated when the surrounding code is already being touched (with tests — see refactor rule).
 - Cancel the scope's `Job` in `onDestroyView` / `onCleared` when tied to a lifecycle.
 
@@ -135,25 +135,23 @@ ViewBinding and DataBinding are both enabled. ViewBinding is dominant (~6:1 by f
 
 These changes have hidden coordination cost or break things in non-obvious ways. **Flag and confirm before doing any of them**, even if the diff looks small:
 
-- **`.github/workflows/_build.yml`** — CI doesn't use the local copy. All workflows reference `szkolny-eu/szkolny-android/.github/workflows/_build.yml@develop`. Editing the local file alone is a no-op for actual CI; coordinate with upstream.
-- **`app/schemas/pl.szczodrzynski.edziennik.data.db.AppDb/`** — these JSON files are *committed snapshots* of past Room schemas. Room uses them to verify migrations. Don't edit them. To change schema, bump `AppDb` version, write a new `Migration`, and let Room export the new snapshot on the next build.
+- **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `assembleDebug` on every push/PR; `release.yml` triggers on `v*.*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
+- **`app/schemas/eu.mikus.edziennik.data.db.AppDb/`** — these JSON files are *committed snapshots* of past Room schemas. Room uses them to verify migrations. Don't edit them. To change schema, bump `AppDb` version, write a new `Migration`, and let Room export the new snapshot on the next build.
 - **Shipped Room `Migration` objects** — never edit a migration after it has shipped (a user already ran it). Add a new migration instead.
 - **`app/src/main/cpp/`** (`aes.{c,h}`, `base64.cpp`, `szkolny-signing.cpp`) — native crypto and API request signing. Changes here can silently break provider authentication. Don't refactor unless the task explicitly requires it.
 - **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker on debug builds is the standard tool).
-- **`pl.szczodrzynski.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and Play Store identity depend on exact values. Don't change without coordinating with the release process.
+- **`eu.mikus.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and sideload identity depend on exact values. Changing the application ID forces users to reinstall and loses their data.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
 - **Adding new dependencies** — many providers parse HTML using `jsoup` + `jspoon` already in deps. Don't add a second HTML parser, JSON library, or networking layer without justifying why the existing one is insufficient.
 - **`gradle.properties` flags** — `android.enableJetifier`, `android.enableR8.fullMode`, `android.ndk.suppressMinSdkVersionError` are set deliberately. Don't flip them as "cleanup".
 
 ## CI / release pipeline
 
-Workflows in `.github/workflows/`:
-- `_build.yml` — reusable workflow definition. **All other workflows `uses:` the upstream copy at `szkolny-eu/szkolny-android/.github/workflows/_build.yml@develop`, not the local file.** Editing the local copy alone does not change actual CI behavior — coordinate any change with the upstream repo.
-- `push-main.yml` — push to `main` → Play AAB build & upload
-- `release.yml` — `v*.*` tag → APK release to SSH/GitHub/Firebase/Discord
-- `schedule-dispatch.yml` — nightly cron (23:30 UTC) checks for new commits and triggers a nightly build if any
+Workflows in `.github/workflows/` — both are self-contained for this fork (no upstream reusable workflow indirection):
+- `build.yml` — push / PR to any branch → `./gradlew assembleDebug`, uploads `app-debug.apk` as a workflow artifact. The smoke gate.
+- `release.yml` — `v*.*` tag → `./gradlew assembleRelease` with a signing config materialised from repo secrets, attaches the signed APK to the GitHub Release.
 
-Python helpers under `.github/utils/` handle version bumping, signing config, changelog extraction, artifact discovery, DB persistence, and Discord posting (deps: `python-dotenv`, `pycryptodome`, `mysql-connector-python`, `requests`).
+There is no Play AAB upload, no nightly cron, and no Discord/Firebase distribution any more — those upstream paths were removed when the fork dropped its `play` and `official` flavors. Releases are sideload-only via GitHub Releases.
 
 ## Constraints to keep in mind
 

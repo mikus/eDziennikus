@@ -51,7 +51,7 @@
     <string name="agenda_lesson_changes">Stundenplanänderungen</string>
     <string name="agenda_teacher_absence">Abwesende Lehrer</string>
     <string name="ago_format">%s vor</string>
-    <string name="app_manager_dialog_text">Möglicherweise läuft auf diesem Gerät ein App-Manager, der Probleme mit der automatischen Synchronisierung verursachen könnte.\n\nUm dieses Problem zu vermeiden, schalten Sie die Batterieoptimierung für Szkolny.eu aus.\n\nKlicken Sie OK, um zu den Systemeinstellungen zu gelangen,</string>
+    <string name="app_manager_dialog_text">Möglicherweise läuft auf diesem Gerät ein App-Manager, der Probleme mit der automatischen Synchronisierung verursachen könnte.\n\nUm dieses Problem zu vermeiden, schalten Sie die Batterieoptimierung für eDziennikus aus.\n\nKlicken Sie OK, um zu den Systemeinstellungen zu gelangen,</string>
     <string name="app_manager_dialog_title">Es gab ein Problem mit der Synchronisierung</string>
     <string name="app_manager_open_failed">Konnte Einstellungen nicht öffnen</string>
     <string name="are_you_sure">Sind Sie sicher?</string>
@@ -265,7 +265,7 @@
     <string name="edziennik_notification_api_first_login_title">Erste Anmeldung</string>
     <string name="edziennik_notification_api_notify_title">Benachrichtigungen erstellen</string>
     <string name="edziennik_notification_api_sync_title_format">Profil %s synchronisieren…</string>
-    <string name="edziennik_notification_api_text">Dank dieser Funktion kann Szkolny.eu Daten mit einem E-Klassenbuch synchronisieren. Sie können es schließen, weil es im Moment nichts tut.</string>
+    <string name="edziennik_notification_api_text">Dank dieser Funktion kann eDziennikus Daten mit einem E-Klassenbuch synchronisieren. Sie können es schließen, weil es im Moment nichts tut.</string>
     <string name="edziennik_notification_api_title">Synchronisierungsdienst</string>
     <string name="edziennik_progress_endpoint_account_details">Kontodaten herunterladen…</string>
     <string name="edziennik_progress_endpoint_announcements">Schulankündigungen herunterladen…</string>
@@ -366,7 +366,7 @@
     <string name="faq_back_title">Haben Sie eine Antwort gefunden?</string>
     <string name="faq_text">Wenn Sie eine Frage haben, können Sie zuerst die FAQ-Datenbank öffnen. Wollen Sie diese Website überprüfen?</string>
     <string name="feedback_ask_a_question">Eine Frage stellen</string>
-    <string name="feedback_faq">Häufig gestellte Fragen - <a href="http://szkolny.eu/pomoc/">offen</a></string>
+    <string name="feedback_faq">Fehlerberichte und Fragen - <a href="https://github.com/mikus/szkolny-android/issues">GitHub Issues</a></string>
     <string name="feedback_faq_button">FAQ-Datenbank öffnen</string>
     <string name="feedback_history">Geschichte des Gesprächs</string>
     <string name="feedback_send">Senden</string>
@@ -554,7 +554,7 @@
     <string name="login_librus_title">Einloggen bei LIBRUS® Synergia</string>
     <string name="login_migration_error_format">Ein Migrationsfehler ist aufgetreten. Er wurde bereits gemeldet, was bedeutet, dass ich versuchen werde, ihn zu beheben.\n\nSie können die App weiterhin verwenden. Bei Problemen versuchen Sie, das Profil zu entfernen und neu zu erstellen</string>
     <string name="login_migration_subtitle">Die App hat ein großes Update erhalten. Wenn bei der Operation Probleme auftreten, können Sie mich über die Hilfe und das Feedback im Menü kontaktieren.</string>
-    <string name="login_migration_title">Szkolny.eu wurde aktualisiert</string>
+    <string name="login_migration_title">eDziennikus wurde aktualisiert</string>
     <string name="login_migration_toast">Migration…</string>
     <string name="login_progress_title">Anmelden…</string>
     <string name="login_startpage_subtitle">Wählen Sie aus, welches E-Klassenbuch Ihre Schule verwendet. In späteren Phasen können Sie mehrere Konten aus verschiedenen E-Klassenbuchen hinzufügen.</string>
@@ -713,10 +713,10 @@
     <string name="notification_event_no_subject_format">%1$s auf %2$s</string>
     <string name="notification_filter_warning">Sind Sie sicher, dass Sie diese Einstellungen anwenden möchten?\n\nSie werden Informationen über einige Daten nicht sehen, so dass Sie wichtige Nachrichten oder Noten verpassen könnten.\n\nDie Einstellungen werden auf das aktuell ausgewählte Profil angewendet</string>
     <string name="notification_get_data_cancel">Abbrechen</string>
-    <string name="notification_get_data_error_summary">Szkolny.eu: Fehler</string>
+    <string name="notification_get_data_error_summary">eDziennikus: Fehler</string>
     <string name="notification_get_data_error_title">Fehler beim herunterladen von Daten für Profil %s</string>
     <string name="notification_get_data_once_again">Erneut versuchen</string>
-    <string name="notification_get_data_summary">Szkolny.eu: Herunterladen</string>
+    <string name="notification_get_data_summary">eDziennikus: Herunterladen</string>
     <string name="notification_get_data_text">Daten herunterladen</string>
     <string name="notification_get_data_title">Aktualisieren</string>
     <string name="notification_grade_format">Neue Note (%s) auf %s</string>
@@ -761,7 +761,7 @@
     <string name="notification_type_timetable_change">Stundenplanänderung</string>
     <string name="notification_type_timetable_lesson_change">Lektionsänderung</string>
     <string name="notification_type_update">Update</string>
-    <string name="notification_updates_summary">Szkolny.eu: Update</string>
+    <string name="notification_updates_summary">eDziennikus: Update</string>
     <string name="notification_updates_text">Klicken Sie zum Herunterladen der Version %s</string>
     <string name="notification_updates_title">Update verfügbar</string>
     <string name="notification_user_action_required_captcha_librus">LIBRUS® Rodzina einloggen: erfordert eine Lösung für die Captcha-Aufgabe. Klicken Sie hier, um sich weiter im Tagebuch anzumelden.</string>
@@ -789,15 +789,15 @@
     <string name="rate_snackbar_negative">Niemals</string>
     <string name="rate_snackbar_neutral">Später</string>
     <string name="rate_snackbar_positive">etzt bewerten</string>
-    <string name="rate_snackbar_text">Zeigen Sie, dass Ihnen Szkolny.eu gefällt - bewerten Sie die App und machen Sie sie noch besser!</string>
+    <string name="rate_snackbar_text">Zeigen Sie, dass Ihnen eDziennikus gefällt - bewerten Sie die App und machen Sie sie noch besser!</string>
     <string name="refresh">Aktualisieren</string>
     <string name="registration_config_disable_progress_text">Benutzerregistrierung aufheben…</string>
     <string name="registration_config_disable_text">Einige Funktionen wie Ereignisfreigabe oder Benachrichtigungsweiterleitung können nicht mehr verwendet werden.\n\nDie Funktion kann je nach ausgewähltem Profil aktiviert / deaktiviert werden.</string>
     <string name="registration_config_enable_progress_text">Gemeinsame Ereignisse herunterladen…</string>
-    <string name="registration_config_enable_text">Die Registrierung erfolgt automatisch, wenn diese Option aktiviert ist. Sie können Ereignisse erstellen und empfangen, die mit anderen Schülern in Ihrer Klasse geteilt werden. Dank dessen können Sie Elemente, die nicht vom Lehrer gespeichert wurden, zum Klassenbuch hinzufügen.\n\nStellen Sie sicher, dass Sie die Bestimmungen der <a href="http://szkolny.eu/privacy-policy"> Datenschutzrichtlinie </a> lesen und die Bestimmungen akzeptieren.</string>
+    <string name="registration_config_enable_text">Die Registrierung erfolgt automatisch, wenn diese Option aktiviert ist. Sie können Ereignisse erstellen und empfangen, die mit anderen Schülern in Ihrer Klasse geteilt werden. Dank dessen können Sie Elemente, die nicht vom Lehrer gespeichert wurden, zum Klassenbuch hinzufügen.</string>
     <string name="registration_config_event_sharing_text">Um das Ereignis freigeben zu können, müssen Sie die Serverregistrierungsoption aktivieren. Auf diese Weise können Sie Ereignisse erstellen und empfangen, die in Ihrer Klasse geteilt werden.\n\nWenn Sie auf OK klicken, wird diese automatisch aktiviert.\n\nStellen Sie sicher, dass Sie die Bedingungen lesen und akzeptieren.</string>
     <string name="registration_config_event_sharing_title">Ereignisse teilen</string>
-    <string name="registration_config_title">Szkolny.eu Server-Registrierung</string>
+    <string name="registration_config_title">eDziennikus Server-Registrierung</string>
     <string name="remove">Löschen</string>
     <string name="removed">gelöschtet</string>
     <string name="report">Melden</string>
@@ -1010,7 +1010,6 @@
     <string name="sync_error_invalid_device">Ungültiges Gerät</string>
     <string name="sync_error_invalid_login">Ungültige Anmeldedaten</string>
     <string name="sync_error_invalid_school_name">Ungültiger Schulname oder verbotene Zeichen</string>
-    <string name="sync_error_invalid_server_address">Die Serveradresse ist ungültig. Stellen Sie sicher, dass es korrekt eingegeben wurde und keine Leerzeichen enthält.</string>
     <string name="sync_error_invalid_token">Ungültiges Token angegeben.</string>
     <string name="sync_error_librus_disconnected">Das LIBRUS® Rodzina-Konto hat die Verbindung zum LIBRUS® Synergia-Konto verloren. Melden Sie sich bei portal.librus.pl oder der offiziellen "LIBRUS®" App an und befolgen Sie die Anweisungen zur Reparatur Ihres Kontos.</string>
     <string name="sync_error_librus_not_activated">Das LIBRUS® Rodzina-Konto wurde nicht aktiviert. Aktivieren Sie das Konto mit der E-Mail, die Sie erhalten haben.</string>
@@ -1103,7 +1102,7 @@
     <string name="timetable_generate_selected_week">Für ausgewählte Woche</string>
     <string name="timetable_generate_show_profile_name">Profilnamen anzeigen</string>
     <string name="timetable_generate_show_teachers_names">Namen von Lehrern anzeigen</string>
-    <string name="timetable_generate_success_text">Der Stundenplan wurde im Verzeichnis Szkolny.eu als Bilddatei gespeichert. \ N \ nSie können ihn sofort öffnen oder freigeben.</string>
+    <string name="timetable_generate_success_text">Der Stundenplan wurde im Verzeichnis eDziennikus als Bilddatei gespeichert. \ N \ nSie können ihn sofort öffnen oder freigeben.</string>
     <string name="timetable_generate_success_title">Gemacht!</string>
     <string name="timetable_lesson_cancelled">Lektion abgesagt</string>
     <string name="timetable_lesson_change">Ersatz</string>
