@@ -14,8 +14,6 @@ import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
-import androidx.navigation.NavOptions
-import androidx.navigation.navOptions
 import androidx.viewbinding.ViewBinding
 import com.google.android.material.textfield.TextInputLayout
 import com.mikepenz.iconics.IconicsDrawable
@@ -54,18 +52,6 @@ class LoginFormFragment : Fragment(), CoroutineScope {
         get() = job + Dispatchers.Main
 
     private val credentials = mutableMapOf<BaseCredential, ViewBinding>()
-    private val platformName
-        get() = arguments?.getString("platformName")
-    private val platformGuideText
-        get() = arguments?.getString("platformGuideText")
-    private val platformDescription
-        get() = arguments?.getString("platformDescription")
-    private val platformFormFields
-        get() = arguments?.getString("platformFormFields")?.split(";")
-    private val platformData
-        get() = arguments?.getString("platformData")?.toJsonObject()
-    private val platformStoreKey
-        get() = arguments?.getString("platformStoreKey")
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -97,13 +83,10 @@ class LoginFormFragment : Fragment(), CoroutineScope {
         }
 
         b.title.setText(R.string.login_form_title_format, app.getString(register.registerName))
-        b.subTitle.text = platformName ?: app.getString(mode.name)
-        b.text.text = platformGuideText ?: app.getString(mode.guideText)
+        b.subTitle.text = app.getString(mode.name)
+        b.text.text = app.getString(mode.guideText)
 
         for (credential in mode.credentials) {
-            if (platformFormFields?.contains(credential.keyName) == false)
-                continue
-
             val b = when (credential) {
                 is FormField -> buildFormField(credential)
                 is FormCheckbox -> buildFormCheckbox(credential)
@@ -247,11 +230,6 @@ class LoginFormFragment : Fragment(), CoroutineScope {
         if (App.debugMode && b.fakeLogin.isChecked) {
             payload.putBoolean("fakeLogin", true)
         }
-
-        if (platformStoreKey == null)
-            payload.putAll(platformData?.toBundle() ?: Bundle())
-        else
-            payload.putBundle(platformStoreKey, platformData?.toBundle())
 
         var hasErrors = false
         credentials.forEach { (credential, b) ->

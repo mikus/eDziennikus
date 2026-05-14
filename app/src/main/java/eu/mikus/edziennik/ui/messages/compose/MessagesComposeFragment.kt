@@ -190,14 +190,10 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
 
         b.subjectLayout.counterMaxLength = when (app.profile.loginStoreType) {
             LoginType.LIBRUS -> 150
-            LoginType.IDZIENNIK -> 180
-            LoginType.EDUDZIENNIK -> 0
             else -> -1
         }
         b.textLayout.counterMaxLength = when (app.profile.loginStoreType) {
             LoginType.LIBRUS -> 20000
-            LoginType.IDZIENNIK -> 1983
-            LoginType.EDUDZIENNIK -> 0
             else -> -1
         }
 

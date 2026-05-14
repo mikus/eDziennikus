@@ -14,7 +14,6 @@ import eu.mikus.edziennik.data.db.enums.LoginMode
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.ui.grades.models.ExpandableItemModel
 import eu.mikus.edziennik.ui.login.qr.LoginQrDecoder
-import pl.szczodrzynski.fslogin.realm.RealmData
 
 object LoginInfo {
 

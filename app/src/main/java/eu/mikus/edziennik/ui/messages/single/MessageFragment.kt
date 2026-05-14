@@ -22,7 +22,6 @@ import org.greenrobot.eventbus.ThreadMode
 import eu.mikus.edziennik.*
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.MessageGetEvent
-import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.databinding.MessageFragmentBinding
 import eu.mikus.edziennik.ext.*
@@ -176,16 +175,6 @@ class MessageFragment : Fragment(), CoroutineScope {
         if (message.body == null) {
             EdziennikTask.messageGet(App.profileId, message).enqueue(activity)
             return
-        }
-
-        if (app.profile.loginStoreType == LoginType.IDZIENNIK) {
-            val meta = "\\[META:([A-z0-9]+);([0-9-]+)]".toRegex().find(message.body!!)
-            val messageIdBefore = meta?.get(2)?.toLong() ?: -1
-
-            if (messageIdBefore == -1L) {
-                EdziennikTask.messageGet(App.profileId, message).enqueue(activity)
-                return
-            }
         }
 
         if (app.data.messagesConfig.needsReadStatus) {

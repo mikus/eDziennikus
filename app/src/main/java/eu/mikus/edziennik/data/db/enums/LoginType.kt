@@ -11,8 +11,4 @@ enum class LoginType(
 ) {
     LIBRUS(id = 2, features = FEATURES_LIBRUS),
     DEMO(id = 8, features = setOf()),
-
-    // the graveyard
-    EDUDZIENNIK(id = 5, features = FEATURES_EDUDZIENNIK),
-    IDZIENNIK(id = 3, features = FEATURES_IDZIENNIK),
 }
