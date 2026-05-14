@@ -175,11 +175,11 @@ class GenerateBlockTimetableDialog(
             lessonRanges[lesson.displayStartTime!!.value] = lesson.displayEndTime!!.value
             weekDays[lesson.displayDate!!.weekDay].add(lesson)
 
-            if (minTime == null || lesson.displayStartTime!! < minTime!!) {
+            if (minTime == null || lesson.displayStartTime!! < minTime) {
                 minTime = lesson.displayStartTime!!.clone()
             }
 
-            if (maxTime == null || lesson.displayEndTime!! > maxTime!!) {
+            if (maxTime == null || lesson.displayEndTime!! > maxTime) {
                 maxTime = lesson.displayEndTime!!.clone()
             }
 
@@ -353,7 +353,7 @@ class GenerateBlockTimetableDialog(
                 isDither = true
             }
 
-            val minTimeInt = ((minTime!!.value / 10000) * 60) + ((minTime!!.value / 100) % 100)
+            val minTimeInt = ((minTime.value / 10000) * 60) + ((minTime.value / 100) % 100)
 
             lessonRanges.forEach { (startTime, endTime) ->
                 listOf(startTime, endTime).forEach { value ->

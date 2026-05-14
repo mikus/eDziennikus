@@ -8,7 +8,7 @@ apply from: 'git-info.gradle'
 android {
     compileSdkVersion setup.compileSdk
 
-    namespace 'eu.mikus.edziennik'
+    namespace = 'eu.mikus.edziennik'
 
     defaultConfig {
         applicationId 'eu.mikus.edziennik'
@@ -57,6 +57,7 @@ android {
         }
     }
     buildFeatures {
+        buildConfig = true
         dataBinding = true
         viewBinding = true
     }
@@ -79,7 +80,7 @@ android {
         }
     }
     lint {
-        checkReleaseBuilds false
+        checkReleaseBuilds = false
     }
 }
 
@@ -95,13 +96,13 @@ tasks.whenTaskAdded { task ->
 
     tasks.register(renameTaskName, Copy) {
         dependsOn(task.name)
-        duplicatesStrategy DuplicatesStrategy.FAIL
+        duplicatesStrategy = DuplicatesStrategy.FAIL
         from file("${projectDir}/release/"),
                 file("${projectDir}/build/outputs/apk/release/"),
                 file("${projectDir}/build/outputs/mapping/release/"),
                 file("${projectDir}/build/outputs/bundle/release/")
         include "*-release.aab", "*-release.apk", "mapping.txt", "output-metadata.json"
-        destinationDir file("${projectDir}/release/")
+        destinationDir = file("${projectDir}/release/")
         rename ".+?\\.(.+)", "Edziennik_${android.defaultConfig.versionName}." + '$1'
     }
 
