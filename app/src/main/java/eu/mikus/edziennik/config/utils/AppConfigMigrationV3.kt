@@ -71,14 +71,11 @@ class AppConfigMigrationV3(p: SharedPreferences, config: Config) {
                 sync.quietHoursEnd = null
             }
 
-            sync.tokenMobidziennikList = listOf()
-            sync.tokenVulcanList = listOf()
             sync.tokenLibrusList = listOf()
             val tokens = p.getString("$s.fcmTokens", null)?.let { Gson().fromJson<Map<Int, Pair<String, List<Int>>>>(it, object: TypeToken<Map<Int, Pair<String, List<Int>>>>(){}.type) }
             tokens?.forEach {
                 val token = it.value.first
                 when (it.key) {
-                    1 -> sync.tokenMobidziennik = token // formerly LoginType.MOBIDZIENNIK.id; provider removed, FCM cleanup deferred to Task 9
                     LoginType.LIBRUS.id -> sync.tokenLibrus = token
                 }
             }

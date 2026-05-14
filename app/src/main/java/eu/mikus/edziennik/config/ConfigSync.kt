@@ -27,17 +27,13 @@ class ConfigSync(base: Config) {
     var quietHoursEnd by base.config<Time?>(null)
     var quietDuringLessons by base.config<Boolean>(false)
 
-    // FCM Tokens
+    // FCM Tokens (Firebase has been removed; tokenApp/tokenLibrus remain as
+    // perma-null stubs because they're still read elsewhere: SzkolnyApi.getDevice()
+    // and LibrusApiPushConfig respectively. With no Firebase to populate them,
+    // those code paths become no-ops. Removing the readers is a follow-up task.)
     var tokenApp by base.config<String?>(null)
-    var tokenMobidziennik by base.config<String?>(null)
     var tokenLibrus by base.config<String?>(null)
-    var tokenVulcan by base.config<String?>(null)
-    var tokenVulcanHebe by base.config<String?>(null)
-
-    var tokenMobidziennikList by base.config<List<Int>> { listOf() }
     var tokenLibrusList by base.config<List<Int>> { listOf() }
-    var tokenVulcanList by base.config<List<Int>> { listOf() }
-    var tokenVulcanHebeList by base.config<List<Int>> { listOf() }
 
     // Register Availability
     private var registerAvailabilityMap by base.config<Map<String, RegisterAvailabilityStatus>>("registerAvailability") { mapOf() }

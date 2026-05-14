@@ -204,13 +204,6 @@
              |_____/ \___|_|    \_/ |_|\___\___||___/
         -->
         <service android:name=".data.api.ApiService" android:foregroundServiceType="dataSync" />
-        <service android:name=".data.firebase.MyFirebaseService"
-            android:exported="false" android:foregroundServiceType="dataSync">
-            <intent-filter android:priority="10000000">
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-                <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />
-            </intent-filter>
-        </service>
         <service android:name=".sync.UpdateDownloaderService" android:foregroundServiceType="dataSync" />
 
         <!--

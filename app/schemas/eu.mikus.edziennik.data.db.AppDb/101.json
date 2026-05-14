@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 98,
-    "identityHash": "2612ebba9802eedc7ebc69724606a23c",
+    "version": 101,
+    "identityHash": "4c141460d807d32d00faad4fb3c12522",
     "entities": [
       {
         "tableName": "grades",
@@ -892,7 +892,7 @@
       },
       {
         "tableName": "profiles",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `loginStoreId` INTEGER NOT NULL, `loginStoreType` INTEGER NOT NULL, `name` TEXT NOT NULL, `subname` TEXT, `studentNameLong` TEXT NOT NULL, `studentNameShort` TEXT NOT NULL, `accountName` TEXT, `studentData` TEXT NOT NULL, `image` TEXT, `empty` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `archiveId` INTEGER, `syncEnabled` INTEGER NOT NULL, `enableSharedEvents` INTEGER NOT NULL, `registration` INTEGER NOT NULL, `userCode` TEXT NOT NULL, `studentNumber` INTEGER NOT NULL, `studentClassName` TEXT, `studentSchoolYearStart` INTEGER NOT NULL, `dateSemester1Start` TEXT NOT NULL, `dateSemester2Start` TEXT NOT NULL, `dateYearEnd` TEXT NOT NULL, `disabledNotifications` TEXT, `lastReceiversSync` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `loginStoreId` INTEGER NOT NULL, `loginStoreType` INTEGER NOT NULL, `name` TEXT NOT NULL, `subname` TEXT, `studentNameLong` TEXT NOT NULL, `studentNameShort` TEXT NOT NULL, `accountName` TEXT, `studentData` TEXT NOT NULL, `image` TEXT, `empty` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `syncEnabled` INTEGER NOT NULL, `enableSharedEvents` INTEGER NOT NULL, `registration` INTEGER NOT NULL, `userCode` TEXT NOT NULL, `archiveId` INTEGER, `studentNumber` INTEGER NOT NULL, `studentClassName` TEXT, `studentSchoolYearStart` INTEGER NOT NULL, `dateSemester1Start` TEXT NOT NULL, `dateSemester2Start` TEXT NOT NULL, `dateYearEnd` TEXT NOT NULL, `disabledNotifications` TEXT, `lastReceiversSync` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -967,19 +967,13 @@
             "notNull": true
           },
           {
-            "fieldPath": "archiveId",
-            "columnName": "archiveId",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
             "fieldPath": "syncEnabled",
             "columnName": "syncEnabled",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "enableSharedEvents",
+            "fieldPath": "unused1",
             "columnName": "enableSharedEvents",
             "affinity": "INTEGER",
             "notNull": true
@@ -995,6 +989,12 @@
             "columnName": "userCode",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "archiveId",
+            "columnName": "archiveId",
+            "affinity": "INTEGER",
+            "notNull": false
           },
           {
             "fieldPath": "studentNumber",
@@ -1521,7 +1521,7 @@
             "notNull": true
           },
           {
-            "fieldPath": "viewId",
+            "fieldPath": "featureType",
             "columnName": "endpointViewId",
             "affinity": "INTEGER",
             "notNull": false
@@ -1629,7 +1629,7 @@
             "notNull": true
           },
           {
-            "fieldPath": "viewId",
+            "fieldPath": "navTarget",
             "columnName": "viewId",
             "affinity": "INTEGER",
             "notNull": false
@@ -1781,7 +1781,7 @@
       },
       {
         "tableName": "timetable",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `id` INTEGER NOT NULL, `type` INTEGER NOT NULL, `date` TEXT, `lessonNumber` INTEGER, `startTime` TEXT, `endTime` TEXT, `subjectId` INTEGER, `teacherId` INTEGER, `teamId` INTEGER, `classroom` TEXT, `oldDate` TEXT, `oldLessonNumber` INTEGER, `oldStartTime` TEXT, `oldEndTime` TEXT, `oldSubjectId` INTEGER, `oldTeacherId` INTEGER, `oldTeamId` INTEGER, `oldClassroom` TEXT, `isExtra` INTEGER NOT NULL, `color` INTEGER, `keep` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `id` INTEGER NOT NULL, `type` INTEGER NOT NULL, `date` TEXT, `lessonNumber` INTEGER, `startTime` TEXT, `endTime` TEXT, `subjectId` INTEGER, `teacherId` INTEGER, `teamId` INTEGER, `classroom` TEXT, `oldDate` TEXT, `oldLessonNumber` INTEGER, `oldStartTime` TEXT, `oldEndTime` TEXT, `oldSubjectId` INTEGER, `oldTeacherId` INTEGER, `oldTeamId` INTEGER, `oldClassroom` TEXT, `isExtra` INTEGER NOT NULL, `ownerId` INTEGER NOT NULL, `color` INTEGER, `keep` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `id`))",
         "fields": [
           {
             "fieldPath": "profileId",
@@ -1900,6 +1900,12 @@
           {
             "fieldPath": "isExtra",
             "columnName": "isExtra",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -2308,7 +2314,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2612ebba9802eedc7ebc69724606a23c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4c141460d807d32d00faad4fb3c12522')"
     ]
   }
 }
