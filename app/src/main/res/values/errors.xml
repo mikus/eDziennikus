@@ -122,12 +122,6 @@
     <string name="error_189" translatable="false">ERROR_LOGIN_LIBRUS_MESSAGES_TIMEOUT</string>
     <string name="error_190" translatable="false">ERROR_LIBRUS_API_TEACHER_FREE_DAYS_NOT_PUBLIC</string>
 
-    <string name="error_702" translatable="false">ERROR_USOS_OAUTH_GOT_DIFFERENT_TOKEN</string>
-    <string name="error_703" translatable="false">ERROR_USOS_OAUTH_INCOMPLETE_RESPONSE</string>
-    <string name="error_704" translatable="false">ERROR_USOS_NO_STUDENT_PROGRAMMES</string>
-    <string name="error_705" translatable="false">ERROR_USOS_API_INCOMPLETE_RESPONSE</string>
-    <string name="error_706" translatable="false">ERROR_USOS_API_MISSING_RESPONSE</string>
-
     <string name="error_900" translatable="false">EXCEPTION_API_TASK</string>
     <string name="error_901" translatable="false">EXCEPTION_LOGIN_LIBRUS_API_TOKEN</string>
     <string name="error_902" translatable="false">EXCEPTION_LOGIN_LIBRUS_PORTAL_TOKEN</string>

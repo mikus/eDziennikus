@@ -150,12 +150,6 @@ const val ERROR_LIBRUS_MESSAGES_ATTACHMENT_NOT_FOUND        = 188
 const val ERROR_LOGIN_LIBRUS_MESSAGES_TIMEOUT               = 189
 const val ERROR_LIBRUS_API_TEACHER_FREE_DAYS_NOT_PUBLIC     = 190
 
-const val ERROR_USOS_OAUTH_GOT_DIFFERENT_TOKEN              = 702
-const val ERROR_USOS_OAUTH_INCOMPLETE_RESPONSE              = 703
-const val ERROR_USOS_NO_STUDENT_PROGRAMMES                  = 704
-const val ERROR_USOS_API_INCOMPLETE_RESPONSE                = 705
-const val ERROR_USOS_API_MISSING_RESPONSE                   = 706
-
 const val EXCEPTION_API_TASK                                = 900
 const val EXCEPTION_LOGIN_LIBRUS_API_TOKEN                  = 901
 const val EXCEPTION_LOGIN_LIBRUS_PORTAL_TOKEN               = 902

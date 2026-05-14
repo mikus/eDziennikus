@@ -131,22 +131,6 @@ object LoginInfo {
                 )
             ),
             Register(
-                loginType = LoginType.USOS,
-                registerName = R.string.login_type_usos,
-                registerLogo = R.drawable.login_logo_usos,
-                loginModes = listOf(
-                    Mode(
-                        loginMode = LoginMode.USOS_OAUTH,
-                        name = R.string.login_mode_usos_oauth,
-                        icon = R.drawable.login_mode_usos_api,
-                        guideText = R.string.login_mode_usos_oauth_guide,
-                        isPlatformSelection = true,
-                        credentials = listOf(),
-                        errorCodes = mapOf(),
-                    ),
-                ),
-            ),
-            Register(
                 loginType = LoginType.DEMO,
                 registerName = R.string.login_type_demo,
                 registerLogo = R.mipmap.ic_launcher,

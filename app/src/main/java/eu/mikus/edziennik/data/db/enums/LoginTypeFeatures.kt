@@ -29,20 +29,6 @@ internal val FEATURES_LIBRUS = setOf(
     PUSH_CONFIG,
 )
 
-internal val FEATURES_USOS = setOf(
-    TIMETABLE,
-    AGENDA,
-    GRADES,
-
-    STUDENT_INFO,
-    STUDENT_NUMBER,
-    CLASS_INFO,
-    TEAM_INFO,
-    TEACHERS,
-    SUBJECTS,
-    CLASSROOMS,
-)
-
 internal val FEATURES_EDUDZIENNIK = setOf(
     TIMETABLE,
     AGENDA,

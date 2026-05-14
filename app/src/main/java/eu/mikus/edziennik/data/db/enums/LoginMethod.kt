@@ -47,8 +47,4 @@ enum class LoginMethod(
         isPossible = { _, loginStore -> !loginStore.hasLoginData("fakeLogin") },
         requiredLoginMethod = { _, _ -> LIBRUS_SYNERGIA },
     ),
-    USOS_API(
-        loginType = LoginType.USOS,
-        id = 7100,
-    ),
 }

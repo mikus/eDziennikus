@@ -59,13 +59,3 @@ const val LIBRUS_SANDBOX_URL = "https://sandbox.librus.pl/index.php?action="
 
 const val LIBRUS_SYNERGIA_HOMEWORK_ATTACHMENT_URL = "https://synergia.librus.pl/homework/downloadFile"
 const val LIBRUS_SYNERGIA_MESSAGES_ATTACHMENT_URL = "https://synergia.librus.pl/wiadomosci/pobierz_zalacznik"
-
-
-const val USOS_API_OAUTH_REDIRECT_URL = "szkolny://redirect/usos"
-
-val USOS_API_SCOPES by lazy { listOf(
-    "offline_access",
-    "studies",
-    "grades",
-    "events",
-) }
