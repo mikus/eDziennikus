@@ -18,7 +18,6 @@ import eu.mikus.edziennik.ext.after
 import eu.mikus.edziennik.ext.getSyncInterval
 import eu.mikus.edziennik.sync.SyncWorker
 import eu.mikus.edziennik.sync.UpdateWorker
-import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.dialogs.settings.NotificationFilterDialog
 import eu.mikus.edziennik.ui.dialogs.settings.QuietHoursConfigDialog
 import eu.mikus.edziennik.ui.dialogs.settings.SyncIntervalDialog
@@ -146,14 +145,6 @@ class SettingsSyncCard(util: SettingsUtil) : SettingsCard(util) {
             }
         ).also {
             it.subTextChecked = getQuietHours()
-        },
-
-        util.createActionItem(
-            text = R.string.settings_sync_web_push_text,
-            subText = R.string.settings_sync_web_push_subtext,
-            icon = CommunityMaterial.Icon2.cmd_laptop
-        ) {
-            activity.navigate(navTarget = NavTarget.WEB_PUSH)
         }
     )
 

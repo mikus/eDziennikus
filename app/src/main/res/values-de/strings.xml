@@ -296,7 +296,6 @@
     <string name="edziennik_progress_endpoint_point_grades">Punktnoten herunterladen…</string>
     <string name="edziennik_progress_endpoint_proposed_grades">Vorschlagene Noten herunterladen…</string>
     <string name="edziennik_progress_endpoint_pt_meetings">Schulversammlungen mit den Eltern herunterladen…</string>
-    <string name="edziennik_progress_endpoint_push_config">Einrichten von Push-Benachrichtigungen…</string>
     <string name="edziennik_progress_endpoint_school_info">Schulinfos herunterladen…</string>
     <string name="edziennik_progress_endpoint_student_info">Studenteninformationen herunterladen…</string>
     <string name="edziennik_progress_endpoint_subjects">Liste der Schulfächer herunterladen…</string>
@@ -452,7 +451,6 @@
     <string name="grades_year_summary_format">Ganzes Jahr: %s • %s</string>
     <string name="hello_blank_fragment">Hallo leeres Fragment</string>
     <string name="help">Hilfe</string>
-    <string name="help_notification_web_push">Die Weiterleitung von Benachrichtigungen ermöglicht es Ihnen, einen PC-Webbrowser zu koppeln, um Benachrichtigungen auf Ihrem Desktop zu empfangen. Dazu gehören neue Noten, Ereignisse, Hausaufgaben usw.\n\nKlicken Sie auf \"Benachrichtigungsweiterleitung\", um zu beginnen</string>
     <string name="help_register_agreement">Die Registrierung läuft automatisch beim ersten Login.\n\nEs werden einige Daten an den App-Server gesendet:\n- Ihre Schul-ID und Klassen-ID\n- Ihr Benutzername für die E-Klassenbuch\n- Ihr Vor- und Nachname\n\nDie einzigen Daten, die für andere Personen in Ihrer Klasse sichtbar sind, ist Ihr Name (beim Teilen von Ereignisse). Private Daten (wie Passwort, Noten usw.) werden nirgendwo versendet. Weitere Informationen finden Sie in den Datenschutz-Bestimmungen.</string>
     <string name="hint_download_again">Erneut herunterladen</string>
     <string name="hint_edit_event">Ereignis bearbeiten</string>
@@ -630,7 +628,6 @@
     <string name="menu_template">Schablone</string>
     <string name="menu_timetable">Stundenplan</string>
     <string name="menu_timetable_manual">Stundenplan-Editor</string>
-    <string name="menu_web_push">Benachrichtigungen weiterleiten</string>
     <string name="messages_attachment_cannot_download">Anhang kann nicht heruntergeladen werden</string>
     <string name="messages_attachment_cannot_download_text">Beim Herunterladen des Anhangs ist ein interner Fehler aufgetreten. Möglicherweise handelt es sich um eine schwache Internetverbindung</string>
     <string name="messages_attachment_download_again">Erneut herunterladen</string>
@@ -824,7 +821,6 @@
     <string name="settings_about_update_text">Aktualisierung</string>
     <string name="settings_about_version_text">Version</string>
     <string name="settings_more_text">Mehr</string>
-    <string name="settings_notification_web_push">Benachrichtigungsweiterleitung</string>
     <string name="settings_profile_change_image">Bild ändern</string>
     <string name="settings_profile_change_name">Name ändern</string>
     <string name="settings_profile_change_name_dialog_text">Geben Sie einen Namen für das Profil ein</string>
@@ -907,8 +903,6 @@
     <string name="settings_sync_sync_interval_text">Automatische Synchronisierung</string>
     <string name="settings_card_sync_title">Synchronisation und Benachrichtigungen</string>
     <string name="settings_sync_updates_text">Über App-Aktualisierungen benachrichtigen</string>
-    <string name="settings_sync_web_push_subtext">Benachrichtigungen auf Ihrem PC anzeigen</string>
-    <string name="settings_sync_web_push_text">Benachrichtigungsweiterleitung</string>
     <string name="settings_sync_wifi_subtext">Beschränkt die Verwendung von Mobilfunkdaten</string>
     <string name="settings_sync_wifi_text">Nur über Wi-Fi synchronisieren</string>
     <string name="settings_theme_app_background_dialog_restore">App-Hintergrund entfernen</string>
@@ -1156,16 +1150,6 @@
     <string name="update_needed">Update erforderlich</string>
     <string name="update_needed_text">Sie müssen die App aktualisieren, um sie verwenden zu können. Klicken Sie zum Herunterladen auf OK.</string>
     <string name="warning_older_version_running">Sie versuchen, eine ältere Version der App auszuführen, deren Daten möglicherweise beschädigt werden.</string>
-    <string name="web_push_configured_browsers">Gepaarte Browser</string>
-    <string name="web_push_connection_error">Keine Verbindung zum Server.</string>
-    <string name="web_push_date_paired_format">Gepaart %s</string>
-    <string name="web_push_no_browsers">Keine gepaaren Browser.</string>
-    <string name="web_push_pair_browser">paaren Sie den Browser</string>
-    <string name="web_push_really_remove">Möchten Sie diesen Browser wirklich löschen?</string>
-    <string name="web_push_token_invalid">Das Token sieht nicht gültig aus</string>
-    <string name="web_push_unavailable">Das kannst du nicht machen</string>
-    <string name="web_push_unpair_button">trennen</string>
-    <string name="web_push_you_need_to_register">Sie müssen die automatische Registrierung aktivieren, um die Benachrichtigungsweiterleitung verwenden zu können.\n\nWählen Sie in den Anmeldeeinstellungen \"Registrierung zulassen\".</string>
     <string name="what_do_you_want_to_do">Was willst du machen?</string>
     <string name="what_is_this">Was ist das?</string>
     <string name="whats_new">Was ist neu?</string>

@@ -330,7 +330,6 @@
     <string name="edziennik_progress_endpoint_point_grades">Pobieranie ocen punktowych…</string>
     <string name="edziennik_progress_endpoint_proposed_grades">Pobieranie ocen proponowanych…</string>
     <string name="edziennik_progress_endpoint_pt_meetings">Pobieranie zebrań z rodzicami…</string>
-    <string name="edziennik_progress_endpoint_push_config">Konfigurowanie natychmiastowych powiadomień…</string>
     <string name="edziennik_progress_endpoint_school_info">Pobieranie informacji o szkole…</string>
     <string name="edziennik_progress_endpoint_student_info">Pobieranie informacji o uczniu…</string>
     <string name="edziennik_progress_endpoint_subjects">Pobieranie listy przedmiotów…</string>
@@ -503,7 +502,6 @@
     <string name="grades_year_summary_format">Cały rok: %s • %s</string>
     <string name="hello_blank_fragment">Witaj pusty fragmencie</string>
     <string name="help">Pomoc</string>
-    <string name="help_notification_web_push">Przekazywanie powiadomień umożliwia sparowanie z przeglądarką internetową w celu wysyłania wszystkich powiadomień z aplikacji na komputer. Można do nich zaliczyć np. nowe oceny, wydarzenia, zadania domowe itp.\n\nKliknij \"Przekazywanie powiadomień\", aby rozpocząć.</string>
     <string name="help_register_agreement">Rejestracja odbędzie się automatycznie przy pierwszym logowaniu do e-dziennika.\n\nDo poprawnego działania funkcji zostaną przesłane:\n- Twój identyfikator szkoły i klasy\n- Twoja nazwa użytkownika do e-dziennika\n- Twoje imię i nazwisko\n\nJedyne dane widoczne dla innych osób z twojej klasy to Imię i Nazwisko podczas udostępniania wydarzeń. Nie zostaną wysłane żadne prywatne dane, takie jak hasła, oceny itp. Dowiedz się więcej w Polityce Prywatności.</string>
     <string name="hint_download_again">Pobierz ponownie</string>
     <string name="hint_edit_event">Edytuj wydarzenie</string>
@@ -693,7 +691,6 @@
     <string name="menu_template">Szablon</string>
     <string name="menu_timetable">Plan lekcji</string>
     <string name="menu_timetable_manual">Edytor planu lekcji</string>
-    <string name="menu_web_push">Przekazywanie powiadomień</string>
     <string name="messages_attachment_cannot_download">Nie można pobrać załącznika</string>
     <string name="messages_attachment_cannot_download_text">Wystąpił błąd wewnętrzny pobierania załącznika. Może to być spowodowane słabym połączeniem internetowym.</string>
     <string name="messages_attachment_download_again">Pobierz ponownie</string>
@@ -904,7 +901,6 @@
     <string name="settings_add_student_subtext">Zaloguj konto ucznia/rodzica w aplikacji</string>
     <string name="settings_add_student_text">Dodaj nowego ucznia</string>
     <string name="settings_more_text">Więcej</string>
-    <string name="settings_notification_web_push">Przekazywanie powiadomień</string>
     <string name="settings_profile_change_image">Zmień obrazek</string>
     <string name="settings_profile_change_name">Zmień nazwę</string>
     <string name="settings_profile_change_name_dialog_text">Podaj nazwę profilu</string>
@@ -989,8 +985,6 @@
     <string name="settings_sync_sync_interval_text">Synchronizacja automatyczna</string>
     <string name="settings_card_sync_title">Synchronizacja i powiadomienia</string>
     <string name="settings_sync_updates_text">Powiadamiaj o aktualizacjach aplikacji</string>
-    <string name="settings_sync_web_push_subtext">Pokazuj powiadomienia na swoim komputerze</string>
-    <string name="settings_sync_web_push_text">Przekazywanie powiadomień</string>
     <string name="settings_sync_wifi_subtext">Ogranicza użycie danych komórkowych</string>
     <string name="settings_sync_wifi_text">Synchronizuj tylko przez Wi-Fi</string>
     <string name="settings_theme_app_background_dialog_restore">Usuń tło aplikacji</string>
@@ -1245,16 +1239,6 @@
     <string name="update_needed">Wymagana aktualizacja</string>
     <string name="update_needed_text">Musisz zaktualizować aplikację, by móc dalej z niej korzystać. Kliknij OK, aby pobrać.</string>
     <string name="warning_older_version_running">Próbujesz uruchomić starszą wersję aplikacji, co może uszkodzić jej dane.</string>
-    <string name="web_push_configured_browsers">Sparowane przeglądarki</string>
-    <string name="web_push_connection_error">Brak połączenia z serwerem.</string>
-    <string name="web_push_date_paired_format">Połączono %s</string>
-    <string name="web_push_no_browsers">Brak sparowanych przeglądarek.</string>
-    <string name="web_push_pair_browser">Sparuj przeglądarkę</string>
-    <string name="web_push_really_remove">Czy na pewno chcesz usunąć tą przeglądarkę?</string>
-    <string name="web_push_token_invalid">Token nie wygląda na prawidłowy</string>
-    <string name="web_push_unavailable">Nie możesz tego zrobić</string>
-    <string name="web_push_unpair_button">Odłącz</string>
-    <string name="web_push_you_need_to_register">Musisz włączyć rejestrację automatyczną, by korzystać z przekazywania powiadomień.\n\nZaznacz \"Zezwól na rejestrację\" w ustawieniach logowania.</string>
     <string name="what_do_you_want_to_do">Co chcesz zrobić?</string>
     <string name="what_is_this">Co to jest?</string>
     <string name="whats_new">Co nowego?</string>

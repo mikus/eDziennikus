@@ -26,20 +26,7 @@ public class ChangelogIntroActivity extends IntroActivity {
             setPageScrollInterpolator(android.R.interpolator.fast_out_slow_in);
         }
 
-        /*if (app.appConfig.lastAppVersion < 120) {
-            addSlide(new SimpleSlide.Builder()
-                    .title(R.string.intro_web_push_title)
-                    .description(R.string.intro_web_push_text)
-                    .image(R.drawable.intro_web_push)
-                    .background(R.color.introPage5Color)
-                    .backgroundDark(R.color.introPage5ColorDark)
-                    .buttonCtaLabel(R.string.ok)
-                    .buttonCtaClickListener(v -> nextSlide())
-                    .scrollable(true)
-                    .build());
-        }
-
-        if (app.appConfig.lastAppVersion < 141) {
+        /*if (app.appConfig.lastAppVersion < 141) {
             addSlide(new SimpleSlide.Builder()
                     .title(R.string.intro_grades_editor_title)
                     .description(R.string.intro_grades_editor_text)

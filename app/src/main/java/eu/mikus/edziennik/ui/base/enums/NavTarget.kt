@@ -32,7 +32,6 @@ import eu.mikus.edziennik.ui.settings.ProfileManagerFragment
 import eu.mikus.edziennik.ui.settings.SettingsFragment
 import eu.mikus.edziennik.ui.teachers.TeachersListFragment
 import eu.mikus.edziennik.ui.timetable.TimetableFragment
-import eu.mikus.edziennik.ui.webpush.WebPushFragment
 
 enum class NavTarget(
     val id: Int,
@@ -234,10 +233,5 @@ enum class NavTarget(
         id = 504,
         fragmentClass = MessagesComposeFragment::class.java,
         nameRes = R.string.menu_message_compose,
-    ),
-    WEB_PUSH(
-        id = 140,
-        fragmentClass = WebPushFragment::class.java,
-        nameRes = R.string.menu_web_push,
     )
 }

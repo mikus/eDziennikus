@@ -32,17 +32,13 @@ class SzkolnyTask(val app: App, val syncingProfiles: List<Profile>) : IApiTask(-
         notifications.run()
 
         val appSyncProfiles = profiles.filter { it.canShare }
-        // App Sync conditions:
-        //    - every 24 hours && any profile is registered
-        //    - if there are new notifications && any browser is paired
+        // App Sync condition: every 24 hours && any profile is registered
         val shouldAppSync =
-                System.currentTimeMillis() - app.config.sync.lastAppSync > 24* HOUR *1000
+                System.currentTimeMillis() - app.config.sync.lastAppSync > 24 * HOUR * 1000
                         && appSyncProfiles.isNotEmpty()
-                        || notificationList.isNotEmpty()
-                        && app.config.sync.webPushEnabled
 
         if (shouldAppSync) {
-            // send notifications to web push, get shared events
+            // sync shared events for registered profiles
             val addedEvents = AppSync(app, notificationList, appSyncProfiles, api).run(app.config.sync.lastAppSync)
             if (addedEvents > 0) {
                 // create notifications for shared events (not present before app sync)

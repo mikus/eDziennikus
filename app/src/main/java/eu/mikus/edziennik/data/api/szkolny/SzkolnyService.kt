@@ -20,9 +20,6 @@ interface SzkolnyService {
     @POST("share")
     fun shareNote(@Body request: NoteShareRequest): Call<ApiResponse<Unit>>
 
-    @POST("webPush")
-    fun webPush(@Body request: WebPushRequest): Call<ApiResponse<WebPushResponse>>
-
     @POST("errorReport")
     fun errorReport(@Body request: ErrorReportRequest): Call<ApiResponse<Unit>>
 

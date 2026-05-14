@@ -143,7 +143,6 @@ const val ERROR_LIBRUS_API_MAINTENANCE                      = 181
 const val ERROR_LIBRUS_PORTAL_MAINTENANCE                   = 182
 const val ERROR_LIBRUS_API_NOTICEBOARD_PROBLEM              = 183
 const val ERROR_LOGIN_LIBRUS_PORTAL_CSRF_EXPIRED            = 184
-const val ERROR_LIBRUS_API_DEVICE_REGISTERED                = 185
 const val ERROR_LIBRUS_MESSAGES_NOT_FOUND                   = 186
 const val ERROR_LOGIN_LIBRUS_API_INVALID_REQUEST            = 187
 const val ERROR_LIBRUS_MESSAGES_ATTACHMENT_NOT_FOUND        = 188

@@ -9,6 +9,5 @@ import eu.mikus.edziennik.data.db.full.EventFull
 
 data class ServerSyncResponse(
         val events: List<EventFull>,
-        val notes: List<Note>,
-        val hasBrowsers: Boolean? = null
+        val notes: List<Note>
 )

@@ -44,8 +44,6 @@ open class LibrusApi(open val data: DataLibrus, open val lastSync: Long?) {
                             .withResponse(response))
                     return
                 }
-                /*
-{"Status":"Error","Code":"DeviceRegistered","Message":"This device is alerdy registered.","Resources":{"..":{"Url":"https:\/\/api.librus.pl\/2.0\/Root"}},"Url":"https:\/\/api.librus.pl\/2.0\/ChangeRegister"}*/
                 val error = if (response?.code() == 200) null else
                     json.getString("Code") ?:
                     json.getString("Message") ?:
@@ -67,7 +65,6 @@ open class LibrusApi(open val data: DataLibrus, open val lastSync: Long?) {
                         "InvalidRequest" -> ERROR_LIBRUS_API_INVALID_REQUEST_PARAMS
                         "Nieprawidłowy węzeł." -> ERROR_LIBRUS_API_INCORRECT_ENDPOINT
                         "NoticeboardProblem" -> ERROR_LIBRUS_API_NOTICEBOARD_PROBLEM
-                        "DeviceRegistered" -> ERROR_LIBRUS_API_DEVICE_REGISTERED
                         "Maintenance" -> ERROR_LIBRUS_API_MAINTENANCE
                         "TeacherFreeDaysIsNotActive" -> ERROR_LIBRUS_API_TEACHER_FREE_DAYS_NOT_PUBLIC
                         else -> ERROR_LIBRUS_API_OTHER

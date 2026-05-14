@@ -217,11 +217,7 @@ class SzkolnyApi(val app: App) : CoroutineScope {
                 lastSync = lastSyncTime,
                 notifications = notifications.map { ServerSyncRequest.Notification(it.profileName ?: "", it.type.id, it.text) }
         )).execute()
-        val (events, notes, hasBrowsers) = parseResponse(response, updateDeviceHash = true)
-
-        hasBrowsers?.let {
-            app.config.sync.webPushEnabled = it
-        }
+        val (events, notes) = parseResponse(response, updateDeviceHash = true)
 
         // update users' hashes on success
         users.forEach { (user, config) ->
@@ -363,42 +359,6 @@ class SzkolnyApi(val app: App) : CoroutineScope {
     /*fun eventEditRequest(requesterName: String, event: Event): ApiResponse<Nothing>? {
 
     }*/
-
-    @Throws(Exception::class)
-    fun pairBrowser(browserId: String?, pairToken: String?): List<WebPushResponse.Browser> {
-        val response = api.webPush(WebPushRequest(
-                deviceId = app.deviceId,
-                device = getDevice(),
-                action = "pairBrowser",
-                browserId = browserId,
-                pairToken = pairToken
-        )).execute()
-
-        return parseResponse(response, updateDeviceHash = true).browsers
-    }
-
-    @Throws(Exception::class)
-    fun listBrowsers(): List<WebPushResponse.Browser> {
-        val response = api.webPush(WebPushRequest(
-                deviceId = app.deviceId,
-                device = getDevice(),
-                action = "listBrowsers"
-        )).execute()
-
-        return parseResponse(response, updateDeviceHash = true).browsers
-    }
-
-    @Throws(Exception::class)
-    fun unpairBrowser(browserId: String): List<WebPushResponse.Browser> {
-        val response = api.webPush(WebPushRequest(
-                deviceId = app.deviceId,
-                device = getDevice(),
-                action = "unpairBrowser",
-                browserId = browserId
-        )).execute()
-
-        return parseResponse(response, updateDeviceHash = true).browsers
-    }
 
     @Throws(Exception::class)
     fun errorReport(errors: List<ErrorReportRequest.Error>) {

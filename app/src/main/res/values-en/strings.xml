@@ -296,7 +296,6 @@
     <string name="edziennik_progress_endpoint_point_grades">Syncing point grades…</string>
     <string name="edziennik_progress_endpoint_proposed_grades">Syncing proposed grades…</string>
     <string name="edziennik_progress_endpoint_pt_meetings">Syncing parents\' meetings…</string>
-    <string name="edziennik_progress_endpoint_push_config">Setting up push notifications…</string>
     <string name="edziennik_progress_endpoint_school_info">Syncing school info…</string>
     <string name="edziennik_progress_endpoint_student_info">Syncing student info…</string>
     <string name="edziennik_progress_endpoint_subjects">Syncing subjects…</string>
@@ -452,7 +451,6 @@
     <string name="grades_year_summary_format">Entire year: %s • %s</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="help">Help</string>
-    <string name="help_notification_web_push">Notification forwarding allows you to pair a PC web browser to receive notifications on your desktop. This includes new grades, events, homework etc.\n\nClick \"Notification forwarding\" to begin.</string>
     <string name="help_register_agreement">Registration will run automatically on the first login.\n\nThere will be some data sent to the app server:\n- your school and class ID\n- your e-register username\n- your first and last name\n\nThe only data visible to others is your name (when sharing events). Any private data (like password, grades etc.) won\'t be sent anywhere. Learn more in the Privacy policy.</string>
     <string name="hint_download_again">Download again</string>
     <string name="hint_edit_event">Edit event</string>
@@ -632,7 +630,6 @@
     <string name="menu_template">Template</string>
     <string name="menu_timetable">Timetable</string>
     <string name="menu_timetable_manual">Timetable editor</string>
-    <string name="menu_web_push">Forwarding notifications</string>
     <string name="messages_attachment_cannot_download">Cannot download attachment</string>
     <string name="messages_attachment_cannot_download_text">An internal error occurred while downloading the attachment. A weak internet connection may be the case.</string>
     <string name="messages_attachment_download_again">Download again</string>
@@ -826,7 +823,6 @@
     <string name="settings_about_update_text">Update</string>
     <string name="settings_about_version_text">Version</string>
     <string name="settings_more_text">More</string>
-    <string name="settings_notification_web_push">Notification forwarding</string>
     <string name="settings_profile_change_image">Change picture</string>
     <string name="settings_profile_change_name">Change name</string>
     <string name="settings_profile_change_name_dialog_text">Enter the name</string>
@@ -909,8 +905,6 @@
     <string name="settings_sync_sync_interval_text">Automatic sync</string>
     <string name="settings_card_sync_title">Sync &amp; notifications</string>
     <string name="settings_sync_updates_text">Notify about app updates</string>
-    <string name="settings_sync_web_push_subtext">Show notifications on your PC</string>
-    <string name="settings_sync_web_push_text">Notification forwarding</string>
     <string name="settings_sync_wifi_subtext">Saves mobile data usage</string>
     <string name="settings_sync_wifi_text">Sync only on Wi-Fi</string>
     <string name="settings_theme_app_background_dialog_restore">Remove app background</string>
@@ -1158,16 +1152,6 @@
     <string name="update_needed">Update needed</string>
     <string name="update_needed_text">You have to update the app in order to use it. Click OK to download.</string>
     <string name="warning_older_version_running">You\'re trying to run an older version of the app which may break its data.</string>
-    <string name="web_push_configured_browsers">Paired browsers</string>
-    <string name="web_push_connection_error">No connection.</string>
-    <string name="web_push_date_paired_format">Paired %s</string>
-    <string name="web_push_no_browsers">No paired browsers.</string>
-    <string name="web_push_pair_browser">Pair a browser</string>
-    <string name="web_push_really_remove">Do you want to remove this browser?</string>
-    <string name="web_push_token_invalid">Token is invalid</string>
-    <string name="web_push_unavailable">You can\'t do this</string>
-    <string name="web_push_unpair_button">Unpair</string>
-    <string name="web_push_you_need_to_register">You have to enable registration in order to use Notification forwarding.\n\nSelect \"Allow registration\" in E-register Settings.</string>
     <string name="what_do_you_want_to_do">What do you want to do?</string>
     <string name="what_is_this">What is this?</string>
     <string name="whats_new">What\'s new?</string>
