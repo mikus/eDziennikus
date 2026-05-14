@@ -46,7 +46,7 @@ Wersję podpisaną do publikacji buduje workflow GitHub Actions na push tagu `v*
 
 PRy wprowadzające nowe funkcje lub naprawiające błędy są mile widziane.
 
-Pytania, zgłoszenia błędów oraz propozycje funkcji: [GitHub Issues](https://github.com/mikus/szkolny-android/issues).
+Pytania, zgłoszenia błędów oraz propozycje funkcji: [GitHub Issues](https://github.com/mikus/eDziennikus/issues).
 
 ## Licencja
 

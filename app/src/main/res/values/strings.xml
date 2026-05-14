@@ -401,7 +401,7 @@
     <string name="faq_back_title">Znalazłeś odpowiedź?</string>
     <string name="faq_text">Jeśli masz jakieś pytanie, warto najpierw zajrzeć do bazy FAQ w poszukiwaniu gotowej odpowiedzi. Chcesz teraz przejść do tej strony?</string>
     <string name="feedback_ask_a_question">Zadaj pytanie</string>
-    <string name="feedback_faq">Zgłoszenia błędów i pytania - <a href="https://github.com/mikus/szkolny-android/issues">GitHub Issues</a></string>
+    <string name="feedback_faq">Zgłoszenia błędów i pytania - <a href="https://github.com/mikus/eDziennikus/issues">GitHub Issues</a></string>
     <string name="feedback_faq_button">Otwórz bazę FAQ</string>
     <string name="feedback_history">Historia konwersacji</string>
     <string name="feedback_send">Wyślij</string>

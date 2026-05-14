@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 eDziennikus (`eu.mikus.edziennik`) is an Android app for a single Polish e-diary backend, derived from the upstream Szkolny.eu codebase. README is in Polish. Licensed GPLv3 with an addendum forbidding redistribution of compiled builds through Google Play or any store hosting the official app.
 
-The canonical upstream is `szkolny-eu/szkolny-android`; this checkout is a fork (`mikus/szkolny-android`) that has been narrowed to a single backend, repackaged under `eu.mikus.edziennik`, and rewired to its own CI (see CI section). The Librus provider code (`data/api/edziennik/librus/`) is the only live e-diary backend; a `demo/` provider exists for offline screenshots and tests.
+The canonical upstream is `szkolny-eu/szkolny-android`; this checkout is a fork (`mikus/eDziennikus`) that has been narrowed to a single backend, repackaged under `eu.mikus.edziennik`, and rewired to its own CI (see CI section). The Librus provider code (`data/api/edziennik/librus/`) is the only live e-diary backend; a `demo/` provider exists for offline screenshots and tests.
 
 ## Build & toolchain
 

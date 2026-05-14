@@ -159,7 +159,7 @@ class BuildManager(val app: App) : CoroutineScope {
             .setPositiveButton(R.string.ok, null)
             .setNeutralButton(R.string.build_dialog_open_repo) { _, _ ->
                 val url = if (gitRemote == null)
-                    "https://github.com/mikus/szkolny-android"
+                    "https://github.com/mikus/eDziennikus"
                 else
                     "https://github.com/$gitRemote/tree/$gitHash"
                 Utils.openUrl(activity, url)

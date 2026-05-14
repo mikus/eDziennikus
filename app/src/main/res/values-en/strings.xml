@@ -365,7 +365,7 @@
     <string name="faq_back_title">Did you find an answer?</string>
     <string name="faq_text">If you have a question, you can open the FAQ database first. Do you want to check that website?</string>
     <string name="feedback_ask_a_question">Ask a question</string>
-    <string name="feedback_faq">Bug reports and questions - <a href="https://github.com/mikus/szkolny-android/issues">GitHub Issues</a></string>
+    <string name="feedback_faq">Bug reports and questions - <a href="https://github.com/mikus/eDziennikus/issues">GitHub Issues</a></string>
     <string name="feedback_faq_button">Open FAQ database</string>
     <string name="feedback_history">Conversation history</string>
     <string name="feedback_send">Send</string>
