@@ -8,7 +8,6 @@ data class Device(
         val osType: String,
         val osVersion: String,
         val hardware: String,
-        val pushToken: String?,
         val appVersion: String,
         val appType: String,
         val appVersionCode: Int,

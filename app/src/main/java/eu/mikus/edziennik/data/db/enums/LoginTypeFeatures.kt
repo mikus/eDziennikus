@@ -26,6 +26,5 @@ internal val FEATURES_LIBRUS = setOf(
     TEACHERS,
     SUBJECTS,
     CLASSROOMS,
-    PUSH_CONFIG,
 )
 

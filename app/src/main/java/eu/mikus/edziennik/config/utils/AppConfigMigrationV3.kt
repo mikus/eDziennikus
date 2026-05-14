@@ -6,10 +6,8 @@ package eu.mikus.edziennik.config.utils
 
 import android.content.SharedPreferences
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.config.Config
-import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.ext.asNavTargetOrNull
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.utils.models.Time
@@ -38,7 +36,6 @@ class AppConfigMigrationV3(p: SharedPreferences, config: Config) {
                     NavTarget.SETTINGS
             )
             devModePassword = p.getString("$s.devModePassword", null).fix()
-            sync.tokenApp = p.getString("$s.fcmToken", null).fix()
             timetable.bellSyncMultiplier = p.getString("$s.bellSyncMultiplier", null)?.toIntOrNull() ?: 0
             appRateSnackbarTime = p.getString("$s.appRateSnackbarTime", null)?.toLongOrNull() ?: 0
             timetable.countInSeconds = p.getString("$s.countInSeconds", null)?.toBoolean() ?: false
@@ -69,15 +66,6 @@ class AppConfigMigrationV3(p: SharedPreferences, config: Config) {
                 sync.quietHoursEnabled = false
                 sync.quietHoursStart = null
                 sync.quietHoursEnd = null
-            }
-
-            sync.tokenLibrusList = listOf()
-            val tokens = p.getString("$s.fcmTokens", null)?.let { Gson().fromJson<Map<Int, Pair<String, List<Int>>>>(it, object: TypeToken<Map<Int, Pair<String, List<Int>>>>(){}.type) }
-            tokens?.forEach {
-                val token = it.value.first
-                when (it.key) {
-                    LoginType.LIBRUS.id -> sync.tokenLibrus = token
-                }
             }
         }
     }

@@ -175,7 +175,6 @@ class SzkolnyApi(val app: App) : CoroutineScope {
                 osType = "Android",
                 osVersion = Build.VERSION.RELEASE,
                 hardware = "${Build.MANUFACTURER} ${Build.MODEL}",
-                pushToken = app.config.sync.tokenApp,
                 appVersion = BuildConfig.VERSION_NAME,
                 appType = BuildConfig.BUILD_TYPE,
                 appVersionCode = BuildConfig.VERSION_CODE,

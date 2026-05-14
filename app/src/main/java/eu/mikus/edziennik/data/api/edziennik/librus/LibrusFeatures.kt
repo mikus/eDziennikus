@@ -18,7 +18,6 @@ const val ENDPOINT_LIBRUS_API_USERS                                    = 1006
 const val ENDPOINT_LIBRUS_API_SUBJECTS                                 = 1007
 const val ENDPOINT_LIBRUS_API_CLASSROOMS                               = 1008
 const val ENDPOINT_LIBRUS_API_LESSONS                                  = 1009
-const val ENDPOINT_LIBRUS_API_PUSH_CONFIG                              = 1010
 const val ENDPOINT_LIBRUS_API_TIMETABLES                               = 1015
 const val ENDPOINT_LIBRUS_API_SUBSTITUTIONS                            = 1016
 const val ENDPOINT_LIBRUS_API_NORMAL_GRADE_CATEGORIES                  = 1021
@@ -63,13 +62,6 @@ val LibrusFeatures = listOf(
         Feature(LoginType.LIBRUS, FeatureType.ALWAYS_NEEDED, listOf(
                 ENDPOINT_LIBRUS_API_LESSONS to LoginMethod.LIBRUS_API
         )),
-
-        // push config
-        Feature(LoginType.LIBRUS, FeatureType.PUSH_CONFIG, listOf(
-                ENDPOINT_LIBRUS_API_PUSH_CONFIG to LoginMethod.LIBRUS_API
-        )).withShouldSync { data ->
-                (data as DataLibrus).isPremium && !data.app.config.sync.tokenLibrusList.contains(data.profileId)
-        },
 
 
 
