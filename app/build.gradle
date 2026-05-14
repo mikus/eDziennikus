@@ -82,6 +82,22 @@ android {
     lint {
         checkReleaseBuilds = false
     }
+    testOptions {
+        unitTests {
+            // Robolectric needs Android resources accessible on the test classpath.
+            includeAndroidResources = true
+            // Un-mocked Android-framework calls return defaults instead of throwing
+            // (helps when a touched class incidentally pokes android.* APIs).
+            returnDefaultValues = true
+
+            all {
+                // Run the JUnit Platform — Jupiter (JUnit 5) is the default engine.
+                // The Vintage engine is also on the classpath so Robolectric's
+                // @RunWith(RobolectricTestRunner.class) JUnit 4 tests still run.
+                useJUnitPlatform()
+            }
+        }
+    }
 }
 
 kotlin {
@@ -200,8 +216,38 @@ dependencies {
     // Debug-only dependencies
     debugImplementation "com.github.amitshekhariitbhu.Android-Debug-Database:debug-db:v1.0.6"
 
-    // JVM unit tests (app/src/test/) — Android framework available as stubs, do not
-    // call into it. Use androidTestImplementation + Robolectric/androidx.test for
-    // tests that need a real Android runtime.
+    // JVM unit tests (app/src/test/). The default engine is JUnit Jupiter (JUnit 5)
+    // via the JUnit Platform — see android.testOptions.unitTests.all { useJUnitPlatform() }.
+    // The Vintage engine is also on the classpath so Robolectric (which currently
+    // ships only a JUnit 4 runner) can run side-by-side with Jupiter tests.
+    // For tests that need a real Android runtime, use Robolectric + androidx.test.
+
+    // JUnit 5 (Jupiter) via BOM — keeps Jupiter / Platform / Vintage versions aligned.
+    testImplementation platform("org.junit:junit-bom:5.13.4")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    // Vintage engine — runs JUnit 4 tests (Robolectric) under the JUnit Platform.
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine"
+    // Robolectric still needs the JUnit 4 API at compile time for @RunWith.
     testImplementation "junit:junit:4.13.2"
+
+    // Kotlin test helpers — assertEquals / assertNotNull / assertTrue that work
+    // with both engines.
+    testImplementation "org.jetbrains.kotlin:kotlin-test-junit5"
+    // Matches the transitive kotlinx-coroutines-core version (1.6.4) — keep these
+    // pinned together; mismatched coroutines-test breaks runBlocking semantics.
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4"
+
+    // Kotlin-friendly mocking.
+    testImplementation "io.mockk:mockk:1.13.13"
+
+    // Robolectric — Android framework fakes on the JVM. 4.14.1 is the first stable
+    // release with Android 14 / 15 (SDK 35) support. We do NOT depend on
+    // androidx.test:core or androidx.test.ext:junit: both ship AndroidManifest.xml
+    // files with uses-sdk:minSdkVersion="19" which fail manifest-merger against the
+    // app's production minSdk=16. Use Robolectric's RuntimeEnvironment.getApplication()
+    // in place of ApplicationProvider.getApplicationContext(). Revisit if/when
+    // we raise minSdk or need fragment/activity test scaffolds.
+    testImplementation "org.robolectric:robolectric:4.14.1"
 }

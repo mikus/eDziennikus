@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Unit-test variant manifest. The production app's minSdk is 16 (see
+  ../main/AndroidManifest.xml + app/build.gradle), but the unit-test variant's
+  manifest merger drops the production manifest's `tools:overrideLibrary`
+  directives. Several deps (PowerPermission, AndroidX Test, future Robolectric
+  helpers) declare minSdk 19/21, so we re-declare the overrides here.
+
+  This file is intentionally NOT packaged into the production APK — it only
+  feeds the unit-test variant's merged manifest, used by Robolectric.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-sdk
+        tools:overrideLibrary="com.qifan.powerpermission.coroutines,
+            com.qifan.powerpermission.core,
+            androidx.test.espresso.idling.resource,
+            androidx.test.monitor,
+            androidx.test.core,
+            androidx.test.runner,
+            androidx.test.rules,
+            androidx.test.ext.junit" />
+
+</manifest>

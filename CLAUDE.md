@@ -27,7 +27,7 @@ Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Te
 
 **Signed-release outputs** land in `app/release/` as `Edziennik_<versionName>.{apk,aab}` — a custom `rename<Task>` task is registered as a finalizer of `assembleRelease` / `bundleRelease` / `signReleaseBundle` and copies+renames the output.
 
-Test source sets (`app/src/test/`, `app/src/androidTest/`) are **not yet wired up** — see the "Testing & quality bar" section for the forward-looking policy and what needs to be set up the first time tests are added.
+The `app/src/test/` source set is wired up for JVM unit tests on the JUnit Platform (JUnit 5 / Jupiter + Vintage). `app/src/androidTest/` (instrumented tests) is **not yet wired up** — defer until an instrumented test is genuinely needed. See "Testing & quality bar" for the policy.
 
 ## Architecture
 
@@ -115,21 +115,42 @@ ViewBinding and DataBinding are both enabled. ViewBinding is dominant (~6:1 by f
 
 ## Testing & quality bar
 
-**Current state**: No tests exist yet — neither `app/src/test/` nor `app/src/androidTest/`. Test dependencies (JUnit, MockK, Robolectric or `androidx.test`) are not yet declared in `app/build.gradle`. Running `./gradlew test` or `connectedAndroidTest` today does nothing useful. The **first** PR that adds a test is also responsible for wiring up the test source set and dependencies it needs.
+**Test source set wired**: `app/src/test/` runs JVM unit tests on the JUnit Platform. The default engine is **Jupiter (JUnit 5)** — `org.junit.jupiter.api.Test`, `kotlin.test.assertEquals`, etc. The **Vintage** engine is also on the classpath so JUnit 4 tests (currently just Robolectric, which has no first-party Jupiter runner) run side-by-side.
 
-**Policy going forward** (the codebase has not yet adopted this — early PRs are setting the precedent):
+Dependencies in `app/build.gradle`:
+- `org.junit:junit-bom:5.13.4` aligns Jupiter / Platform / Vintage versions.
+- `org.junit.jupiter:junit-jupiter` (API + engine via BOM), `org.junit.platform:junit-platform-launcher`, `org.junit.vintage:junit-vintage-engine`.
+- `org.jetbrains.kotlin:kotlin-test-junit5` for Kotlin-friendly assertions.
+- `org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4` — pinned to match the transitive coroutines version; bumping requires bumping coroutines first.
+- `io.mockk:mockk:1.13.13` for Kotlin-friendly mocking.
+- `org.robolectric:robolectric:4.14.1` for Android-framework fakes on the JVM (first stable with SDK 35 support).
 
-- **New features → TDD.** Write the failing test first in `app/src/test/` (JVM, preferred when no Android framework is required) or `app/src/androidTest/` (instrumented, only when needed). Implementation follows. The test should fail for the right reason before any production code is touched.
-- **Refactors → characterize first.** Before changing the structure of existing code, write tests that pin down its current observable behavior. These are a regression safety net — they don't need to be pretty, they need to be honest. Refactor against a green bar. **Refactor PRs that don't add coverage for the touched area should be rejected**, including Java → Kotlin migrations and DataBinding ↔ ViewBinding moves.
-- **Bug fixes → reproduce first.** Add a failing test that reproduces the bug, then fix it.
+We deliberately do **not** depend on `androidx.test:core` or `androidx.test.ext:junit` — both declare `minSdkVersion=19` and the production app is `minSdk=16`. Use `org.robolectric.RuntimeEnvironment.getApplication()` instead of `ApplicationProvider.getApplicationContext()`. A unit-test-only manifest at `app/src/test/AndroidManifest.xml` re-declares the `tools:overrideLibrary` directives needed for the test variant (the main manifest's overrides don't flow into the unit-test merged manifest).
+
+Robolectric tests instantiate the production `App.onCreate()` by default, which calls `System.loadLibrary("szkolny-signing")` (native, won't load on the JVM). Use `@Config(application = android.app.Application::class)` to swap in stock Application — see `RobolectricSmokeTest.kt` for the canonical shape. Tests that genuinely need the real `App` will have to stub the JNI dependency.
+
+**Running tests:**
+- `./gradlew test` — all JVM unit tests (debug + release variants).
+- `./gradlew :app:testDebugUnitTest` — debug-variant tests only (faster local loop).
+
+**Configuration in `app/build.gradle`** (`android.testOptions.unitTests`):
+- `includeAndroidResources = true` — Robolectric needs Android resources on the test classpath.
+- `returnDefaultValues = true` — un-mocked Android-framework calls return defaults instead of throwing.
+- `all { useJUnitPlatform() }` — run via the JUnit Platform (Jupiter is default; Vintage is on the classpath for JUnit 4 / Robolectric).
+
+**Policy** (now actionable):
+
+- **New features → TDD.** Write the failing test first; implementation follows. Prefer Jupiter (`org.junit.jupiter.api.Test`) for non-Android tests; reach for Robolectric only when the unit under test genuinely touches `android.*`.
+- **Refactors → characterize first.** Before changing the structure of existing code, write tests that pin down its current observable behavior. Refactor against a green bar. **Refactor PRs that don't add coverage for the touched area should be rejected**, including Java → Kotlin migrations and DataBinding ↔ ViewBinding moves.
+- **Bug fixes → reproduce first.** Failing test that reproduces the bug, then fix.
 
 **Definition of done for any change**:
 - `./gradlew assembleDebug` builds clean.
 - `./gradlew lint` produces no new warnings for touched files (release builds skip lint by config, but local runs should still be clean).
-- Tests for the touched area exist and pass. If scaffolding isn't wired up yet, the scaffolding is part of the change.
+- `./gradlew test` passes. Tests for the touched area exist.
 - No new `AsyncTask`, no new direct `Log.d` calls, no hardcoded user-facing strings.
 
-**Don't** add `./gradlew test` to any docs or instructions until at least one test source set is present in the repo — confirm with `ls app/src/test app/src/androidTest` before suggesting test commands.
+`app/src/androidTest/` (instrumented tests) is **not yet wired up** — defer until an instrumented test is genuinely needed (e.g., real-Activity tests that Robolectric can't fake). Adding it later will require the `android-junit5` plugin if you want Jupiter on instrumented tests; until then, the standard JUnit 4 idiom is the path of least resistance.
 
 ## Safe-change rules
 

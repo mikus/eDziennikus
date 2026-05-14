@@ -4,8 +4,8 @@
 
 package eu.mikus.edziennik.ext
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.assertEquals
+import org.junit.jupiter.api.Test
 
 /**
  * Characterization tests for [getNameInitials].
