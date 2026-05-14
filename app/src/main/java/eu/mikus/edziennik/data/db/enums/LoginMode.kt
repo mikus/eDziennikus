@@ -10,6 +10,5 @@ enum class LoginMode(
 ) {
     LIBRUS_EMAIL(LoginType.LIBRUS, id = 200),
     LIBRUS_SYNERGIA(LoginType.LIBRUS, id = 201),
-    LIBRUS_JST(LoginType.LIBRUS, id = 202),
     DEMO(LoginType.DEMO, id = 800),
 }

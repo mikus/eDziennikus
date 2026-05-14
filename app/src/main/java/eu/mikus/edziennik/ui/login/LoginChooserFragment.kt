@@ -153,14 +153,6 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
     }
 
     private fun navigateToLoginMode(loginType: LoginInfo.Register, loginMode: LoginInfo.Mode) {
-        if (loginMode.isPlatformSelection) {
-            nav.navigate(R.id.loginPlatformListFragment, Bundle(
-                    "loginType" to loginType.loginType,
-                    "loginMode" to loginMode.loginMode
-            ), activity.navOptions)
-            return
-        }
-
         nav.navigate(R.id.loginFormFragment, Bundle(
                 "loginType" to loginType.loginType,
                 "loginMode" to loginMode.loginMode

@@ -46,7 +46,6 @@ class LibrusLoginApi {
             when (data.loginStore.mode) {
                 LoginMode.LIBRUS_EMAIL -> loginWithPortal()
                 LoginMode.LIBRUS_SYNERGIA -> loginWithSynergia()
-                LoginMode.LIBRUS_JST -> loginWithJst()
                 else -> {
                     data.error(ApiError(TAG, ERROR_INVALID_LOGIN_MODE))
                 }
@@ -74,14 +73,6 @@ class LibrusLoginApi {
                 data.apiPassword = getString("accountPassword")
                 remove("accountPassword")
             }
-            if (has("accountCode")) {
-                data.apiCode = getString("accountCode")
-                remove("accountCode")
-            }
-            if (has("accountPin")) {
-                data.apiPin = getString("accountPin")
-                remove("accountPin")
-            }
         }
     }
 
@@ -93,23 +84,6 @@ class LibrusLoginApi {
         }
         else if (data.apiLogin != null && data.apiPassword != null) {
             synergiaGetToken()
-        }
-        else {
-            // cannot log in: token expired, no login data present
-            data.error(ApiError(TAG, ERROR_LOGIN_DATA_MISSING))
-        }
-    }
-
-    private fun loginWithJst() {
-        copyFromLoginStore()
-
-        if (data.apiRefreshToken != null) {
-            // refresh a JST token
-            jstRefreshToken()
-        }
-        else if (data.apiCode != null && data.apiPin != null) {
-            // get a JST token from Code and PIN
-            jstGetToken()
         }
         else {
             // cannot log in: token expired, no login data present
@@ -202,48 +176,6 @@ class LibrusLoginApi {
                 .addParameter("librus_long_term_token", "1")
                 .addParameter("librus_rules_accepted", "1")
                 .addHeader("Authorization", "Basic $LIBRUS_API_AUTHORIZATION")
-                .contentType(MediaTypeUtils.APPLICATION_FORM)
-                .post()
-                .allowErrorCode(HTTP_BAD_REQUEST)
-                .allowErrorCode(HTTP_UNAUTHORIZED)
-                .callback(tokenCallback)
-                .build()
-                .enqueue()
-    }
-    private fun jstGetToken() {
-        d(TAG, "Request: Librus/Login/Api - $LIBRUS_API_TOKEN_JST_URL")
-
-        Request.builder()
-                .url(LIBRUS_API_TOKEN_JST_URL)
-                .userAgent(LIBRUS_USER_AGENT)
-                .addParameter("grant_type", "implicit_grant")
-                .addParameter("client_id", LIBRUS_API_CLIENT_ID_JST)
-                .addParameter("secret", LIBRUS_API_SECRET_JST)
-                .addParameter("code", data.apiCode)
-                .addParameter("pin", data.apiPin)
-                .addParameter("librus_rules_accepted", "1")
-                .addParameter("librus_mobile_rules_accepted", "1")
-                .addParameter("librus_long_term_token", "1")
-                .contentType(MediaTypeUtils.APPLICATION_FORM)
-                .post()
-                .allowErrorCode(HTTP_BAD_REQUEST)
-                .allowErrorCode(HTTP_UNAUTHORIZED)
-                .callback(tokenCallback)
-                .build()
-                .enqueue()
-    }
-    private fun jstRefreshToken() {
-        d(TAG, "Request: Librus/Login/Api - $LIBRUS_API_TOKEN_JST_URL")
-
-        Request.builder()
-                .url(LIBRUS_API_TOKEN_JST_URL)
-                .userAgent(LIBRUS_USER_AGENT)
-                .addParameter("grant_type", "refresh_token")
-                .addParameter("client_id", LIBRUS_API_CLIENT_ID_JST)
-                .addParameter("refresh_token", data.apiRefreshToken)
-                .addParameter("librus_long_term_token", "1")
-                .addParameter("mobile_app_accept_rules", "1")
-                .addParameter("synergy_accept_rules", "1")
                 .contentType(MediaTypeUtils.APPLICATION_FORM)
                 .post()
                 .allowErrorCode(HTTP_BAD_REQUEST)

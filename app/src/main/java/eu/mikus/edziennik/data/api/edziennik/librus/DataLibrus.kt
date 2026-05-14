@@ -131,23 +131,6 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
         set(value) { profile["accountPassword"] = value; mApiPassword = value }
 
     /**
-     * A JST login Code.
-     * Used only during first login in JST mode.
-     */
-    private var mApiCode: String? = null
-    var apiCode: String?
-        get() { mApiCode = mApiCode ?: loginStore.getLoginData("accountCode", null); return mApiCode }
-        set(value) { profile["accountCode"] = value; mApiCode = value }
-    /**
-     * A JST login PIN.
-     * Used only during first login in JST mode.
-     */
-    private var mApiPin: String? = null
-    var apiPin: String?
-        get() { mApiPin = mApiPin ?: loginStore.getLoginData("accountPin", null); return mApiPin }
-        set(value) { profile["accountPin"] = value; mApiPin = value }
-
-    /**
      * A Synergia API access token.
      * Used in all Api Endpoints.
      * Created in Login Method Api.

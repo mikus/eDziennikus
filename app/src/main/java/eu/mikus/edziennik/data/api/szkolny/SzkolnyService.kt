@@ -6,7 +6,6 @@ package eu.mikus.edziennik.data.api.szkolny
 
 import eu.mikus.edziennik.data.api.szkolny.request.*
 import eu.mikus.edziennik.data.api.szkolny.response.*
-import eu.mikus.edziennik.ui.login.LoginInfo
 import retrofit2.Call
 import retrofit2.http.*
 
@@ -44,7 +43,4 @@ interface SzkolnyService {
 
     @GET("registerAvailability")
     fun registerAvailability(): Call<ApiResponse<Map<String, RegisterAvailabilityStatus>>>
-
-    @GET("platforms/{registerName}")
-    fun platforms(@Path("registerName") registerName: String): Call<ApiResponse<List<LoginInfo.Platform>>>
 }

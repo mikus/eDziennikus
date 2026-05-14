@@ -30,7 +30,6 @@ import eu.mikus.edziennik.ext.toApiError
 import eu.mikus.edziennik.ext.toErrorCode
 import eu.mikus.edziennik.ui.error.ErrorDetailsDialog
 import eu.mikus.edziennik.ui.error.ErrorSnackbar
-import eu.mikus.edziennik.ui.login.LoginInfo
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import retrofit2.Response
@@ -440,15 +439,6 @@ class SzkolnyApi(val app: App) : CoroutineScope {
         )).execute()
 
         return parseResponse(response, updateDeviceHash = true).message
-    }
-
-    @Throws(Exception::class)
-    fun getRealms(registerName: String): List<LoginInfo.Platform> {
-        val response = api.platforms(registerName).execute()
-        if (response.isSuccessful && response.body() != null) {
-            return parseResponse(response)
-        }
-        throw SzkolnyApiException(null)
     }
 
     @Throws(Exception::class)

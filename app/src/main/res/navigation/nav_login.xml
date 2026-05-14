@@ -13,21 +13,7 @@
         android:name="eu.mikus.edziennik.ui.login.LoginChooserFragment"
         android:label="LoginChooserFragment">
         <action
-            android:id="@+id/action_loginChooserFragment_to_loginPlatformListFragment"
-            app:destination="@id/loginPlatformListFragment" />
-        <action
             android:id="@+id/action_loginChooserFragment_to_loginFormFragment"
-            app:destination="@id/loginFormFragment" />
-        <action
-            android:id="@+id/action_loginChooserFragment_to_labFragment"
-            app:destination="@id/labFragment" />
-    </fragment>
-    <fragment
-        android:id="@+id/loginPlatformListFragment"
-        android:name="eu.mikus.edziennik.ui.login.LoginPlatformListFragment"
-        android:label="LoginPlatformListFragment">
-        <action
-            android:id="@+id/action_loginPlatformListFragment_to_loginFormFragment"
             app:destination="@id/loginFormFragment" />
     </fragment>
     <fragment
@@ -80,8 +66,4 @@
         android:id="@+id/loginFinishFragment"
         android:name="eu.mikus.edziennik.ui.login.LoginFinishFragment"
         android:label="LoginFinishFragment" />
-    <fragment
-        android:id="@+id/labFragment"
-        android:name="eu.mikus.edziennik.ui.debug.LabFragment"
-        android:label="LabFragment" />
 </navigation>

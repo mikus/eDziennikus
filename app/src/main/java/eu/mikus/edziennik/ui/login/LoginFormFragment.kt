@@ -296,14 +296,6 @@ class LoginFormFragment : Fragment(), CoroutineScope {
         if (hasErrors)
             return
 
-        val navOptions =
-            if (credentials.isEmpty())
-                activity.navOptionsBuilder
-                    .setPopUpTo(R.id.loginPlatformListFragment, inclusive = false)
-                    .build()
-            else
-                activity.navOptions
-
-        nav.navigate(R.id.loginProgressFragment, payload, navOptions)
+        nav.navigate(R.id.loginProgressFragment, payload, activity.navOptions)
     }
 }
