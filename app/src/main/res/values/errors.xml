@@ -263,11 +263,6 @@
     <string name="error_362_reason">Błąd powiadomień push. Sprawdź połączenie z internetem.</string>
     <string name="error_366_reason">Błąd wysyłania wiadomości - brak informacji o nadawcy.</string>
 
-    <string name="error_702_reason">Błąd logowania: otrzymano nieprawidłowy token</string>
-    <string name="error_703_reason">Błąd logowania: niekompletna odpowiedź serwera</string>
-    <string name="error_704_reason">Student nie jest zapisany na żaden kierunek</string>
-    <string name="error_705_reason">Brakujące dane w odpowiedzi serwera</string>
-    <string name="error_706_reason">Brakująca odpowiedź serwera</string>
 
     <string name="error_900_reason">Błąd synchronizacji. Upewnij się, że masz połączenie z internetem, a następnie zgłoś błąd.</string>
     <string name="error_901_reason">EXCEPTION_LOGIN_LIBRUS_API_TOKEN</string>
