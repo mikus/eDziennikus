@@ -1217,7 +1217,6 @@
     <string name="login_chooser_mode_recommended">{cmd-information-outline} Recommended</string>
     <string name="login_chooser_mode_dev_only">{cmd-android-studio} Developer version</string>
     <string name="login_chooser_mode_testing">{cmd-alert-circle-outline} Testing version</string>
-    <string name="eggs">\???</string>
     <string name="see_also">See also</string>
     <string name="settings_about_github_text">Source code</string>
     <string name="build_branch">Git branch</string>

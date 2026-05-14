@@ -67,11 +67,6 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
             return
         if (destination.id == R.id.loginFinishFragment)
             return
-        // eggs
-        if (destination.id == R.id.loginPrizeFragment) {
-            finish()
-            return
-        }
         if (destination.id == R.id.loginChooserFragment && loginStores.isEmpty()) {
             setResult(Activity.RESULT_CANCELED)
             finish()

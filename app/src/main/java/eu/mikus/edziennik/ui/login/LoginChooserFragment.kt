@@ -4,18 +4,13 @@
 
 package eu.mikus.edziennik.ui.login
 
-import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.Animation
-import android.view.animation.RotateAnimation
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -40,8 +35,6 @@ import kotlin.coroutines.CoroutineContext
 class LoginChooserFragment : Fragment(), CoroutineScope {
     companion object {
         private const val TAG = "LoginChooserFragment"
-        // eggs
-        var isRotated = false
     }
 
     private lateinit var app: App
@@ -85,25 +78,6 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
         LoginInfo.chooserList = LoginInfo.chooserList
                 ?: LoginInfo.list.toMutableList()
 
-        // eggs
-        if (isRotated) {
-            isRotated = false
-            LoginFormFragment.wantEggs = false
-            LoginInfo.chooserList = LoginInfo.list.toMutableList()
-            val anim = RotateAnimation(
-                    180f,
-                    0f,
-                    Animation.RELATIVE_TO_SELF,
-                    0.5f,
-                    Animation.RELATIVE_TO_SELF,
-                    0.5f
-            )
-            anim.interpolator = AccelerateDecelerateInterpolator()
-            anim.duration = 500
-            anim.fillAfter = true
-            activity.getRootView().startAnimation(anim)
-        }
-
         adapter.items = LoginInfo.chooserList!!
         b.list.adapter = adapter
         b.list.apply {
@@ -114,63 +88,6 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
 
         b.helpButton.onClick {
             startActivity(Intent(activity, FeedbackActivity::class.java))
-        }
-
-        // eggs
-        b.footnoteText.onClick {
-            if (!LoginFormFragment.wantEggs || isRotated)
-                return@onClick
-
-            val text = b.subtitleText.text.toString()
-            if (text.endsWith(".."))
-                b.subtitleText.text = text.substring(0, text.length - 2)
-            else
-                b.subtitleText.text = "$text..."
-        }
-        var clickCount = 0
-        val color = R.color.md_blue_500.resolveColor(app)
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        val hueOriginal = hsv[0]
-        b.subtitleText.onClick {
-            if (isRotated)
-                return@onClick
-            val text = b.subtitleText.text.toString()
-            if (text.endsWith("..") && !text.endsWith("...")) {
-                clickCount++
-            }
-            if (clickCount == 5) {
-                val anim = ValueAnimator.ofFloat(0f, 1f)
-                anim.duration = 5000
-                anim.addUpdateListener {
-                    hsv[0] = hueOriginal + it.animatedFraction * 3f * 360f
-                    hsv[0] = hsv[0] % 360f
-                    b.topLogo.drawable.setTintColor(Color.HSVToColor(Color.alpha(color), hsv))
-                }
-                anim.start()
-            }
-        }
-        b.topLogo.onClick {
-            if (clickCount != 5 || isRotated) {
-                clickCount = 0
-                return@onClick
-            }
-            isRotated = true
-            val anim = RotateAnimation(
-                    0f,
-                    180f,
-                    Animation.RELATIVE_TO_SELF,
-                    0.5f,
-                    Animation.RELATIVE_TO_SELF,
-                    0.5f
-            )
-            anim.interpolator = AccelerateDecelerateInterpolator()
-            anim.duration = 2000
-            anim.fillAfter = true
-            activity.getRootView().startAnimation(anim)
-
-            adapter.items.removeAll { it !is LoginInfo.Register }
-            adapter.notifyDataSetChanged()
         }
 
         when {
