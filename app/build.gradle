@@ -16,15 +16,17 @@ android {
         targetSdkVersion setup.targetSdk
 
         versionCode release.versionCode
-        versionName release.versionName
+        versionName "${release.versionName}-${gitInfo.versionSuffix}"
 
         buildConfigField "java.util.Map<String, String>", "GIT_INFO", gitInfoMap
         buildConfigField "String", "VERSION_BASE", "\"${release.versionName}\""
+        buildConfigField "String", "FLAVOR", "\"main\""
         manifestPlaceholders = [
                 buildTimestamp: String.valueOf(System.currentTimeMillis())
         ]
 
         multiDexEnabled = true
+        vectorDrawables.useSupportLibrary = true
 
         externalNativeBuild {
             cmake {
@@ -53,36 +55,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             proguardFiles fileTree('proguard').asList().toArray()
         }
-    }
-    flavorDimensions "platform"
-    productFlavors {
-        unofficial {
-            getIsDefault().set(true)
-            versionName "${release.versionName}-${gitInfo.versionSuffix}"
-        }
-        official {}
-        play {}
-    }
-    variantFilter { variant ->
-        def flavors = variant.flavors*.name
-        setIgnore(variant.buildType.name == "debug" && !flavors.contains("unofficial") || flavors.contains("main"))
-    }
-    sourceSets {
-        unofficial {
-            java.srcDirs = ["src/main/java", "src/play-not/java"]
-            manifest.srcFile("src/play-not/AndroidManifest.xml")
-        }
-        official {
-            java.srcDirs = ["src/main/java", "src/play-not/java"]
-            manifest.srcFile("src/play-not/AndroidManifest.xml")
-        }
-        play {
-            java.srcDirs = ["src/main/java", "src/play/java"]
-        }
-    }
-
-    defaultConfig {
-        vectorDrawables.useSupportLibrary = true
     }
     buildFeatures {
         dataBinding = true
@@ -116,36 +88,24 @@ kotlin {
 }
 
 tasks.whenTaskAdded { task ->
-    if (!(task.name == "assembleUnofficialRelease" || task.name == "assembleOfficialRelease" || task.name == "signPlayReleaseBundle"))
+    if (!(task.name == "assembleRelease" || task.name == "bundleRelease" || task.name == "signReleaseBundle"))
         return
 
     def renameTaskName = "rename${task.name.capitalize()}"
 
-    def flavor = ""
-    if (task.name.startsWith("bundle"))
-        flavor = task.name.substring("bundle".length(), task.name.indexOf("Release")).uncapitalize()
-    if (task.name.startsWith("assemble"))
-        flavor = task.name.substring("assemble".length(), task.name.indexOf("Release")).uncapitalize()
-    if (task.name.startsWith("minify"))
-        flavor = task.name.substring("minify".length(), task.name.indexOf("Release")).uncapitalize()
-    if (task.name.startsWith("sign"))
-        flavor = task.name.substring("sign".length(), task.name.indexOf("Release")).uncapitalize()
-
-    if (flavor != "") {
-        tasks.register(renameTaskName, Copy) {
-            dependsOn(task.name)
-            duplicatesStrategy DuplicatesStrategy.FAIL
-            from file("${projectDir}/${flavor}/release/"),
-                    file("${projectDir}/build/outputs/apk/${flavor}/release/"),
-                    file("${projectDir}/build/outputs/mapping/${flavor}Release/"),
-                    file("${projectDir}/build/outputs/bundle/${flavor}Release/")
-            include "*-release.aab", "*-release.apk", "mapping.txt", "output-metadata.json"
-            destinationDir file("${projectDir}/release/")
-            rename ".+?\\.(.+)", "Edziennik_${android.defaultConfig.versionName}_${flavor}." + '$1'
-        }
-
-        task.finalizedBy(renameTaskName)
+    tasks.register(renameTaskName, Copy) {
+        dependsOn(task.name)
+        duplicatesStrategy DuplicatesStrategy.FAIL
+        from file("${projectDir}/release/"),
+                file("${projectDir}/build/outputs/apk/release/"),
+                file("${projectDir}/build/outputs/mapping/release/"),
+                file("${projectDir}/build/outputs/bundle/release/")
+        include "*-release.aab", "*-release.apk", "mapping.txt", "output-metadata.json"
+        destinationDir file("${projectDir}/release/")
+        rename ".+?\\.(.+)", "Edziennik_${android.defaultConfig.versionName}." + '$1'
     }
+
+    task.finalizedBy(renameTaskName)
 }
 
 configurations.all {
@@ -201,8 +161,7 @@ dependencies {
     implementation "eu.szkolny:mhttp:af4b62e6e9"
     implementation "eu.szkolny:nachos:0e5dfcaceb"
     implementation "eu.szkolny.selective-dao:annotation:27f8f3f194"
-    officialImplementation "eu.szkolny:ssl-provider:1.0.0"
-    unofficialImplementation "eu.szkolny:ssl-provider:1.0.0"
+    implementation "eu.szkolny:ssl-provider:1.0.0"
     implementation "pl.szczodrzynski:navlib:0.8.0"
     implementation "pl.szczodrzynski:numberslidingpicker:2921225f76"
     implementation "pl.szczodrzynski:recyclertablayout:700f980584"

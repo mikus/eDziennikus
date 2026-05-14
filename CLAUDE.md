@@ -14,19 +14,18 @@ Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Te
 
 | Task | Purpose |
 |---|---|
-| `./gradlew assembleUnofficialDebug` | Local-dev APK — the only debug variant that builds (see below) |
-| `./gradlew assembleUnofficialRelease` | Local release build, no signing keys needed for the binary |
-| `./gradlew assembleOfficialRelease` | Production APK (used by `release.yml`) — signed |
-| `./gradlew bundlePlayRelease` | Google Play AAB (used by `push-main.yml`) — signed |
+| `./gradlew assembleDebug` | Local-dev APK |
+| `./gradlew assembleRelease` | Production APK (signed if signing config present) |
+| `./gradlew bundleRelease` | AAB build (signed if signing config present) |
 | `./gradlew lint` | Android lint (release builds skip lint by config) |
 | `./gradlew clean` | Clean build outputs |
 
-**Flavor & variant rules** (`app/build.gradle`):
-- Three flavors: `unofficial` (default), `official`, `play`. Per the README, `official` and `play` are reserved for official releases and require signing material.
-- `variantFilter` deliberately ignores every non-`unofficial` debug variant. **`./gradlew assembleDebug` produces nothing useful** — use `assembleUnofficialDebug`.
-- `play` flavor uses `src/play/java` (Firebase Messaging enabled); `unofficial` and `official` share `src/play-not/java` (no Google Mobile Services).
+**Variant rules** (`app/build.gradle`):
+- **No product flavors.** The fork ships a single sideload-distribution binary (GitHub Releases), so the upstream `unofficial`/`official`/`play` trio was collapsed. `./gradlew assembleDebug` produces a usable artifact at `app/build/outputs/apk/debug/app-debug.apk` (no more `variantFilter` trap).
+- The runtime `BuildConfig.FLAVOR` string is hard-coded to `"main"` via `buildConfigField` so the X-AppFlavor backend header and the config-sync cache key stay stable.
+- `versionName` in `defaultConfig` is appended with `gitInfo.versionSuffix` so running builds always reflect branch and dirty state.
 
-**Signed-release outputs** land in `app/release/` as `Edziennik_<versionName>_<flavor>.{apk,aab}` — a custom `rename<Task>` task is registered as a finalizer of every `assemble*Release` / `bundle*Release` / `sign*Release` and copies+renames the output.
+**Signed-release outputs** land in `app/release/` as `Edziennik_<versionName>.{apk,aab}` — a custom `rename<Task>` task is registered as a finalizer of `assembleRelease` / `bundleRelease` / `signReleaseBundle` and copies+renames the output.
 
 Test source sets (`app/src/test/`, `app/src/androidTest/`) are **not yet wired up** — see the "Testing & quality bar" section for the forward-looking policy and what needs to be set up the first time tests are added.
 
@@ -59,13 +58,12 @@ Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timet
 ### Background work
 - `sync/` — sync logic driven by `androidx.work` (WorkManager)
 - `receivers/` — broadcast receivers (boot, alarms)
-- `data/firebase/` — FCM handling, only wired up on the `play` flavor
 
 ### Native code
 `app/src/main/cpp/` (CMake): `aes.{c,h}`, `base64.cpp`, `szkolny-signing.cpp`. Used for crypto and API request signing. Build needs `-std=c++11`; `android.ndk.suppressMinSdkVersionError=21` is set in `gradle.properties`.
 
 ### Version metadata
-`app/git-info.gradle` runs at Gradle configure time and uses JGit to inject git metadata (hash, branch, tag, dirty flag, rev-count) into `BuildConfig.GIT_INFO`. The `unofficial` flavor appends `${gitInfo.versionSuffix}` to its `versionName` so the running version reflects the branch and dirty state. Gradle configuration cache is intentionally disabled because this script reads live git state.
+`app/git-info.gradle` runs at Gradle configure time and uses JGit to inject git metadata (hash, branch, tag, dirty flag, rev-count) into `BuildConfig.GIT_INFO`. `defaultConfig.versionName` appends `${gitInfo.versionSuffix}` so the running version reflects the branch and dirty state. Gradle configuration cache is intentionally disabled because this script reads live git state.
 
 ## Coding conventions
 
@@ -126,7 +124,7 @@ ViewBinding and DataBinding are both enabled. ViewBinding is dominant (~6:1 by f
 - **Bug fixes → reproduce first.** Add a failing test that reproduces the bug, then fix it.
 
 **Definition of done for any change**:
-- `./gradlew assembleUnofficialDebug` builds clean.
+- `./gradlew assembleDebug` builds clean.
 - `./gradlew lint` produces no new warnings for touched files (release builds skip lint by config, but local runs should still be clean).
 - Tests for the touched area exist and pass. If scaffolding isn't wired up yet, the scaffolding is part of the change.
 - No new `AsyncTask`, no new direct `Log.d` calls, no hardcoded user-facing strings.
@@ -142,7 +140,6 @@ These changes have hidden coordination cost or break things in non-obvious ways.
 - **Shipped Room `Migration` objects** — never edit a migration after it has shipped (a user already ran it). Add a new migration instead.
 - **`app/src/main/cpp/`** (`aes.{c,h}`, `base64.cpp`, `szkolny-signing.cpp`) — native crypto and API request signing. Changes here can silently break provider authentication. Don't refactor unless the task explicitly requires it.
 - **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker on debug builds is the standard tool).
-- **Flavor source-set split** — `play` adds Firebase Messaging via `src/play/java`; `unofficial` and `official` share `src/play-not/java`. Code touching FCM/AdMob/any GMS API must stay in `src/play/java` only or be guarded by flavor at compile time. Don't move FCM code into `src/main/java`.
 - **`pl.szczodrzynski.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and Play Store identity depend on exact values. Don't change without coordinating with the release process.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
 - **Adding new dependencies** — many providers parse HTML using `jsoup` + `jspoon` already in deps. Don't add a second HTML parser, JSON library, or networking layer without justifying why the existing one is insufficient.
