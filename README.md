@@ -2,7 +2,7 @@
 
 ## O aplikacji
 
-**eDziennikus** to osobisty fork porzuconej aplikacji [Szkolny.eu](https://github.com/szkolny-eu/szkolny-android), zawężony do obsługi wyłącznie e-dziennika **Librus Synergia**. Powstał jako alternatywa po wygaśnięciu rozwoju oryginału — utrzymywany prywatnie, dystrybuowany wyłącznie jako sideload (GitHub Releases), bez Firebase, bez integracji z infrastrukturą Szkolny.eu.
+**eDziennikus** to osobisty fork porzuconej aplikacji [Szkolny.eu](https://github.com/szkolny-eu/szkolny-android), zawężony do obsługi wyłącznie jednego z popularnych e-dzienników. Powstał jako alternatywa po wygaśnięciu rozwoju oryginału — utrzymywany prywatnie, dystrybuowany wyłącznie jako sideload (GitHub Releases), bez Firebase, bez integracji z infrastrukturą Szkolny.eu.
 
 ### Funkcje aplikacji
 
@@ -24,7 +24,7 @@
 
 W stosunku do upstreamu (`szkolny-eu/szkolny-android`):
 
-- **Obsługuje wyłącznie Librus Synergia.** Usunięto kod pozostałych providerów (Vulcan UONET+, Mobidziennik, Podlasie, USOS, Template, EDU.dziennik, iDziennik) oraz odpowiadające im fragmenty UI, zasoby i przepływy logowania.
+- **Obsługuje wyłącznie jednego providera** (wybranego przez właściciela forka). Usunięto kod pozostałych providerów dziedziczonych z upstreamu oraz odpowiadające im fragmenty UI, zasoby i przepływy logowania.
 - **Bez Firebase / FCM / Crashlytics.** Brak powiadomień push w czasie rzeczywistym — aplikacja korzysta wyłącznie z lokalnego pollingu przez WorkManager. Brak telemetrii.
 - **Bez integracji z backendem Szkolny.eu.** Aplikacja jest całkowicie niezależna od centralnej infrastruktury Szkolny.eu — sprawdzanie wersji, dystrybucja Web Push, statystyki użytkowania itp. zostały usunięte.
 - **Pojedynczy product flavor.** Trzy flavors upstreamu (`unofficial`, `official`, `play`) zostały zwinięte do jednego — fork ma jedną postać, dystrybuowaną tylko przez GitHub Releases.

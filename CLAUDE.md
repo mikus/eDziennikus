@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-eDziennikus (`eu.mikus.edziennik`) is an Android app for the Librus Synergia e-diary, derived from the upstream Szkolny.eu codebase. README is in Polish. Licensed GPLv3 with an addendum forbidding redistribution of compiled builds through Google Play or any store hosting the official app.
+eDziennikus (`eu.mikus.edziennik`) is an Android app for a single Polish e-diary backend, derived from the upstream Szkolny.eu codebase. README is in Polish. Licensed GPLv3 with an addendum forbidding redistribution of compiled builds through Google Play or any store hosting the official app.
 
 The canonical upstream is `szkolny-eu/szkolny-android`; this checkout is a fork (`mikus/szkolny-android`) that has been narrowed to a single backend, repackaged under `eu.mikus.edziennik`, and rewired to its own CI (see CI section). The Librus provider code (`data/api/edziennik/librus/`) is the only live e-diary backend; a `demo/` provider exists for offline screenshots and tests.
 
@@ -35,7 +35,7 @@ Single Gradle module `:app`. All code under `app/src/main/java/eu/mikus/edzienni
 
 ### E-diary backend (`data/api/edziennik/`)
 The provider abstraction is kept from upstream even though the fork ships a single backend, so the multi-provider scaffolding can be re-used if more providers come back later.
-- `librus/` — the only live provider (Librus Synergia, mostly HTML-scrape backed)
+- `librus/` — the only live provider, mostly HTML-scrape backed
 - `demo/` — offline sample provider, useful for screenshots and tests
 - `EdziennikTask.kt` — task orchestrator entry point at this layer
 - `ProfileArchiver.kt` — profile archiving (still parameterised over provider IDs)
