@@ -266,3 +266,8 @@ fabric.properties
 
 signatures/
 .idea/*.xml
+
+# Signing keystores (never commit)
+# *.jks and *.keystore are already matched above; this entry is
+# explicit for the CI-decoded keystore path used by release.yml.
+app/keystore.jks
