@@ -169,7 +169,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         b.nightlyText.isVisible = versionBadge != null
         b.nightlyText.text = versionBadge
         if (versionBadge != null) {
-            b.nightlyText.background.setTintColor(0xa0ff0000.toInt())
+            b.nightlyText.background.setTintColor(app.buildManager.versionBadgeColor)
         }
 
         navLoading = true

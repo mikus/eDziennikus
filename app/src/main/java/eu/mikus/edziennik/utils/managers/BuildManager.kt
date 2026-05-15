@@ -69,12 +69,16 @@ class BuildManager(val app: App) : CoroutineScope {
     var gitRemote: String? = ""
     var gitAuthor: String? = ""
 
-    val isSigned = Signing.appCertificate.md5() == "f98c600d6ea0cb5bc40ffc8e6f7824ac"
+    // MD5 of base64(SHA-1(<fork signing cert>)) — see app/keystore.jks (alias
+    // edziennikus). The value is the runtime form of Signing.appCertificate.md5().
+    // To rotate: rebuild keystore, run apksigner verify --print-certs on the
+    // resulting APK, then recompute via base64+md5 of the SHA-1 digest.
+    val isSigned = Signing.appCertificate.md5() == "86b0d7cd956538a19eed86a2e41a0092"
 
-    // The fork has no `play`/`official` flavors any more — every build is
-    // unofficial from upstream's perspective. The previous `isPlayRelease`,
-    // `isApkRelease`, and `isOfficial` properties were permanently false
-    // since the flavor drop and have been removed.
+    // The fork has no `play`/`official` flavors any more. A build is "signed"
+    // when its signing cert matches the fork keystore above; everything else
+    // (debug, side-built sources, unsigned) falls through to the "Unofficial"
+    // branches in versionBadge / validateBuild.
 
     val versionName = when {
         isRelease -> "$gitVersion\n$gitBranch"
@@ -86,10 +90,24 @@ class BuildManager(val app: App) : CoroutineScope {
             "Nightly\n" + BuildConfig.VERSION_NAME.substringAfterLast('.')
         isSigned && isDaily ->
             "Daily\n" + BuildConfig.VERSION_NAME.substringAfterLast('.')
+        isSigned ->
+            "Release\n" + BuildConfig.VERSION_BASE
         isDebug ->
             "Debug\n" + BuildConfig.VERSION_BASE
         else ->
             "Unofficial\n" + BuildConfig.VERSION_BASE
+    }
+
+    // Tint color (ARGB) for the badge background, mirroring versionBadge's
+    // branches. Three-tier semantics:
+    //   - dark (0x60000000)  = stable release, you can trust this build
+    //   - amber (0xa0ffa000) = pre-release / dev (nightly, daily, debug)
+    //   - red (0xa0ff0000)   = unsigned/unofficial, treat with caution
+    val versionBadgeColor: Int = when {
+        isSigned && (isNightly || isDaily) -> 0xa0ffa000.toInt()
+        isSigned -> 0x60000000.toInt()
+        isDebug -> 0xa0ffa000.toInt()
+        else -> 0xa0ff0000.toInt()
     }
 
     val releaseType = when {
