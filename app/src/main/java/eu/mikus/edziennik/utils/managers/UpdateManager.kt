@@ -13,7 +13,7 @@ import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.data.api.task.PostNotifications
 import eu.mikus.edziennik.data.db.entity.Notification
 import eu.mikus.edziennik.data.db.enums.NotificationType

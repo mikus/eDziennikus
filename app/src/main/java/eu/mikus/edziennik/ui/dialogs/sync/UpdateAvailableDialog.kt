@@ -7,7 +7,7 @@ package eu.mikus.edziennik.ui.dialogs.sync
 import androidx.appcompat.app.AppCompatActivity
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.ext.Intent
 import eu.mikus.edziennik.sync.UpdateDownloaderService
 import eu.mikus.edziennik.ui.dialogs.base.BaseDialog

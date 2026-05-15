@@ -12,7 +12,6 @@ import im.wangchao.mhttp.Response
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.ERROR_API_EXCEPTION
 import eu.mikus.edziennik.data.api.ERROR_EXCEPTION
-import eu.mikus.edziennik.data.api.szkolny.SzkolnyApiException
 import eu.mikus.edziennik.ext.stackTraceString
 import eu.mikus.edziennik.ext.toErrorCode
 
@@ -74,8 +73,6 @@ class ApiError(val tag: String, var errorCode: Int) {
     }
 
     fun getStringReason(context: Context): String {
-        if (errorCode == ERROR_API_EXCEPTION && throwable is SzkolnyApiException)
-            return throwable?.message.toString()
         return context.resources.getIdentifier("error_${errorCode}_reason", "string", context.packageName).let {
             if (it != 0)
                 context.getString(it)

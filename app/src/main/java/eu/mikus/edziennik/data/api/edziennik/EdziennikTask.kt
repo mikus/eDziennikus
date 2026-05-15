@@ -5,13 +5,11 @@
 package eu.mikus.edziennik.data.api.edziennik
 
 import com.google.gson.JsonObject
-import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.ERROR_PROFILE_ARCHIVED
 import eu.mikus.edziennik.data.api.edziennik.demo.Demo
 import eu.mikus.edziennik.data.api.edziennik.librus.Librus
-import eu.mikus.edziennik.data.api.events.RegisterAvailabilityEvent
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
 import eu.mikus.edziennik.data.api.interfaces.EdziennikInterface
 import eu.mikus.edziennik.data.api.models.ApiError
@@ -27,7 +25,6 @@ import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.ext.isBeforeYear
 import eu.mikus.edziennik.ext.shouldArchive
 import eu.mikus.edziennik.utils.Utils.d
-import eu.mikus.edziennik.utils.managers.AvailabilityManager.Error.Type
 
 open class EdziennikTask(override val profileId: Int, val request: Any) : IApiTask(profileId) {
     companion object {
@@ -91,22 +88,10 @@ open class EdziennikTask(override val profileId: Int, val request: Any) : IApiTa
                 return
             }
 
-            val error = app.availabilityManager.check(profile)
-            when (error?.type) {
-                Type.NOT_AVAILABLE -> {
-                    if (EventBus.getDefault().hasSubscriberForEvent(RegisterAvailabilityEvent::class.java)) {
-                        EventBus.getDefault().postSticky(RegisterAvailabilityEvent())
-                    }
-                    cancel()
-                    taskCallback.onCompleted()
-                    return
-                }
-                Type.API_ERROR -> {
-                    taskCallback.onError(error.apiError!!)
-                    return
-                }
-                else -> return@let
-            }
+            // The provider-availability check was removed when the fork dropped
+            // SzkolnyApi. Sync proceeds; provider-down errors surface naturally
+            // from the e-diary HTTP calls themselves rather than from a
+            // centralised pre-check.
         }
 
         if (profile?.empty == true) {

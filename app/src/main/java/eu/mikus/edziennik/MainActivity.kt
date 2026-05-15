@@ -42,7 +42,7 @@ import pl.droidsonroids.gif.GifDrawable
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.*
 import eu.mikus.edziennik.data.api.models.ApiError
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.data.db.entity.Message
 import eu.mikus.edziennik.data.db.entity.Metadata.*
 import eu.mikus.edziennik.data.db.entity.Profile
@@ -58,7 +58,6 @@ import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.base.enums.NavTargetLocation
 import eu.mikus.edziennik.ui.dialogs.ChangelogDialog
 import eu.mikus.edziennik.ui.dialogs.settings.ProfileConfigDialog
-import eu.mikus.edziennik.ui.dialogs.sync.RegisterUnavailableDialog
 import eu.mikus.edziennik.ui.dialogs.sync.ServerMessageDialog
 import eu.mikus.edziennik.ui.dialogs.sync.SyncViewListDialog
 import eu.mikus.edziennik.ui.dialogs.sync.UpdateAvailableDialog
@@ -72,7 +71,6 @@ import eu.mikus.edziennik.ui.timetable.TimetableFragment
 import eu.mikus.edziennik.utils.*
 import eu.mikus.edziennik.utils.Utils.d
 import eu.mikus.edziennik.utils.Utils.dpToPx
-import eu.mikus.edziennik.utils.managers.AvailabilityManager.Error.Type
 import eu.mikus.edziennik.utils.managers.UserActionManager
 import eu.mikus.edziennik.utils.models.Date
 import pl.szczodrzynski.navlib.*
@@ -510,26 +508,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             return
         }
 
-        val error = withContext(Dispatchers.IO) {
-            app.availabilityManager.check(app.profile)
-        }
-        when (error?.type) {
-            Type.NOT_AVAILABLE -> {
-                swipeRefreshLayout.isRefreshing = false
-                navigate(navTarget = NavTarget.HOME)
-                RegisterUnavailableDialog(this, error.status!!).show()
-                return
-            }
-            Type.API_ERROR -> {
-                errorSnackbar.addError(error.apiError!!).show()
-                return
-            }
-            Type.NO_API_ACCESS -> {
-                Toast.makeText(this, R.string.error_no_api_access, Toast.LENGTH_SHORT).show()
-            }
-            else -> {}
-        }
-
+        // Pre-sync provider-availability check was removed when SzkolnyApi was
+        // dropped. Errors from the actual sync surface from each provider's
+        // own HTTP calls.
         swipeRefreshLayout.isRefreshing = true
         Toast.makeText(this, fragmentToSyncName(navTarget), Toast.LENGTH_SHORT).show()
         val featureType = when (navTarget) {
@@ -562,15 +543,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             return
         EventBus.getDefault().removeStickyEvent(event)
         UpdateProgressDialog(this, event.update ?: return, event.downloadId).show()
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
-    fun onRegisterAvailabilityEvent(event: RegisterAvailabilityEvent) {
-        EventBus.getDefault().removeStickyEvent(event)
-        val error = app.availabilityManager.check(app.profile, cacheOnly = true)
-        if (error != null) {
-            RegisterUnavailableDialog(this, error.status!!).show()
-        }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

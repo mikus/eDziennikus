@@ -11,7 +11,6 @@ import android.widget.FrameLayout
 import androidx.core.view.isVisible
 import androidx.core.view.plusAssign
 import androidx.core.view.setMargins
-import coil.load
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,13 +25,11 @@ import eu.mikus.edziennik.ext.dp
 import eu.mikus.edziennik.ext.onClick
 import eu.mikus.edziennik.ext.setText
 import eu.mikus.edziennik.sync.UpdateDownloaderService
-import eu.mikus.edziennik.ui.dialogs.sync.RegisterUnavailableDialog
 import eu.mikus.edziennik.ui.dialogs.sync.UpdateAvailableDialog
 import eu.mikus.edziennik.ui.home.HomeCard
 import eu.mikus.edziennik.ui.home.HomeCardAdapter
 import eu.mikus.edziennik.ui.home.HomeFragment
 import eu.mikus.edziennik.utils.Utils
-import eu.mikus.edziennik.utils.html.BetterHtml
 import kotlin.coroutines.CoroutineContext
 
 class HomeAvailabilityCard(
@@ -58,39 +55,21 @@ class HomeAvailabilityCard(
         }
         holder.root += b.root
 
-        val error = app.availabilityManager.check(profile, cacheOnly = true)
-        val status = error?.status
+        // The provider-availability "register unavailable" path was removed
+        // when SzkolnyApi was dropped; this card now only renders when a
+        // newer GitHub Release is available.
         val update = app.config.update
-
-        if (update == null && status == null)
-            return
-
-        var onInfoClick = { _: View -> }
-
-        // show "register unavailable" only when disabled
-        if (status?.userMessage != null) {
-            b.homeAvailabilityTitle.text = BetterHtml.fromHtml(activity, status.userMessage.title)
-            b.homeAvailabilityText.text = BetterHtml.fromHtml(activity, status.userMessage.contentShort)
-            b.homeAvailabilityUpdate.isVisible = false
-            b.homeAvailabilityIcon.setImageResource(R.drawable.ic_sync)
-            if (status.userMessage.icon != null)
-                b.homeAvailabilityIcon.load(status.userMessage.icon)
-            onInfoClick = {
-                RegisterUnavailableDialog(activity, status).show()
-            }
-        }
-        // show "update available" when available OR version too old for the register
-        else if (update != null && update.versionCode > BuildConfig.VERSION_CODE) {
-            b.homeAvailabilityTitle.setText(R.string.home_availability_title)
-            b.homeAvailabilityText.setText(R.string.home_availability_text, update.versionName)
-            b.homeAvailabilityUpdate.isVisible = true
-            b.homeAvailabilityIcon.setImageResource(R.drawable.ic_update)
-            onInfoClick = {
-                UpdateAvailableDialog(activity, update).show()
-            }
-        }
-        else {
+        if (update == null || update.versionCode <= BuildConfig.VERSION_CODE) {
             b.root.isVisible = false
+            return
+        }
+
+        b.homeAvailabilityTitle.setText(R.string.home_availability_title)
+        b.homeAvailabilityText.setText(R.string.home_availability_text, update.versionName)
+        b.homeAvailabilityUpdate.isVisible = true
+        b.homeAvailabilityIcon.setImageResource(R.drawable.ic_update)
+        val onInfoClick: (View) -> Unit = {
+            UpdateAvailableDialog(activity, update).show()
         }
 
         b.homeAvailabilityUpdate.onClick {

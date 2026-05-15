@@ -9,7 +9,7 @@ import android.content.Context
 import androidx.work.*
 import kotlinx.coroutines.*
 import eu.mikus.edziennik.*
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.ext.DAY
 import eu.mikus.edziennik.ext.formatDate
 import eu.mikus.edziennik.utils.Utils

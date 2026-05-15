@@ -35,7 +35,7 @@ import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.config.AppData
 import eu.mikus.edziennik.config.Config
 import eu.mikus.edziennik.data.api.events.ProfileListEmptyEvent
-import eu.mikus.edziennik.data.api.szkolny.interceptor.Signing
+import eu.mikus.edziennik.utils.AppCertificateReader
 import eu.mikus.edziennik.data.db.AppDb
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.data.db.enums.LoginType
@@ -55,7 +55,6 @@ import eu.mikus.edziennik.utils.Themes
 import eu.mikus.edziennik.utils.Utils
 import eu.mikus.edziennik.utils.Utils.d
 import eu.mikus.edziennik.utils.managers.AttendanceManager
-import eu.mikus.edziennik.utils.managers.AvailabilityManager
 import eu.mikus.edziennik.utils.managers.BuildManager
 import eu.mikus.edziennik.utils.managers.EventManager
 import eu.mikus.edziennik.utils.managers.GradesManager
@@ -91,7 +90,6 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
     }
 
     val attendanceManager by lazy { AttendanceManager(this) }
-    val availabilityManager by lazy { AvailabilityManager(this) }
     val buildManager by lazy { BuildManager(this) }
     val eventManager by lazy { EventManager(this) }
     val gradesManager by lazy { GradesManager(this) }
@@ -228,7 +226,7 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
             setLanguage(it)
         }
 
-        Signing.getCert(this)
+        AppCertificateReader.getCert(this)
         Utils.initializeStorageDir(this)
 
         launch {

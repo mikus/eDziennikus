@@ -19,7 +19,7 @@ import androidx.core.content.getSystemService
 import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.utils.Utils
 import java.io.File
 

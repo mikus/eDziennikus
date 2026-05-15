@@ -4,8 +4,6 @@
 
 package eu.mikus.edziennik.config
 
-import eu.mikus.edziennik.BuildConfig
-import eu.mikus.edziennik.data.api.szkolny.response.RegisterAvailabilityStatus
 import eu.mikus.edziennik.ext.HOUR
 import eu.mikus.edziennik.utils.models.Time
 
@@ -26,18 +24,7 @@ class ConfigSync(base: Config) {
     var quietHoursEnd by base.config<Time?>(null)
     var quietDuringLessons by base.config<Boolean>(false)
 
-    // Register Availability
-    private var registerAvailabilityMap by base.config<Map<String, RegisterAvailabilityStatus>>("registerAvailability") { mapOf() }
-    private var registerAvailabilityFlavor by base.config<String?>(null)
-
-    var registerAvailability: Map<String, RegisterAvailabilityStatus>
-        get() {
-            if (BuildConfig.FLAVOR != registerAvailabilityFlavor)
-                return mapOf()
-            return registerAvailabilityMap
-        }
-        set(value) {
-            registerAvailabilityMap = value
-            registerAvailabilityFlavor = BuildConfig.FLAVOR
-        }
+    // The cached register-availability map (provider-down statuses keyed by
+    // provider name) went away with AvailabilityManager; no code reads or
+    // writes it anymore.
 }

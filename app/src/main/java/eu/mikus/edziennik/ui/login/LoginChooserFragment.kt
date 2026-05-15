@@ -23,12 +23,10 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.databinding.LoginChooserFragmentBinding
 import eu.mikus.edziennik.ext.*
-import eu.mikus.edziennik.ui.dialogs.sync.RegisterUnavailableDialog
 import eu.mikus.edziennik.utils.BetterLinkMovementMethod
 import eu.mikus.edziennik.utils.Utils
 import eu.mikus.edziennik.utils.SimpleDividerItemDecoration
 import eu.mikus.edziennik.utils.html.BetterHtml
-import eu.mikus.edziennik.utils.managers.AvailabilityManager.Error.Type
 import eu.mikus.edziennik.utils.models.Date
 import kotlin.coroutines.CoroutineContext
 
@@ -133,9 +131,6 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
         }
 
         launch {
-            if (!checkAvailability(loginType.loginType))
-                return@launch
-
             if (loginMode.isTesting || loginMode.isDevOnly) {
                 MaterialAlertDialogBuilder(activity)
                         .setTitle(R.string.login_chooser_testing_title)
@@ -159,24 +154,4 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
         ), activity.navOptions)
     }
 
-    private suspend fun checkAvailability(loginType: LoginType): Boolean {
-        val error = withContext(Dispatchers.IO) {
-            app.availabilityManager.check(loginType)
-        } ?: return true
-
-        return when (error.type) {
-            Type.NOT_AVAILABLE -> {
-                RegisterUnavailableDialog(activity, error.status!!).show()
-                false
-            }
-            Type.API_ERROR -> {
-                activity.errorSnackbar.addError(error.apiError!!).show()
-                false
-            }
-            Type.NO_API_ACCESS -> {
-                Toast.makeText(activity, R.string.error_no_api_access, Toast.LENGTH_SHORT).show()
-                true
-            }
-        }
-    }
 }

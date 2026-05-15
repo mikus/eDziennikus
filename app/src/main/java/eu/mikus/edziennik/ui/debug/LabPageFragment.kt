@@ -22,7 +22,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import eu.mikus.edziennik.*
 import eu.mikus.edziennik.config.Config
-import eu.mikus.edziennik.data.api.szkolny.interceptor.SignatureInterceptor
 import eu.mikus.edziennik.data.db.entity.EventType.Companion.SOURCE_DEFAULT
 import eu.mikus.edziennik.databinding.LabFragmentBinding
 import eu.mikus.edziennik.ext.*
@@ -153,16 +152,6 @@ class LabPageFragment : LazyFragment(), CoroutineScope {
 
         b.resetCert.onClick {
             app.config.apiInvalidCert = null
-        }
-
-        b.apiKey.setText(app.config.apiKeyCustom ?: SignatureInterceptor.API_KEY)
-        b.apiKey.doAfterTextChanged {
-            it?.toString()?.let { key ->
-                if (key == SignatureInterceptor.API_KEY)
-                    app.config.apiKeyCustom = null
-                else
-                    app.config.apiKeyCustom = key.takeValue()?.trim()
-            }
         }
 
         b.rebuildConfig.onClick {

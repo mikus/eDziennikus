@@ -60,7 +60,11 @@ Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timet
 - `receivers/` — broadcast receivers (boot, alarms)
 
 ### Native code
-`app/src/main/cpp/` (CMake): `aes.{c,h}`, `base64.cpp`, `szkolny-signing.cpp`. Used for crypto and API request signing. Build needs `-std=c++11`; `android.ndk.suppressMinSdkVersionError=21` is set in `gradle.properties`.
+None. The fork has no native sources or NDK dependencies — the upstream
+`szkolny-signing` JNI library (used to sign requests to szkolny.eu's
+now-removed API) was deleted along with SzkolnyApi. `Signing.kt`
+survives as a pure-Kotlin helper that reads the APK's signing
+certificate for the `BuildManager.isSigned` keystore-recognition check.
 
 ### Version metadata
 `app/git-info.gradle` runs at Gradle configure time and uses JGit to inject git metadata (hash, branch, tag, dirty flag, rev-count) into `BuildConfig.GIT_INFO`. `defaultConfig.versionName` appends `${gitInfo.versionSuffix}` so the running version reflects the branch and dirty state. Gradle configuration cache is intentionally disabled because this script reads live git state.
@@ -127,7 +131,7 @@ Dependencies in `app/build.gradle`:
 
 We deliberately do **not** depend on `androidx.test:core` or `androidx.test.ext:junit` — both declare `minSdkVersion=19` and the production app is `minSdk=16`. Use `org.robolectric.RuntimeEnvironment.getApplication()` instead of `ApplicationProvider.getApplicationContext()`. A unit-test-only manifest at `app/src/test/AndroidManifest.xml` re-declares the `tools:overrideLibrary` directives needed for the test variant (the main manifest's overrides don't flow into the unit-test merged manifest).
 
-Robolectric tests instantiate the production `App.onCreate()` by default, which calls `System.loadLibrary("szkolny-signing")` (native, won't load on the JVM). Use `@Config(application = android.app.Application::class)` to swap in stock Application — see `RobolectricSmokeTest.kt` for the canonical shape. Tests that genuinely need the real `App` will have to stub the JNI dependency.
+Robolectric tests can instantiate the production `App.onCreate()` directly — there's no native library load to fake out anymore (the `szkolny-signing` JNI dep was deleted along with SzkolnyApi). Tests that just need an `Application` instance can either let the real `App` boot, or swap in stock `android.app.Application::class` via `@Config(application = …)` if they want isolation from app-wide singletons. See `RobolectricSmokeTest.kt` for the canonical shape.
 
 **Running tests:**
 - `./gradlew test` — all JVM unit tests (debug + release variants).
@@ -159,12 +163,11 @@ These changes have hidden coordination cost or break things in non-obvious ways.
 - **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `assembleDebug` on every push/PR; `release.yml` triggers on `v*.*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
 - **`app/schemas/eu.mikus.edziennik.data.db.AppDb/`** — these JSON files are *committed snapshots* of past Room schemas. Room uses them to verify migrations. Don't edit them. To change schema, bump `AppDb` version, write a new `Migration`, and let Room export the new snapshot on the next build.
 - **Shipped Room `Migration` objects** — never edit a migration after it has shipped (a user already ran it). Add a new migration instead.
-- **`app/src/main/cpp/`** (`aes.{c,h}`, `base64.cpp`, `szkolny-signing.cpp`) — native crypto and API request signing. Changes here can silently break provider authentication. Don't refactor unless the task explicitly requires it.
 - **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker on debug builds is the standard tool).
 - **`eu.mikus.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and sideload identity depend on exact values. Changing the application ID forces users to reinstall and loses their data.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
 - **Adding new dependencies** — many providers parse HTML using `jsoup` + `jspoon` already in deps. Don't add a second HTML parser, JSON library, or networking layer without justifying why the existing one is insufficient.
-- **`gradle.properties` flags** — `android.enableJetifier`, `android.enableR8.fullMode`, `android.ndk.suppressMinSdkVersionError` are set deliberately. Don't flip them as "cleanup".
+- **`gradle.properties` flags** — `android.enableJetifier`, `android.enableR8.fullMode` are set deliberately. Don't flip them as "cleanup".
 
 ## CI / release pipeline
 

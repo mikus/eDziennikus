@@ -18,8 +18,8 @@ import okhttp3.Request
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.api.szkolny.interceptor.Signing
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.utils.AppCertificateReader
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.ext.Intent
 import eu.mikus.edziennik.ext.asBoldSpannable
 import eu.mikus.edziennik.ext.asColoredSpannable
@@ -70,10 +70,10 @@ class BuildManager(val app: App) : CoroutineScope {
     var gitAuthor: String? = ""
 
     // MD5 of base64(SHA-1(<fork signing cert>)) — see app/keystore.jks (alias
-    // edziennikus). The value is the runtime form of Signing.appCertificate.md5().
+    // edziennikus). The value is the runtime form of AppCertificateReader.appCertificate.md5().
     // To rotate: rebuild keystore, run apksigner verify --print-certs on the
     // resulting APK, then recompute via base64+md5 of the SHA-1 digest.
-    val isSigned = Signing.appCertificate.md5() == "86b0d7cd956538a19eed86a2e41a0092"
+    val isSigned = AppCertificateReader.appCertificate.md5() == "86b0d7cd956538a19eed86a2e41a0092"
 
     // The fork has no `play`/`official` flavors any more. A build is "signed"
     // when its signing cert matches the fork keystore above; everything else
@@ -263,8 +263,8 @@ class BuildManager(val app: App) : CoroutineScope {
 
             // debug build, invalidate once
             if (isDebug) {
-                if (app.config.validation != "debug${Signing.appCertificate}".md5()) {
-                    app.config.validation = "debug${Signing.appCertificate}".md5()
+                if (app.config.validation != "debug${AppCertificateReader.appCertificate}".md5()) {
+                    app.config.validation = "debug${AppCertificateReader.appCertificate}".md5()
                     invalidateBuild(activity, null, InvalidBuildReason.DEBUG)
                 }
                 return@launch
@@ -276,7 +276,7 @@ class BuildManager(val app: App) : CoroutineScope {
                 return@launch
             }
 
-            val validation = Signing.appCertificate + gitHash + gitRemotes?.join(";")
+            val validation = AppCertificateReader.appCertificate + gitHash + gitRemotes?.join(";")
 
             // app already validated
             if (app.config.validation?.substringBefore(":") == validation.md5()){

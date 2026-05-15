@@ -8,7 +8,7 @@ import com.google.gson.JsonObject
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.config.utils.*
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.data.db.AppDb
 
 @Suppress("RemoveExplicitTypeArguments")

@@ -200,9 +200,11 @@ class HomeFragment : Fragment(), CoroutineScope {
         if (app.profile.archived)
             items.add(0, HomeArchiveCard(101, app, activity, this, app.profile))
 
-        val status = app.availabilityManager.check(app.profile, cacheOnly = true)?.status
+        // The home-screen "register unavailable" notice was tied to the
+        // szkolny.eu availability backend (gone). The card is now only added
+        // when a newer GitHub release is available.
         val update = app.config.update
-        if (update != null && update.versionCode > BuildConfig.VERSION_CODE || status?.userMessage != null) {
+        if (update != null && update.versionCode > BuildConfig.VERSION_CODE) {
             items.add(0, HomeAvailabilityCard(102, app, activity, this, app.profile))
         }
 

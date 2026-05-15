@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.api.szkolny.response.Update
+import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.ext.after
 import eu.mikus.edziennik.ui.settings.SettingsCard
 import eu.mikus.edziennik.ui.settings.SettingsLicenseActivity
