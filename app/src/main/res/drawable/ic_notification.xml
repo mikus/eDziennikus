@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Notification small-icon and action-icon for the foreground sync service.
+  Reuses the same "eD" glyph paths as ic_launcher_foreground.xml so the
+  notification icon matches the fork's launcher icon. White on transparent,
+  which is what Android API 21+ wants from a small-icon (the system tints
+  it to the channel/accent color); pre-21 displays it as-is in white.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Letter "e": filled square ring opening to the right -->
+    <path android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M30,38 L52,38 L52,46 L38,46 L38,52 L50,52 L50,60 L38,60 L38,66 L52,66 L52,74 L30,74 Z" />
+    <!-- Letter "D": filled rounded rectangle with inner cutout -->
+    <path android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M58,38 L70,38 C78,38 84,46 84,56 C84,66 78,74 70,74 L58,74 Z M66,46 L66,66 L70,66 C73,66 76,62 76,56 C76,50 73,46 70,46 Z" />
+</vector>

@@ -19,6 +19,17 @@ import eu.mikus.edziennik.receivers.SzkolnyReceiver
 import kotlin.math.roundToInt
 
 
+/**
+ * Holds the foreground-service notification used during sync. Every mutator
+ * here is `@Synchronized` because the same instance is touched from multiple
+ * threads — the foreground-service main thread on idle/close, background
+ * sync workers calling [setProgress] / [setCurrentTask] / [addError] /
+ * [setCriticalError], and [post]'s `build()` reading the shared
+ * `NotificationCompat.Builder` state. Without synchronization, the
+ * `mActions.clear()` in [setCloseAction] / [setCancelAction] can race with
+ * `build()` iterating that same list, producing a
+ * `ConcurrentModificationException` deep inside NotificationCompat.
+ */
 class EdziennikNotification(val app: App) {
     private val notificationManager by lazy { app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
 
@@ -31,6 +42,7 @@ class EdziennikNotification(val app: App) {
     }
 
     val notification: Notification
+        @Synchronized
         get() = notificationBuilder.build()
 
     private var errorCount = 0
@@ -66,6 +78,7 @@ class EdziennikNotification(val app: App) {
         return if (result.isEmpty()) null else result
     }
 
+    @Synchronized
     fun setIdle(): EdziennikNotification {
         notificationBuilder.setContentTitle(app.getString(R.string.edziennik_notification_api_title))
         notificationBuilder.setProgress(0, 0, false)
@@ -78,10 +91,13 @@ class EdziennikNotification(val app: App) {
         return this
     }
 
+    @Synchronized
     fun addError(): EdziennikNotification {
         errorCount++
         return this
     }
+
+    @Synchronized
     fun setCriticalError(): EdziennikNotification {
         criticalErrorCount++
         notificationBuilder.setContentTitle(app.getString(R.string.edziennik_notification_api_error_title))
@@ -95,15 +111,19 @@ class EdziennikNotification(val app: App) {
         return this
     }
 
+    @Synchronized
     fun setProgress(progress: Float): EdziennikNotification {
         notificationBuilder.setProgress(100, progress.roundToInt(), progress < 0f)
         return this
     }
+
+    @Synchronized
     fun setProgressText(progressText: String?): EdziennikNotification {
         notificationBuilder.setContentTitle(progressText)
         return this
     }
 
+    @Synchronized
     fun setCurrentTask(taskId: Int, progressText: String?): EdziennikNotification {
         notificationBuilder.setProgress(100, 0, true)
         notificationBuilder.setContentTitle(progressText)
@@ -118,7 +138,10 @@ class EdziennikNotification(val app: App) {
 
     // NotificationCompat.Builder has no public API to clear actions; reach into the
     // @RestrictTo(LIBRARY_GROUP) mActions list to replace the set on each rebuild.
+    // @Synchronized is required: mActions.clear() must not race with build()'s
+    // iteration of that same list.
     @SuppressLint("RestrictedApi")
+    @Synchronized
     fun setCloseAction(): EdziennikNotification {
         notificationBuilder.mActions.clear()
         notificationBuilder.addAction(
@@ -129,7 +152,9 @@ class EdziennikNotification(val app: App) {
                 ))
         return this
     }
+
     @SuppressLint("RestrictedApi")
+    @Synchronized
     private fun setCancelAction(taskId: Int) {
         notificationBuilder.mActions.clear()
         notificationBuilder.addAction(
@@ -140,6 +165,7 @@ class EdziennikNotification(val app: App) {
                 ))
     }
 
+    @Synchronized
     fun post() {
         if (serviceClosed)
             return
