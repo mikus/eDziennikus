@@ -17,8 +17,6 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.ERROR_APP_CRASH
-import eu.mikus.edziennik.data.api.szkolny.SzkolnyApi
-import eu.mikus.edziennik.data.api.szkolny.request.ErrorReportRequest
 import eu.mikus.edziennik.ext.resolveColor
 import eu.mikus.edziennik.utils.Themes.appTheme
 import eu.mikus.edziennik.utils.html.BetterHtml
@@ -46,7 +44,6 @@ class CrashActivity : AppCompatActivity(), CoroutineScope {
     }
 
     private val app by lazy { application as App }
-    private val api by lazy { SzkolnyApi(app) }
 
     private var job = Job()
     override val coroutineContext: CoroutineContext
@@ -69,22 +66,11 @@ class CrashActivity : AppCompatActivity(), CoroutineScope {
         val restartButton = findViewById<Button>(R.id.crash_restart_btn)
         restartButton.setOnClickListener { CustomActivityOnCrash.restartApplication(this@CrashActivity, config) }
 
-        val reportButton = findViewById<Button>(R.id.crash_report_btn)
-        reportButton.setOnClickListener {
-            launch {
-                api.runCatching({
-                    withContext(Dispatchers.Default) {
-                        errorReport(listOf(getReportableError(intent)))
-                    }
-                }, {
-                    Toast.makeText(app, getString(R.string.crash_report_cannot_send) + it, Toast.LENGTH_LONG).show()
-                }) ?: return@launch
-
-                Toast.makeText(app, getString(R.string.crash_report_sent), Toast.LENGTH_SHORT).show()
-                reportButton.isEnabled = false
-                reportButton.setTextColor(android.R.color.darker_gray.resolveColor(this@CrashActivity))
-            }
-        }
+        // Crash reporting via szkolny.eu was removed when SzkolnyApi was
+        // dropped from the fork. The button is hidden; users can still copy
+        // the crash details to clipboard via the "details" button and paste
+        // them into a GitHub issue manually.
+        findViewById<Button>(R.id.crash_report_btn).visibility = View.GONE
 
         val moreInfoButton = findViewById<Button>(R.id.crash_details_btn)
         moreInfoButton.setOnClickListener {
@@ -122,29 +108,6 @@ class CrashActivity : AppCompatActivity(), CoroutineScope {
         return if (plain) contentPlain else content
     }
 
-    private fun getReportableError(intent: Intent): ErrorReportRequest.Error {
-        val content = CustomActivityOnCrash.getStackTraceFromIntent(intent)
-        val errorCode: Int = ERROR_APP_CRASH
-
-        val errorText = app.resources.getIdentifier("error_$errorCode", "string", app.packageName).let {
-            if (it != 0) getString(it) else "?"
-        }
-        val errorReason = app.resources.getIdentifier("error_" + errorCode + "_reason", "string", app.packageName).let {
-            if (it != 0) getString(it) else "?"
-        }
-        return ErrorReportRequest.Error(
-                System.currentTimeMillis(),
-                TAG,
-                errorCode,
-                errorText,
-                errorReason,
-                content,
-                null,
-                null,
-                null,
-                true
-        )
-    }
 
     private fun copyErrorToClipboard() {
         val errorInformation = CustomActivityOnCrash.getAllErrorDetailsFromIntent(this@CrashActivity, intent)

@@ -20,7 +20,6 @@ import eu.mikus.edziennik.ui.dialogs.settings.AttendanceConfigDialog
 import eu.mikus.edziennik.ui.dialogs.settings.BellSyncConfigDialog
 import eu.mikus.edziennik.ui.dialogs.settings.GradesConfigDialog
 import eu.mikus.edziennik.ui.dialogs.settings.MessagesConfigDialog
-import eu.mikus.edziennik.ui.dialogs.settings.RegistrationConfigDialog
 import eu.mikus.edziennik.ui.dialogs.settings.TimetableConfigDialog
 import eu.mikus.edziennik.ui.settings.SettingsCard
 import eu.mikus.edziennik.ui.settings.SettingsUtil
@@ -148,31 +147,12 @@ class SettingsRegisterCard(util: SettingsUtil) : SettingsCard(util) {
             subText = R.string.settings_register_allow_registration_subtext,
             icon = CommunityMaterial.Icon.cmd_account_circle_outline,
             value = app.profile.canShare,
-            beforeChange =
-            { item, value ->
-                if (app.profile.canShare == value)
-                // allow the switch to change - needed for util.refresh() to change the visual state
-                    return@createPropertyItem true
-                val dialog =
-                    RegistrationConfigDialog(activity,
-                        app.profile,
-                        onChangeListener = { enabled ->
-                            if (item.isChecked == enabled)
-                                return@RegistrationConfigDialog
-                            item.isChecked = enabled
-                            if (value) {
-                                card.items.after(item, sharedEventsDefaultItem)
-                            } else {
-                                card.items.remove(sharedEventsDefaultItem)
-                            }
-                            util.refresh()
-                        })
-                if (value)
-                    dialog.showEnableDialog()
-                else
-                    dialog.showDisableDialog()
-                false
-            }
+            // Cross-user sharing registration was removed when SzkolnyApi was
+            // dropped from the fork. The toggle is left visible for legacy
+            // profiles whose canShare flag is true in DB, but flipping it
+            // no longer round-trips to a server — beforeChange returns true
+            // to accept the local-only value change.
+            beforeChange = { _, _ -> true }
         ) { _, _ -> },
 
         sharedEventsDefaultItem.takeIf { app.profile.canShare },

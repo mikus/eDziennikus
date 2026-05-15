@@ -35,7 +35,6 @@ import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.config.AppData
 import eu.mikus.edziennik.config.Config
 import eu.mikus.edziennik.data.api.events.ProfileListEmptyEvent
-import eu.mikus.edziennik.data.api.szkolny.SzkolnyApi
 import eu.mikus.edziennik.data.api.szkolny.interceptor.Signing
 import eu.mikus.edziennik.data.db.AppDb
 import eu.mikus.edziennik.data.db.entity.Profile
@@ -91,7 +90,6 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
         var devMode = false
     }
 
-    val api by lazy { SzkolnyApi(this) }
     val attendanceManager by lazy { AttendanceManager(this) }
     val availabilityManager by lazy { AvailabilityManager(this) }
     val buildManager by lazy { BuildManager(this) }

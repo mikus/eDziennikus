@@ -22,7 +22,6 @@ import org.greenrobot.eventbus.ThreadMode
 import eu.mikus.edziennik.*
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.EventGetEvent
-import eu.mikus.edziennik.data.api.szkolny.SzkolnyApi
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.databinding.DialogEventDetailsBinding
 import eu.mikus.edziennik.ext.*
@@ -57,10 +56,6 @@ class EventDetailsDialog(
     private val eventOwn = event.sharedBy == "self"
     private val manager
         get() = app.eventManager
-
-    private val api by lazy {
-        SzkolnyApi(app)
-    }
 
     private var progressDialog: AlertDialog? = null
 
@@ -332,16 +327,11 @@ class EventDetailsDialog(
     private fun removeEvent() {
         launch {
             if (eventShared && eventOwn) {
-                // unshare + remove own event
+                // Cross-user event sharing was removed when SzkolnyApi was
+                // dropped from the fork. Existing shared-own events are
+                // removed locally only; the upstream copy on szkolny.eu
+                // (if any) is left as-is.
                 showRemovingProgressDialog()
-
-                api.runCatching(activity) {
-                    unshareEvent(event)
-                } ?: run {
-                    progressDialog?.dismiss()
-                    return@launch
-                }
-
                 finishRemoving()
             } else if (eventShared && !eventOwn) {
                 // remove + blacklist somebody's event

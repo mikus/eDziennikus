@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.core.view.isVisible
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,6 @@ import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskFinishedEvent
-import eu.mikus.edziennik.data.api.szkolny.SzkolnyApi
 import eu.mikus.edziennik.data.db.entity.Event
 import eu.mikus.edziennik.data.db.entity.Metadata
 import eu.mikus.edziennik.data.db.entity.Profile
@@ -45,7 +45,6 @@ import eu.mikus.edziennik.ext.removeFromParent
 import eu.mikus.edziennik.ext.setText
 import eu.mikus.edziennik.ext.setTintColor
 import eu.mikus.edziennik.ui.dialogs.base.BindingDialog
-import eu.mikus.edziennik.ui.dialogs.settings.RegistrationConfigDialog
 import eu.mikus.edziennik.ui.views.TimeDropdown.Companion.DISPLAY_LESSONS
 import eu.mikus.edziennik.utils.Anim
 import eu.mikus.edziennik.utils.html.BetterHtml
@@ -89,10 +88,6 @@ class EventManualDialog(
     private val editingShared = editingEvent?.sharedBy != null
     private val editingOwn = editingEvent?.sharedBy == "self"
     private var removeEventDialog: AlertDialog? = null
-
-    private val api by lazy {
-        SzkolnyApi(app)
-    }
 
     private var enqueuedWeekDialog: AlertDialog? = null
     private var enqueuedWeekStart = Date.getToday()
@@ -151,17 +146,15 @@ class EventManualDialog(
 
         stylingConfig = StylingConfigBase(editText = b.topic, htmlMode = SIMPLE)
 
-        updateShareText()
-        b.shareSwitch.onChange { _, isChecked ->
-            updateShareText(isChecked)
-        }
+        // Cross-user event sharing was removed when SzkolnyApi was dropped
+        // from the fork. The share switch is hidden so users can't toggle
+        // it on; share-related labels stay so existing shared events
+        // received via legacy upstream syncs still render correctly.
+        b.shareSwitch.isVisible = false
+        b.shareSwitch.isChecked = false
+        updateShareText(checked = false)
 
         loadLists()
-
-        val shareByDefault = app.profile.config.shareByDefault && profile.canShare
-
-        b.shareSwitch.isChecked = editingShared || editingEvent == null && shareByDefault
-        b.shareSwitch.isEnabled = !editingShared || editingOwn
     }
 
     private fun updateShareText(checked: Boolean = b.shareSwitch.isChecked) {
@@ -426,15 +419,9 @@ class EventManualDialog(
         val subject = b.subjectDropdown.getSelected() as? Subject
         val teacher = b.teacherDropdown.getSelected()
 
-        val share = b.shareSwitch.isChecked
-
-        if (share && !profile.canShare) {
-            RegistrationConfigDialog(activity, profile, onChangeListener = { enabled ->
-                if (enabled)
-                    saveEvent()
-            }).showEventShareDialog()
-            return
-        }
+        // Sharing was removed when SzkolnyApi was dropped from the fork;
+        // share is always false here (the switch is hidden + unchecked).
+        val share = false
 
         b.dateDropdown.error = null
         b.teamDropdown.error = null
@@ -515,53 +502,16 @@ class EventManualDialog(
         launch {
             val profile = app.db.profileDao().getByIdNow(profileId)
 
-            if (!share && !editingShared) {
-                //Toast.makeText(activity, R.string.event_manual_saving, Toast.LENGTH_SHORT).show()
-                finishAdding(eventObject, metadataObject)
-            }
-            else if (editingShared && !editingOwn) {
+            // Cross-user event sharing was removed when SzkolnyApi was dropped
+            // from the fork. The share switch is hidden (see setupShareUi), so
+            // `share` is always false; existing shared events stored locally
+            // continue to display but no longer roundtrip to upstream's server.
+            @Suppress("UNUSED_VARIABLE")
+            val unusedProfile = profile  // keep the dao call alive for future hooks
+            if (editingShared && !editingOwn) {
                 Toast.makeText(activity, "Opcja edycji wydarzeń innych uczniów nie została jeszcze zaimplementowana.", Toast.LENGTH_LONG).show()
-                // TODO
-            }
-            else if (!share && editingShared) {
-                showSharingProgressDialog()
-
-                eventObject.apply {
-                    sharedBy = null
-                    sharedByName = profile?.studentNameLong
-                }
-
-                api.runCatching(activity) {
-                    unshareEvent(eventObject)
-                } ?: run {
-                    progressDialog?.dismiss()
-                    return@launch
-                }
-
-                eventObject.sharedByName = null
+            } else {
                 finishAdding(eventObject, metadataObject)
-            }
-            else if (share) {
-                showSharingProgressDialog()
-
-                eventObject.apply {
-                    sharedBy = profile?.userCode
-                    sharedByName = profile?.studentNameLong
-                    addedDate = System.currentTimeMillis()
-                }
-
-                api.runCatching(activity) {
-                    shareEvent(eventObject.withMetadata(metadataObject))
-                } ?: run {
-                    progressDialog?.dismiss()
-                    return@launch
-                }
-
-                eventObject.sharedBy = "self"
-                finishAdding(eventObject, metadataObject)
-            }
-            else {
-                Toast.makeText(activity, "Unknown action :(", Toast.LENGTH_SHORT).show()
             }
             progressDialog?.dismiss()
         }
@@ -570,16 +520,10 @@ class EventManualDialog(
     private fun removeEvent() {
         launch {
             if (editingShared && editingOwn) {
-                // unshare + remove own event
+                // Cross-user event sharing was removed when SzkolnyApi was
+                // dropped from the fork. The own copy is removed locally;
+                // any upstream copy on szkolny.eu is left as-is.
                 showRemovingProgressDialog()
-
-                api.runCatching(activity) {
-                    unshareEvent(editingEvent!!)
-                } ?: run {
-                    progressDialog?.dismiss()
-                    return@launch
-                }
-
                 finishRemoving()
             } else if (editingShared && !editingOwn) {
                 // remove + blacklist somebody's event

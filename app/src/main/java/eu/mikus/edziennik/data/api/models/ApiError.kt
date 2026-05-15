@@ -13,7 +13,6 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.ERROR_API_EXCEPTION
 import eu.mikus.edziennik.data.api.ERROR_EXCEPTION
 import eu.mikus.edziennik.data.api.szkolny.SzkolnyApiException
-import eu.mikus.edziennik.data.api.szkolny.request.ErrorReportRequest
 import eu.mikus.edziennik.ext.stackTraceString
 import eu.mikus.edziennik.ext.toErrorCode
 
@@ -89,32 +88,8 @@ class ApiError(val tag: String, var errorCode: Int) {
         return "ApiError(tag='$tag', errorCode=$errorCode, profileId=$profileId, throwable=$throwable, apiResponse=$apiResponse, request=$request, response=$response, isCritical=$isCritical)"
     }
 
-    fun toReportableError(context: Context): ErrorReportRequest.Error {
-        val requestString = request?.let {
-            it.method() + " " + it.url() + "\n" + it.headers() + "\n\n" + (it.jsonBody()?.toString() ?: "") + (it.textBody() ?: "")
-        }
-        val responseString = response?.let {
-            if (it.parserErrorBody == null) {
-                try {
-                    it.parserErrorBody = it.raw().body()?.string()
-                } catch (e: Exception) {
-                    it.parserErrorBody = e.stackTraceString
-                }
-            }
-            "HTTP "+it.code()+" "+it.message()+"\n" + it.headers() + "\n\n" + it.parserErrorBody
-        }
-        return ErrorReportRequest.Error(
-                id = id,
-                tag = tag,
-                errorCode = errorCode,
-                errorText = getStringText(context),
-                errorReason = getStringReason(context),
-                stackTrace = throwable?.stackTraceString,
-                request = requestString,
-                response = responseString,
-                apiResponse = apiResponse ?: response?.parserErrorBody,
-                isCritical = isCritical
-        )
-    }
-
+    // toReportableError(): mapping to ErrorReportRequest.Error was used by
+    // the szkolny.eu crash-reporting endpoint. With SzkolnyApi removed there
+    // are no remote consumers, so the conversion was deleted alongside the
+    // ErrorReportRequest DTO. Surface errors locally via toString() instead.
 }

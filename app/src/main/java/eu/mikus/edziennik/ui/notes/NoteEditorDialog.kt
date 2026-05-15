@@ -22,7 +22,6 @@ import eu.mikus.edziennik.databinding.NoteEditorDialogBinding
 import eu.mikus.edziennik.ext.isNotNullNorBlank
 import eu.mikus.edziennik.ext.resolveString
 import eu.mikus.edziennik.ui.dialogs.base.BindingDialog
-import eu.mikus.edziennik.ui.dialogs.settings.RegistrationConfigDialog
 import eu.mikus.edziennik.utils.TextInputDropDown
 import eu.mikus.edziennik.utils.managers.TextStylingManager.HtmlMode
 import eu.mikus.edziennik.utils.managers.TextStylingManager.StylingConfigBase
@@ -68,14 +67,10 @@ class NoteEditorDialog(
 
         val note = buildNote(profile) ?: return NO_DISMISS
 
-        if (note.isShared && !profile.canShare) {
-            RegistrationConfigDialog(activity, profile, onChangeListener = { enabled ->
-                if (enabled)
-                    onPositiveClick()
-            }).showNoteShareDialog()
-            return NO_DISMISS
-        }
-
+        // Cross-user note sharing registration was removed when SzkolnyApi
+        // was dropped from the fork. If a note has been marked as shared
+        // (legacy state), we keep that flag in DB but skip the
+        // share-onboarding flow entirely.
         if (note.isShared || editingNote?.isShared == true) {
             progressDialog = MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.please_wait)

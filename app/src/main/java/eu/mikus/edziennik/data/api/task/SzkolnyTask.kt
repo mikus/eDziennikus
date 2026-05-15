@@ -7,17 +7,14 @@ package eu.mikus.edziennik.data.api.task
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
-import eu.mikus.edziennik.data.api.szkolny.SzkolnyApi
 import eu.mikus.edziennik.data.db.entity.Notification
 import eu.mikus.edziennik.data.db.entity.Profile
-import eu.mikus.edziennik.ext.HOUR
 import eu.mikus.edziennik.utils.Utils.d
 
 class SzkolnyTask(val app: App, val syncingProfiles: List<Profile>) : IApiTask(-1) {
     companion object {
         private const val TAG = "SzkolnyTask"
     }
-    private val api by lazy { SzkolnyApi(app) }
     private val profiles by lazy { app.db.profileDao().allNow }
     override fun prepare(app: App) { taskName = app.getString(R.string.edziennik_szkolny_creating_notifications) }
     override fun cancel() {}
@@ -31,20 +28,9 @@ class SzkolnyTask(val app: App, val syncingProfiles: List<Profile>) : IApiTask(-
         val notifications = Notifications(app, notificationList, profiles)
         notifications.run()
 
-        val appSyncProfiles = profiles.filter { it.canShare }
-        // App Sync condition: every 24 hours && any profile is registered
-        val shouldAppSync =
-                System.currentTimeMillis() - app.config.sync.lastAppSync > 24 * HOUR * 1000
-                        && appSyncProfiles.isNotEmpty()
-
-        if (shouldAppSync) {
-            // sync shared events for registered profiles
-            val addedEvents = AppSync(app, notificationList, appSyncProfiles, api).run(app.config.sync.lastAppSync)
-            if (addedEvents > 0) {
-                // create notifications for shared events (not present before app sync)
-                notifications.sharedEventNotifications()
-            }
-        }
+        // The AppSync cross-user shared-events sync against szkolny.eu's
+        // backend was removed when SzkolnyApi was dropped from the fork.
+        // What remains here is the local notification pipeline only.
         d(TAG, "Created ${notificationList.count()} notifications.")
 
         // filter notifications

@@ -24,8 +24,8 @@ import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.databinding.LoginChooserFragmentBinding
 import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.ui.dialogs.sync.RegisterUnavailableDialog
-import eu.mikus.edziennik.ui.feedback.FeedbackActivity
 import eu.mikus.edziennik.utils.BetterLinkMovementMethod
+import eu.mikus.edziennik.utils.Utils
 import eu.mikus.edziennik.utils.SimpleDividerItemDecoration
 import eu.mikus.edziennik.utils.html.BetterHtml
 import eu.mikus.edziennik.utils.managers.AvailabilityManager.Error.Type
@@ -87,7 +87,7 @@ class LoginChooserFragment : Fragment(), CoroutineScope {
         }
 
         b.helpButton.onClick {
-            startActivity(Intent(activity, FeedbackActivity::class.java))
+            Utils.openUrl(activity, "https://github.com/mikus/eDziennikus/issues")
         }
 
         when {

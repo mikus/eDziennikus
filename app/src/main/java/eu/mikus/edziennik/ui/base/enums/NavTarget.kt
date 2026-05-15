@@ -18,7 +18,6 @@ import eu.mikus.edziennik.ui.attendance.AttendanceFragment
 import eu.mikus.edziennik.ui.behaviour.BehaviourFragment
 import eu.mikus.edziennik.ui.debug.DebugFragment
 import eu.mikus.edziennik.ui.debug.LabFragment
-import eu.mikus.edziennik.ui.feedback.FeedbackFragment
 import eu.mikus.edziennik.ui.grades.GradesListFragment
 import eu.mikus.edziennik.ui.grades.editor.GradesEditorFragment
 import eu.mikus.edziennik.ui.home.HomeFragment
@@ -202,13 +201,6 @@ enum class NavTarget(
         location = NavTargetLocation.PROFILE_LIST,
         nameRes = R.string.menu_sync_all,
         icon = CommunityMaterial.Icon.cmd_download_outline,
-    ),
-    FEEDBACK(
-        id = 120,
-        fragmentClass = FeedbackFragment::class.java,
-        location = NavTargetLocation.BOTTOM_SHEET,
-        nameRes = R.string.menu_feedback,
-        icon = CommunityMaterial.Icon2.cmd_help_circle_outline,
     ),
     DEBUG(
         id = 102,

@@ -160,11 +160,6 @@
         <activity android:name=".ui.home.CounterActivity"
             android:exported="false"
             android:theme="@style/AppTheme.Black" />
-        <activity android:name=".ui.feedback.FeedbackActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:label="@string/app_name"
-            android:exported="false"
-            android:theme="@style/AppTheme" />
         <activity android:name=".ui.settings.SettingsLicenseActivity"
             android:configChanges="orientation|keyboardHidden"
             android:exported="false"
@@ -182,8 +177,6 @@
             android:exported="false"
             android:theme="@style/Theme.MaterialComponents.Light.DarkActionBar" />
         <activity android:name=".ui.base.BuildInvalidActivity" android:exported="false" />
-        <activity android:name=".ui.settings.contributors.ContributorsActivity" android:exported="false" />
-
         <!--  _____               _
              |  __ \             (_)
              | |__) |___  ___ ___ ___   _____ _ __ ___

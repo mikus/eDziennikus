@@ -5,22 +5,29 @@
 package eu.mikus.edziennik.utils.managers
 
 import eu.mikus.edziennik.App
-import eu.mikus.edziennik.BuildConfig
-import eu.mikus.edziennik.data.api.*
 import eu.mikus.edziennik.data.api.models.ApiError
-import eu.mikus.edziennik.data.api.szkolny.SzkolnyApi
 import eu.mikus.edziennik.data.api.szkolny.response.RegisterAvailabilityStatus
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.data.db.enums.LoginType
-import eu.mikus.edziennik.ext.currentTimeUnix
-import eu.mikus.edziennik.ext.toApiError
 
-class AvailabilityManager(val app: App) {
+/**
+ * Neutered after the fork dropped SzkolnyApi: the upstream availability
+ * endpoint (`api.getRegisterAvailability()`) is no longer reachable, so
+ * [check] always returns null and every provider is treated as available.
+ *
+ * The [Error] type and [check] overload signatures are preserved so the
+ * ~15 caller sites (MainActivity, HomeFragment, HomeAvailabilityCard,
+ * EdziennikTask, LoginChooserFragment, …) keep compiling without edits;
+ * their `availabilityManager.check(…)?.let { … }` paths simply never enter.
+ *
+ * If a future fork wants per-provider availability reporting, this is the
+ * single class to revisit — every consumer already gates on a nullable
+ * [Error] result.
+ */
+class AvailabilityManager(@Suppress("UNUSED_PARAMETER") app: App) {
     companion object {
         private const val TAG = "AvailabilityManager"
     }
-
-    private val api = SzkolnyApi(app)
 
     data class Error(
         val type: Type,
@@ -45,48 +52,12 @@ class AvailabilityManager(val app: App) {
         }
     }
 
-    fun check(profile: Profile, cacheOnly: Boolean = false): Error? {
-        return check(profile.registerName, cacheOnly)
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun check(profile: Profile, cacheOnly: Boolean = false): Error? = null
 
-    fun check(loginType: LoginType, cacheOnly: Boolean = false): Error? {
-        return check(loginType.name.lowercase(), cacheOnly)
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun check(loginType: LoginType, cacheOnly: Boolean = false): Error? = null
 
-    fun check(registerName: String, cacheOnly: Boolean = false): Error? {
-        if (!app.config.apiAvailabilityCheck)
-            return null
-        val status = app.config.sync.registerAvailability[registerName]
-        if (status != null && status.nextCheckAt > currentTimeUnix()) {
-            return reportStatus(status)
-        }
-        if (cacheOnly) {
-            return reportStatus(status)
-        }
-
-        return try {
-            val availability = api.getRegisterAvailability()
-            app.config.sync.registerAvailability = availability
-            reportStatus(availability[registerName])
-        } catch (e: Throwable) {
-            reportApiError(e)
-        }
-    }
-
-    private fun reportStatus(status: RegisterAvailabilityStatus?): Error? {
-        if (status == null)
-            return null
-        if (!status.available || status.minVersionCode > BuildConfig.VERSION_CODE)
-            return Error.notAvailable(status)
-        return null
-    }
-
-    private fun reportApiError(throwable: Throwable): Error {
-        val apiError = throwable.toApiError(TAG)
-        if (apiError.errorCode == ERROR_API_INVALID_SIGNATURE) {
-            app.config.sync.registerAvailability = mapOf()
-            return Error.noApiAccess()
-        }
-        return Error.apiError(apiError)
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun check(registerName: String, cacheOnly: Boolean = false): Error? = null
 }

@@ -129,17 +129,16 @@ class NoteManager(private val app: App) {
         return true
     }
 
-    private suspend fun shareNote(activity: AppCompatActivity, note: Note, teamId: Long?): Boolean {
-        return app.api.runCatching(activity) {
-            shareNote(note, teamId)
-        } != null
-    }
+    // Note sharing across users went through szkolny.eu's backend. After the
+    // SzkolnyApi removal these are local-only no-ops; the note's isShared
+    // flag continues to be persisted (legacy state remains visible) but no
+    // longer round-trips to a server. Both stubs report success so the
+    // saveNote() / removeNote() flows continue normally.
+    @Suppress("UNUSED_PARAMETER")
+    private suspend fun shareNote(activity: AppCompatActivity, note: Note, teamId: Long?): Boolean = true
 
-    private suspend fun unshareNote(activity: AppCompatActivity, note: Note): Boolean {
-        return app.api.runCatching(activity) {
-            unshareNote(note)
-        } != null
-    }
+    @Suppress("UNUSED_PARAMETER")
+    private suspend fun unshareNote(activity: AppCompatActivity, note: Note): Boolean = true
 
     private fun getAdapterForItem(
         activity: AppCompatActivity,

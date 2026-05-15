@@ -734,10 +734,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     ).show()
                     true
                 }
-                "feedbackMessage" -> {
-                    intentNavTarget = NavTarget.FEEDBACK
-                    false
-                }
                 "userActionRequired" -> {
                     val event = UserActionRequiredEvent(
                         profileId = extras.getInt("profileId"),
