@@ -39,7 +39,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -388,7 +387,7 @@ public class Utils {
             byte[] iv = new byte[16];
             IvParameterSpec ivSpec = new IvParameterSpec(iv);
             cipher.init(Cipher.ENCRYPT_MODE, keyObj, ivSpec);
-            byte [] encryptedByteValue = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
+            byte [] encryptedByteValue = cipher.doFinal(value.getBytes("UTF-8"));
             String encryptedValue64 = Base64.encodeToString(encryptedByteValue, Base64.DEFAULT);
             return encryptedValue64;
 
@@ -403,7 +402,7 @@ public class Utils {
             cipher.init(Cipher.DECRYPT_MODE, keyObj, ivSpec);
             byte[] decryptedValue64 = Base64.decode(value, Base64.DEFAULT);
             byte [] decryptedByteValue = cipher.doFinal(decryptedValue64);
-            String decryptedValue = new String(decryptedByteValue, StandardCharsets.UTF_8);
+            String decryptedValue = new String(decryptedByteValue, "UTF-8");
             return decryptedValue;
 
         }

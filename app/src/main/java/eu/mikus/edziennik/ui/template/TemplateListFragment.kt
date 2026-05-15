@@ -52,7 +52,7 @@ class TemplateListFragment : Fragment(), CoroutineScope {
 
         val adapter = TemplateAdapter(activity)
 
-        app.db.notificationDao().getAll().observe(this@TemplateListFragment, Observer { items ->
+        app.db.notificationDao().getAll().observe(viewLifecycleOwner, Observer { items ->
             if (!isAdded) return@Observer
 
             // load & configure the adapter

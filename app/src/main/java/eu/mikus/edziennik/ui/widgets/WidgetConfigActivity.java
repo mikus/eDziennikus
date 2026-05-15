@@ -6,6 +6,7 @@ package eu.mikus.edziennik.ui.widgets;
 
 import static eu.mikus.edziennik.ext.DataExtensionsKt.filterOutArchived;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.WallpaperManager;
 import android.appwidget.AppWidgetManager;
@@ -169,6 +170,10 @@ public class WidgetConfigActivity extends Activity {
                 .show();
     }
 
+    // WallpaperManager.getDrawable() is restricted on Android 13+ (throws SecurityException
+    // without MANAGE_EXTERNAL_STORAGE / READ_WALLPAPER_INTERNAL, neither available to apps).
+    // The try/catch at the call site swallows it; preview just stays empty on modern Android.
+    @SuppressLint("MissingPermission")
     private void configure() {
         b = DialogWidgetConfigBinding.inflate(getLayoutInflater(), null, false);
 

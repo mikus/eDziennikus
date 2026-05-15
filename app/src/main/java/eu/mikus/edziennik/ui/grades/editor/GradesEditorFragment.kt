@@ -97,7 +97,7 @@ class GradesEditorFragment : Fragment() {
         b.listView.setHasFixedSize(false)
         b.listView.isNestedScrollingEnabled = false
         b.listView.layoutManager = LinearLayoutManager(context)
-        b.listView.adapter = GradesEditorAdapter(context!!, editorGrades, object : GradesEditorAdapter.OnGradeActionListener {
+        b.listView.adapter = GradesEditorAdapter(requireContext(), editorGrades, object : GradesEditorAdapter.OnGradeActionListener {
             override fun onClickRemove(gradeId: Long) {
                 gradeSumSemester = 0f
                 gradeCountSemester = 0f
@@ -196,7 +196,7 @@ class GradesEditorFragment : Fragment() {
     private fun refreshViews() {
         editorGrades.clear()
 
-        app.db.subjectDao().getById(App.profileId, subjectId).observe(this, Observer { subject ->
+        app.db.subjectDao().getById(App.profileId, subjectId).observe(viewLifecycleOwner, Observer { subject ->
             if (subject == null || subject.id == -1L) {
                 MaterialAlertDialogBuilder(activity)
                     .setTitle(R.string.error_occured)
@@ -210,7 +210,7 @@ class GradesEditorFragment : Fragment() {
             gradeCountSemester = 0f
             averageSemester = 0f
 
-            app.db.gradeDao().getAllBySubject(App.profileId, subject.id).observe(this, Observer { grades ->
+            app.db.gradeDao().getAllBySubject(App.profileId, subject.id).observe(viewLifecycleOwner, Observer { grades ->
                 for (grade in grades) {
                     if (grade.type == Grade.TYPE_NORMAL) {
                         if (grade.weight < 0) {

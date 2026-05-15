@@ -81,6 +81,9 @@ android {
     }
     lint {
         checkReleaseBuilds = false
+        // Polish is the canonical source language; en/de translations are partial
+        // and added over time. See CLAUDE.md "Strings" section.
+        disable 'MissingTranslation'
     }
     testOptions {
         unitTests {
@@ -137,7 +140,7 @@ dependencies {
     // Language cores
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "androidx.multidex:multidex:2.0.1"
-    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:1.1.5"
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
 
     // Android Jetpack
     implementation "androidx.appcompat:appcompat:1.5.1"

@@ -102,7 +102,7 @@ class MainActivityRequestHandler(val activity: MainActivity) {
 
         return cursor?.use {
             if (it.moveToFirst()) {
-                val name = it.getString(it.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+                val name = it.getString(it.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
                 val mimeIndex = it.getColumnIndex("mime_type")
                 val mimeType = if (mimeIndex != -1) it.getString(mimeIndex) else null
 

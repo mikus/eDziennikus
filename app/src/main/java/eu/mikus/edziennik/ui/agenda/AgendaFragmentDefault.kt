@@ -118,7 +118,7 @@ class AgendaFragmentDefault(
                 addTeacherAbsence(events)
         }
 
-        app.db.eventDao().getAll(app.profileId).observe(fragment) {
+        app.db.eventDao().getAll(app.profileId).observe(fragment.viewLifecycleOwner) {
             addEvents(events, it)
             if (isInitialized)
                 updateView()

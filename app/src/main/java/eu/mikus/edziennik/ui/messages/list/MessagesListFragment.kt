@@ -5,6 +5,7 @@
 package eu.mikus.edziennik.ui.messages.list
 
 import android.os.Bundle
+import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -54,7 +55,7 @@ class MessagesListFragment : LazyFragment(), CoroutineScope {
     override fun onPageCreated(): Boolean { startCoroutineTimer(100L) {
         val messageType = arguments.getInt("messageType", Message.TYPE_RECEIVED)
         var recyclerViewState =
-            arguments?.getParcelable<LinearLayoutManager.SavedState>("recyclerViewState")
+            arguments?.getParcelable<Parcelable>("recyclerViewState")
         val searchText = arguments?.getString("searchText")
 
         teachers = withContext(Dispatchers.Default) {

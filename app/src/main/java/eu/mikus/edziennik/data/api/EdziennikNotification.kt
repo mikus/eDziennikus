@@ -4,6 +4,7 @@
 
 package eu.mikus.edziennik.data.api
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -115,6 +116,9 @@ class EdziennikNotification(val app: App) {
         return this
     }
 
+    // NotificationCompat.Builder has no public API to clear actions; reach into the
+    // @RestrictTo(LIBRARY_GROUP) mActions list to replace the set on each rebuild.
+    @SuppressLint("RestrictedApi")
     fun setCloseAction(): EdziennikNotification {
         notificationBuilder.mActions.clear()
         notificationBuilder.addAction(
@@ -125,6 +129,7 @@ class EdziennikNotification(val app: App) {
                 ))
         return this
     }
+    @SuppressLint("RestrictedApi")
     private fun setCancelAction(taskId: Int) {
         notificationBuilder.mActions.clear()
         notificationBuilder.addAction(
