@@ -119,45 +119,6 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
         }
     }
 
-    fun sharedEventNotifications() {
-        app.db.eventDao().getNotNotifiedNow().filter {
-            it.date >= today && it.sharedBy != null && it.sharedBy != "self"
-        }.forEach { event ->
-            val text = app.getString(
-                R.string.notification_shared_event_format,
-                event.sharedByName,
-                event.typeName ?: "wydarzenie",
-                event.date.formattedString,
-                event.topicHtml
-            )
-            val textLong = app.getString(
-                R.string.notification_shared_event_long_format,
-                event.sharedByName,
-                event.typeName ?: "-",
-                event.subjectLongName ?: "-",
-                event.date.formattedString,
-                Week.getFullDayName(event.date.weekDay),
-                event.time?.stringHM ?: app.getString(R.string.event_all_day),
-                event.topicHtml.take(200)
-            )
-            val type = if (event.isHomework)
-                NotificationType.HOMEWORK
-            else
-                NotificationType.EVENT
-            notifications += Notification(
-                id = Notification.buildId(event.profileId, type, event.id),
-                title = type.titleRes.resolveString(app),
-                text = text,
-                textLong = textLong,
-                type = type,
-                profileId = event.profileId,
-                profileName = profiles.singleOrNull { it.id == event.profileId }?.name,
-                navTarget = if (event.isHomework) NavTarget.HOMEWORK else NavTarget.AGENDA,
-                addedDate = event.addedDate
-            ).addExtra("eventId", event.id).addExtra("eventDate", event.date.value.toLong())
-        }
-    }
-
     private fun gradeNotifications() {
         for (grade in app.db.gradeDao().getNotNotifiedNow()) {
             val gradeName = when (grade.type) {

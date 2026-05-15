@@ -51,26 +51,11 @@ class NoteViewHolder(
             b.colorLayout.background = null
         }
 
-        if (item.sharedBy != null && item.sharedByName != null) {
-            b.addedBy.text = listOf<CharSequence>(
-                "{cmd-share-variant}",
-                item.sharedByName,
-                "•",
-                addedDate,
-            ).concat(" ")
+        // All notes are locally-authored now; cross-user sharing/attribution
+        // was removed when SzkolnyApi was dropped.
+        b.addedBy.setText(R.string.notes_added_by_you_format, addedDate)
 
-            // workaround for the span data lost during setText above
-            val sharedBySpanned = adapter.highlightSearchText(
-                item = item,
-                text = item.sharedByName,
-                color = colorHighlight,
-            )
-            b.addedBy.text = b.addedBy.text.replaceSpanned(item.sharedByName, sharedBySpanned)
-        } else {
-            b.addedBy.setText(R.string.notes_added_by_you_format, addedDate)
-        }
-
-        b.editButton.isVisible = item.canEdit && adapter.onNoteEditClick != null
+        b.editButton.isVisible = adapter.onNoteEditClick != null
 
         if (adapter.onNoteClick != null)
             b.root.onClick {

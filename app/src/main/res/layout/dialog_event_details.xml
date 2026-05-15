@@ -15,8 +15,6 @@
         <variable
             name="event"
             type="eu.mikus.edziennik.data.db.full.EventFull" />
-        <variable name="eventShared" type="boolean" />
-        <variable name="eventOwn" type="boolean" />
         <variable name="name" type="java.lang.CharSequence" />
         <variable name="details" type="java.lang.CharSequence" />
         <variable name="monthName" type="String" />

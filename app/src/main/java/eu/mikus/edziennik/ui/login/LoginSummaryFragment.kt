@@ -10,13 +10,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import eu.mikus.edziennik.*
 import eu.mikus.edziennik.databinding.LoginSummaryFragmentBinding
-import eu.mikus.edziennik.ext.Bundle
 import eu.mikus.edziennik.ext.onChange
 import eu.mikus.edziennik.ext.onClick
 import eu.mikus.edziennik.utils.SimpleDividerItemDecoration
@@ -61,26 +59,16 @@ class LoginSummaryFragment : Fragment(), CoroutineScope {
             addItemDecoration(SimpleDividerItemDecoration(context))
         }
 
-        b.registerMeSwitch.onChange { _, isChecked ->
-            if (isChecked)
-                return@onChange
-            MaterialAlertDialogBuilder(activity)
-                    .setTitle(R.string.login_summary_unregister_title)
-                    .setMessage(R.string.login_summary_unregister_text)
-                    .setPositiveButton(R.string.ok, null)
-                    .setNegativeButton(R.string.cancel) { _, _ -> b.registerMeSwitch.isChecked = true }
-                    .show()
-        }
-
         b.anotherButton.onClick {
             nav.navigate(R.id.loginChooserFragment, null, activity.navOptions)
         }
 
+        // Cross-user-sharing registration was removed when SzkolnyApi was
+        // dropped from the fork. New profiles are never registered, so the
+        // login flow no longer surfaces the toggle and passes no argument
+        // to the sync fragment (which defaults to REGISTRATION_DISABLED).
         b.finishButton.onClick {
-            val args = Bundle(
-                    "registrationAllowed" to b.registerMeSwitch.isChecked
-            )
-            nav.navigate(R.id.loginSyncFragment, args, activity.navOptions)
+            nav.navigate(R.id.loginSyncFragment, null, activity.navOptions)
         }
     }
 }

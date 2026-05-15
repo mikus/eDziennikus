@@ -84,16 +84,12 @@ class EventViewHolder(
             else null,
         ).concat(bullet)
 
-        val addedBy = item.sharedByName ?: item.teacherName ?: ""
+        val addedBy = item.teacherName ?: ""
         b.addedBy.setText(
-            when (item.sharedBy) {
-                null -> when {
-                    item.addedManually -> R.string.event_list_added_by_self_format
-                    item.teacherName == null -> R.string.event_list_added_by_unknown_format
-                    else -> R.string.event_list_added_by_format
-                }
-                "self" -> R.string.event_list_shared_by_self_format
-                else -> R.string.event_list_shared_by_format
+            when {
+                item.addedManually -> R.string.event_list_added_by_self_format
+                item.teacherName == null -> R.string.event_list_added_by_unknown_format
+                else -> R.string.event_list_added_by_format
             },
             /* 1$ */
             Date.fromMillis(item.addedDate).formattedString,

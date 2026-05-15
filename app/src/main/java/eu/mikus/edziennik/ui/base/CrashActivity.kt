@@ -66,12 +66,10 @@ class CrashActivity : AppCompatActivity(), CoroutineScope {
         val restartButton = findViewById<Button>(R.id.crash_restart_btn)
         restartButton.setOnClickListener { CustomActivityOnCrash.restartApplication(this@CrashActivity, config) }
 
-        // Crash reporting via szkolny.eu was removed when SzkolnyApi was
-        // dropped from the fork. The button is hidden; users can still copy
-        // the crash details to clipboard via the "details" button and paste
-        // them into a GitHub issue manually.
-        findViewById<Button>(R.id.crash_report_btn).visibility = View.GONE
-
+        // The "Send crash report" button was removed when SzkolnyApi was
+        // dropped from the fork. Users can still copy the crash details
+        // to clipboard via the "details" button (below) and paste them
+        // into a GitHub issue manually.
         val moreInfoButton = findViewById<Button>(R.id.crash_details_btn)
         moreInfoButton.setOnClickListener {
             MaterialAlertDialogBuilder(this, R.style.AppTheme_MaterialAlertDialogMonospace)
@@ -86,11 +84,9 @@ class CrashActivity : AppCompatActivity(), CoroutineScope {
 
         if (errorInformation.contains("MANUAL CRASH")) {
             findViewById<View>(R.id.crash_notice).visibility = View.GONE
-            findViewById<View>(R.id.crash_report_btn).visibility = View.GONE
             findViewById<View>(R.id.crash_feature).visibility = View.VISIBLE
         } else {
             findViewById<View>(R.id.crash_notice).visibility = View.VISIBLE
-            findViewById<View>(R.id.crash_report_btn).visibility = View.VISIBLE
             findViewById<View>(R.id.crash_feature).visibility = View.GONE
         }
     }
@@ -101,9 +97,10 @@ class CrashActivity : AppCompatActivity(), CoroutineScope {
         content = content.replace(packageName.toRegex(), "<font color='#4caf50'>$packageName</font>")
         content = content.replace("\n".toRegex(), "<br>")
         contentPlain += "\n" + Build.MANUFACTURER + "\n" + Build.BRAND + "\n" + Build.MODEL + "\n" + Build.DEVICE + "\n"
-        if (!app.profile.canShare) {
-            contentPlain += "U: " + app.profile.userCode + "\nS: " + app.profile.studentNameLong + "\n"
-        }
+        // Cross-user-sharing registration is gone; include user info in crash
+        // details always (used to be gated on !canShare to avoid leaking when
+        // the user opted in to share).
+        contentPlain += "U: " + app.profile.userCode + "\nS: " + app.profile.studentNameLong + "\n"
         contentPlain += BuildConfig.VERSION_NAME + " " + BuildConfig.BUILD_TYPE
         return if (plain) contentPlain else content
     }

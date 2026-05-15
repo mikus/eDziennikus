@@ -71,7 +71,6 @@ class Demo(
         profile.apply {
             empty = false
             syncEnabled = false
-            registration = Profile.REGISTRATION_DISABLED
             studentClassName = "1A"
             userCode = "nologin:1234"
             dateYearEnd.month = 8

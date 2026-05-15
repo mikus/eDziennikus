@@ -52,8 +52,6 @@ class EventDetailsDialog(
     override fun getNeutralButtonText() = if (event.addedManually) R.string.remove else null
 
     private var removeEventDialog: AlertDialog? = null
-    private val eventShared = event.sharedBy != null
-    private val eventOwn = event.sharedBy == "self"
     private val manager
         get() = app.eventManager
 
@@ -84,8 +82,6 @@ class EventDetailsDialog(
 
     private fun update() {
         b.event = event
-        b.eventShared = eventShared
-        b.eventOwn = eventOwn
 
         b.topic.text = event.topicHtml
         b.body.text = event.bodyHtml
@@ -125,17 +121,13 @@ class EventDetailsDialog(
         ).concat(bullet)
 
         b.addedBy.setText(
-                when (event.sharedBy) {
-                    null -> when {
-                        event.addedManually -> R.string.event_details_added_by_self_format
-                        event.teacherName == null -> R.string.event_details_added_by_unknown_format
-                        else -> R.string.event_details_added_by_format
-                    }
-                    "self" -> R.string.event_details_shared_by_self_format
-                    else -> R.string.event_details_shared_by_format
+                when {
+                    event.addedManually -> R.string.event_details_added_by_self_format
+                    event.teacherName == null -> R.string.event_details_added_by_unknown_format
+                    else -> R.string.event_details_added_by_format
                 },
                 Date.fromMillis(event.addedDate).formattedString,
-                event.sharedByName ?: event.teacherName ?: ""
+                event.teacherName ?: ""
         )
 
 
@@ -301,14 +293,9 @@ class EventDetailsDialog(
     }
 
     private fun showRemoveEventDialog() {
-        val shareNotice = when {
-            eventShared && eventOwn -> "\n\n"+activity.getString(R.string.dialog_event_manual_remove_shared_self)
-            eventShared && !eventOwn -> "\n\n"+activity.getString(R.string.dialog_event_manual_remove_shared)
-            else -> ""
-        }
         removeEventDialog = MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.are_you_sure)
-                .setMessage(activity.getString(R.string.dialog_register_event_manual_remove_confirmation)+shareNotice)
+                .setMessage(R.string.dialog_register_event_manual_remove_confirmation)
                 .setPositiveButton(R.string.yes, null)
                 .setNegativeButton(R.string.no) { dialog, _ -> dialog.dismiss() }
                 .create()
@@ -326,22 +313,8 @@ class EventDetailsDialog(
 
     private fun removeEvent() {
         launch {
-            if (eventShared && eventOwn) {
-                // Cross-user event sharing was removed when SzkolnyApi was
-                // dropped from the fork. Existing shared-own events are
-                // removed locally only; the upstream copy on szkolny.eu
-                // (if any) is left as-is.
-                showRemovingProgressDialog()
-                finishRemoving()
-            } else if (eventShared && !eventOwn) {
-                // remove + blacklist somebody's event
-                Toast.makeText(activity, "Nie zaimplementowana opcja :(", Toast.LENGTH_SHORT).show()
-                // TODO
-            } else {
-                // remove event
-                Toast.makeText(activity, R.string.event_manual_remove, Toast.LENGTH_SHORT).show()
-                finishRemoving()
-            }
+            Toast.makeText(activity, R.string.event_manual_remove, Toast.LENGTH_SHORT).show()
+            finishRemoving()
             progressDialog?.dismiss()
         }
     }

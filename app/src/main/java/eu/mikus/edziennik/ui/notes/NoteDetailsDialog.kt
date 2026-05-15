@@ -31,7 +31,9 @@ class NoteDetailsDialog(
         NoteDetailsDialogBinding.inflate(layoutInflater)
 
     override fun getPositiveButtonText() = R.string.close
-    override fun getNeutralButtonText() = if (note.canEdit) R.string.homework_edit else null
+    // All notes are locally-authored now (no cross-user sharing), so editing
+    // is always allowed.
+    override fun getNeutralButtonText() = R.string.homework_edit
 
     private val manager
         get() = app.noteManager
@@ -73,13 +75,9 @@ class NoteDetailsDialog(
         }
 
         b.addedBy.setText(
-            when (note.sharedBy) {
-                null -> R.string.notes_added_by_you_format
-                "self" -> R.string.event_details_shared_by_self_format
-                else -> R.string.event_details_shared_by_format
-            },
+            R.string.notes_added_by_you_format,
             Date.fromMillis(note.addedDate).formattedString,
-            note.sharedByName ?: "",
+            "",
         )
     }
 }

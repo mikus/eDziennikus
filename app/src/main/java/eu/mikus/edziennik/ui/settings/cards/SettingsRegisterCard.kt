@@ -4,6 +4,7 @@
 
 package eu.mikus.edziennik.ui.settings.cards
 
+import com.danielstone.materialaboutlibrary.items.MaterialAboutItem
 import com.danielstone.materialaboutlibrary.model.MaterialAboutCard
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.szkolny.font.SzkolnyFont
@@ -39,17 +40,6 @@ class SettingsRegisterCard(util: SettingsUtil) : SettingsCard(util) {
                 (if (configGlobal.timetable.bellSyncMultiplier == -1) "-" else "+") + it.stringHMS
             )
         } ?: activity.getString(R.string.settings_register_bell_sync_subtext_disabled)
-
-    private val sharedEventsDefaultItem by lazy {
-        util.createPropertyItem(
-            text = R.string.settings_register_share_by_default_text,
-            subText = R.string.settings_register_share_by_default_subtext,
-            icon = CommunityMaterial.Icon3.cmd_toggle_switch_outline,
-            value = configProfile.shareByDefault
-        ) { _, value ->
-            configProfile.shareByDefault = value
-        }
-    }
 
     override fun getItems(card: MaterialAboutCard) = listOfNotNull(
         util.createActionItem(
@@ -137,24 +127,12 @@ class SettingsRegisterCard(util: SettingsUtil) : SettingsCard(util) {
         *(getRegistrationItems().takeIf { !app.profile.archived } ?: arrayOf()),
     )
 
-    private fun getRegistrationItems() = listOfNotNull(
-        util.createSectionItem(
-            text = R.string.settings_registration_section,
-        ),
-
-        util.createPropertyItem(
-            text = R.string.settings_register_allow_registration_text,
-            subText = R.string.settings_register_allow_registration_subtext,
-            icon = CommunityMaterial.Icon.cmd_account_circle_outline,
-            value = app.profile.canShare,
-            // Cross-user sharing registration was removed when SzkolnyApi was
-            // dropped from the fork. The toggle is left visible for legacy
-            // profiles whose canShare flag is true in DB, but flipping it
-            // no longer round-trips to a server — beforeChange returns true
-            // to accept the local-only value change.
-            beforeChange = { _, _ -> true }
-        ) { _, _ -> },
-
-        sharedEventsDefaultItem.takeIf { app.profile.canShare },
-    ).toTypedArray()
+    // Cross-user-sharing registration was removed when SzkolnyApi was
+    // dropped from the fork. The "Allow registration" toggle and the
+    // dependent "Share by default" item used to live here; both UI
+    // affordances have been removed because no backend can act on them.
+    // Returning an empty array keeps the surrounding card structure
+    // (settings_card_register_title remains for the e-diary settings
+    // above).
+    private fun getRegistrationItems() = emptyArray<MaterialAboutItem>()
 }

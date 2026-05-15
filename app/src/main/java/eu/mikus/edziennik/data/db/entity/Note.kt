@@ -36,11 +36,6 @@ data class Note(
     @ColumnInfo(name = "noteColor")
     val color: Long?,
 
-    @ColumnInfo(name = "noteSharedBy")
-    var sharedBy: String? = null,
-    @ColumnInfo(name = "noteSharedByName")
-    val sharedByName: String? = null,
-
     val addedDate: Long = System.currentTimeMillis(),
 ) : Searchable<Note> {
     enum class OwnerType(
@@ -79,11 +74,6 @@ data class Note(
         BLACK(0xff000000, R.string.color_black),
     }
 
-    val isShared
-        get() = sharedBy != null && sharedByName != null
-    val canEdit
-        get() = !isShared || sharedBy == "self"
-
     // used when receiving notes
     @Ignore
     var teamCode: String? = null
@@ -121,7 +111,6 @@ data class Note(
             return@lazy emptyList()
         listOf(
             listOf(topicHtml?.toString(), bodyHtml.toString()),
-            listOf(sharedByName),
         )
     }
 

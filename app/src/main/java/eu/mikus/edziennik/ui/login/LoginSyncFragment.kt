@@ -69,13 +69,7 @@ class LoginSyncFragment : Fragment(), CoroutineScope {
         val loginStores = activity.loginStores.filter { store -> profiles.any { it.loginStoreId == store.id } }
 
         withContext(Dispatchers.IO) {
-            val registrationAllowed = arguments?.getBoolean("registrationAllowed") ?: false
             profiles.forEach {
-                it.registration = if (registrationAllowed)
-                    Profile.REGISTRATION_ENABLED
-                else
-                    Profile.REGISTRATION_DISABLED
-
                 val data = AppData.get(it.loginStoreType)
                 for ((key, value) in data.configOverrides) {
                     it.config.set(key, value)

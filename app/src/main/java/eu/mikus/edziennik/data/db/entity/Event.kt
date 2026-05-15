@@ -74,20 +74,11 @@ open class Event(
     }
 
     /**
-     * Added manually - added by self, shared by self, or shared by someone else.
+     * Added manually - added by the local user. Cross-user "shared" events
+     * went away with SzkolnyApi; no other source can set this.
      */
     @ColumnInfo(name = "eventAddedManually")
     var addedManually: Boolean = false
-        get() = field || isShared
-
-    /**
-     * Shared by - user code who shared the event. Null if not shared.
-     * "Self" if shared by this app user.
-     */
-    @ColumnInfo(name = "eventSharedBy")
-    var sharedBy: String? = null
-    @ColumnInfo(name = "eventSharedByName")
-    var sharedByName: String? = null
 
     @ColumnInfo(name = "eventBlacklisted")
     var blacklisted: Boolean = false
@@ -115,24 +106,6 @@ open class Event(
 
     val isHomework
         get() = type == TYPE_HOMEWORK
-
-    /**
-     * Whether the event is shared by anyone. Note that this implies [addedManually].
-     */
-    val isShared
-        get() = sharedBy != null
-
-    /**
-     * Whether the event is shared by "self" (this app user).
-     */
-    val isSharedSent
-        get() = sharedBy == "self"
-
-    /**
-     * Whether the event is shared by someone else from the class group.
-     */
-    val isSharedReceived
-        get() = sharedBy != null && sharedBy != "self"
 
     /**
      * Add an attachment

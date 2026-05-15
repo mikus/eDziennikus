@@ -98,30 +98,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="@string/agenda_config_event_sharing"
-                android:textAppearance="@style/NavView.TextView.Subtitle" />
-
-            <com.google.android.material.checkbox.MaterialCheckBox
-                android:id="@+id/eventSharingEnabled"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="32dp"
-                android:text="@string/agenda_config_event_sharing_enabled" />
-
-            <com.google.android.material.checkbox.MaterialCheckBox
-                android:id="@+id/shareByDefault"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:minHeight="32dp"
-                android:checked="@={config.shareByDefault}"
-                android:text="@string/settings_register_share_by_default_text" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 android:text="@string/agenda_config_elearning"
                 android:textAppearance="@style/NavView.TextView.Subtitle" />
 

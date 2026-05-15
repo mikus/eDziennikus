@@ -89,23 +89,6 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
-                    android:id="@+id/shareSwitch"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:checked="@{editingNote.sharedBy != null || editingNote == null &amp;&amp; shareByDefault}"
-                    android:isVisible="@{ownerType.shareable}"
-                    android:minHeight="32dp"
-                    android:text="@string/dialog_event_manual_share_enabled" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:isVisible="@{ownerType.shareable}"
-                    android:text="@string/notes_editor_share_hint"
-                    android:textAppearance="@style/NavView.TextView.Helper" />
-
-                <com.google.android.material.switchmaterial.SwitchMaterial
                     android:id="@+id/replaceSwitch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

@@ -30,8 +30,6 @@ class EventFull(
             event.teacherId, event.subjectId, event.teamId, event.addedDate) {
         event.let {
             addedManually = it.addedManually
-            sharedBy = it.sharedBy
-            sharedByName = it.sharedByName
             blacklisted = it.blacklisted
             isDownloaded = it.isDownloaded
             homeworkBody = it.homeworkBody
@@ -83,7 +81,6 @@ class EventFull(
             attachmentNames,
             listOf(subjectLongName),
             listOf(teacherName),
-            listOf(sharedByName),
         )
     }
 

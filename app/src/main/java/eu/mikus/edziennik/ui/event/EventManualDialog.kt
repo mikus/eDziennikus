@@ -85,8 +85,6 @@ class EventManualDialog(
         get() = app.textStylingManager
 
     private var customColor: Int? = null
-    private val editingShared = editingEvent?.sharedBy != null
-    private val editingOwn = editingEvent?.sharedBy == "self"
     private var removeEventDialog: AlertDialog? = null
 
     private var enqueuedWeekDialog: AlertDialog? = null
@@ -145,31 +143,7 @@ class EventManualDialog(
         )
 
         stylingConfig = StylingConfigBase(editText = b.topic, htmlMode = SIMPLE)
-
-        // Cross-user event sharing was removed when SzkolnyApi was dropped
-        // from the fork. The share switch is hidden so users can't toggle
-        // it on; share-related labels stay so existing shared events
-        // received via legacy upstream syncs still render correctly.
-        b.shareSwitch.isVisible = false
-        b.shareSwitch.isChecked = false
-        updateShareText(checked = false)
-
         loadLists()
-    }
-
-    private fun updateShareText(checked: Boolean = b.shareSwitch.isChecked) {
-        b.shareDetails.visibility = if (checked || editingShared)
-            View.VISIBLE
-        else View.GONE
-
-        val text = when {
-            checked && editingShared && editingOwn -> R.string.dialog_event_manual_share_will_change
-            checked && editingShared -> R.string.dialog_event_manual_share_will_request
-            !checked && editingShared -> R.string.dialog_event_manual_share_will_remove
-            else -> R.string.dialog_event_manual_share_first_notice
-        }
-
-        b.shareDetails.setText(text, editingEvent?.sharedByName ?: "")
     }
 
     private fun syncTimetable(date: Date) {
@@ -195,18 +169,6 @@ class EventManualDialog(
                         "weekStart" to weekStart.stringY_m_d
                 )
         ).enqueue(activity)
-    }
-
-    private fun showSharingProgressDialog() {
-        if (progressDialog != null) {
-            return
-        }
-
-        progressDialog = MaterialAlertDialogBuilder(activity)
-                .setTitle(R.string.please_wait)
-                .setMessage(R.string.event_sharing_text)
-                .setCancelable(false)
-                .show()
     }
 
     private fun showRemovingProgressDialog() {
@@ -387,14 +349,9 @@ class EventManualDialog(
     }
 
     private fun showRemoveEventDialog() {
-        val shareNotice = when {
-            editingShared && editingOwn -> "\n\n"+activity.getString(R.string.dialog_event_manual_remove_shared_self)
-            editingShared && !editingOwn -> "\n\n"+activity.getString(R.string.dialog_event_manual_remove_shared)
-            else -> ""
-        }
         removeEventDialog = MaterialAlertDialogBuilder(activity)
                 .setTitle(R.string.are_you_sure)
-                .setMessage(activity.getString(R.string.dialog_register_event_manual_remove_confirmation)+shareNotice)
+                .setMessage(R.string.dialog_register_event_manual_remove_confirmation)
                 .setPositiveButton(R.string.yes, null)
                 .setNegativeButton(R.string.no) { dialog, _ -> dialog.dismiss() }
                 .create()
@@ -419,10 +376,6 @@ class EventManualDialog(
         val subject = b.subjectDropdown.getSelected() as? Subject
         val teacher = b.teacherDropdown.getSelected()
 
-        // Sharing was removed when SzkolnyApi was dropped from the fork;
-        // share is always false here (the switch is hidden + unchecked).
-        val share = false
-
         b.dateDropdown.error = null
         b.teamDropdown.error = null
         b.typeDropdown.error = null
@@ -439,12 +392,6 @@ class EventManualDialog(
         if (timeSelected !is Pair<*, *> && timeSelected != 0L) {
             b.timeDropdown.error = app.getString(R.string.dialog_event_manual_time_choose)
             if (!isError) b.timeDropdown.parent.requestChildFocus(b.timeDropdown, b.timeDropdown)
-            isError = true
-        }
-
-        if (share && team == null) {
-            b.teamDropdown.error = app.getString(R.string.dialog_event_manual_team_choose)
-            if (!isError) b.teamDropdown.parent.requestChildFocus(b.teamDropdown, b.teamDropdown)
             isError = true
         }
 
@@ -499,41 +446,16 @@ class EventManualDialog(
                 true
         )
 
-        launch {
-            val profile = app.db.profileDao().getByIdNow(profileId)
-
-            // Cross-user event sharing was removed when SzkolnyApi was dropped
-            // from the fork. The share switch is hidden (see setupShareUi), so
-            // `share` is always false; existing shared events stored locally
-            // continue to display but no longer roundtrip to upstream's server.
-            @Suppress("UNUSED_VARIABLE")
-            val unusedProfile = profile  // keep the dao call alive for future hooks
-            if (editingShared && !editingOwn) {
-                Toast.makeText(activity, "Opcja edycji wydarzeń innych uczniów nie została jeszcze zaimplementowana.", Toast.LENGTH_LONG).show()
-            } else {
-                finishAdding(eventObject, metadataObject)
-            }
-            progressDialog?.dismiss()
-        }
+        // Cross-user event sharing was removed when SzkolnyApi was dropped
+        // from the fork; new events are always local. The previous profile
+        // lookup here only mattered for the share path.
+        finishAdding(eventObject, metadataObject)
+        progressDialog?.dismiss()
     }
 
     private fun removeEvent() {
         launch {
-            if (editingShared && editingOwn) {
-                // Cross-user event sharing was removed when SzkolnyApi was
-                // dropped from the fork. The own copy is removed locally;
-                // any upstream copy on szkolny.eu is left as-is.
-                showRemovingProgressDialog()
-                finishRemoving()
-            } else if (editingShared && !editingOwn) {
-                // remove + blacklist somebody's event
-                Toast.makeText(activity, "Nie zaimplementowana opcja :(", Toast.LENGTH_SHORT).show()
-                // TODO
-            } else {
-                // remove event
-                //Toast.makeText(activity, R.string.event_manual_remove, Toast.LENGTH_SHORT).show()
-                finishRemoving()
-            }
+            finishRemoving()
             progressDialog?.dismiss()
         }
     }

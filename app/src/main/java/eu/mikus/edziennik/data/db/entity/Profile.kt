@@ -45,9 +45,6 @@ open class Profile(
 
 ) : IDrawerProfile {
     companion object {
-        const val REGISTRATION_UNSPECIFIED = 0
-        const val REGISTRATION_DISABLED = 1
-        const val REGISTRATION_ENABLED = 2
         const val AGENDA_DEFAULT = 0
         const val AGENDA_CALENDAR = 1
     }
@@ -56,9 +53,6 @@ open class Profile(
     var empty = true
     var archived = false
     var syncEnabled = true
-    @ColumnInfo(name = "enableSharedEvents")
-    var unused1 = true
-    var registration = REGISTRATION_UNSPECIFIED
     var userCode = ""
 
     /**
@@ -87,8 +81,6 @@ open class Profile(
         get() = accountName ?: studentNameLong
     val registerName
         get() = loginStoreType.name.lowercase()
-    val canShare
-        get() = registration == REGISTRATION_ENABLED && !archived
 
     @delegate:Ignore
     @delegate:Transient

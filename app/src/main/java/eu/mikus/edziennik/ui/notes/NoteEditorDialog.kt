@@ -67,28 +67,14 @@ class NoteEditorDialog(
 
         val note = buildNote(profile) ?: return NO_DISMISS
 
-        // Cross-user note sharing registration was removed when SzkolnyApi
-        // was dropped from the fork. If a note has been marked as shared
-        // (legacy state), we keep that flag in DB but skip the
-        // share-onboarding flow entirely.
-        if (note.isShared || editingNote?.isShared == true) {
-            progressDialog = MaterialAlertDialogBuilder(activity)
-                .setTitle(R.string.please_wait)
-                .setMessage(when (note.isShared) {
-                    true -> R.string.notes_editor_progress_sharing
-                    false -> R.string.notes_editor_progress_unsharing
-                })
-                .setCancelable(false)
-                .show()
-        }
-
+        // Cross-user note sharing was removed when SzkolnyApi was dropped
+        // from the fork. The share/unshare progress dialog branches went
+        // with it; saveNote() is now a pure local-DB operation.
         val success = manager.saveNote(
             activity = activity,
             note = note,
             teamId = owner?.getNoteShareTeamId(),
-            wasShared = editingNote?.isShared ?: false,
         )
-        progressDialog?.dismiss()
         return success
     }
 
@@ -108,17 +94,7 @@ class NoteEditorDialog(
         if (!confirmation)
             return NO_DISMISS
 
-        if (editingNote?.isShared == true) {
-            progressDialog = MaterialAlertDialogBuilder(activity)
-                .setTitle(R.string.please_wait)
-                .setMessage(R.string.notes_editor_progress_unsharing)
-                .setCancelable(false)
-                .show()
-        }
-
-        val success = manager.deleteNote(activity, editingNote ?: return NO_DISMISS)
-        progressDialog?.dismiss()
-        return success
+        return manager.deleteNote(activity, editingNote ?: return NO_DISMISS)
     }
 
     override suspend fun onShow() {
@@ -127,13 +103,8 @@ class NoteEditorDialog(
         topicStylingConfig = StylingConfigBase(editText = b.topic, htmlMode = HtmlMode.SIMPLE)
         bodyStylingConfig = StylingConfigBase(editText = b.body, htmlMode = HtmlMode.SIMPLE)
 
-        val profile = withContext(Dispatchers.IO) {
-            app.db.profileDao().getByIdNow(profileId)
-        }
-
         b.ownerType = owner?.getNoteType() ?: Note.OwnerType.NONE
         b.editingNote = editingNote
-        b.shareByDefault = app.profile.config.shareByDefault && profile?.canShare == true
 
         b.color.clear().append(Note.Color.values().map { color ->
             TextInputDropDown.Item(
@@ -172,7 +143,8 @@ class NoteEditorDialog(
         val body = b.body.text?.toString()
         val color = b.color.selected?.tag as? Note.Color
 
-        val share = b.shareSwitch.isChecked && ownerType.isShareable
+        // Cross-user note sharing was removed when SzkolnyApi was dropped
+        // from the fork; new notes are always created local-only.
         val replace = b.replaceSwitch.isChecked && ownerType.canReplace
 
         if (body.isNullOrBlank()) {
@@ -195,8 +167,6 @@ class NoteEditorDialog(
             topic = topicHtml,
             body = bodyHtml,
             color = color?.value,
-            sharedBy = if (share) "self" else null,
-            sharedByName = if (share) profile.studentNameLong else null,
         )
     }
 }

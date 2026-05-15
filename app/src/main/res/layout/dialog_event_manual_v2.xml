@@ -68,20 +68,6 @@
                 tools:text="2b3T" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/shareSwitch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/dialog_event_manual_share_enabled" />
-
-        <TextView
-            android:id="@+id/shareDetails"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/dialog_event_manual_share_first_notice"
-            android:visibility="gone"
-            tools:visibility="visible" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

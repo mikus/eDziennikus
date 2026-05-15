@@ -62,13 +62,6 @@
                 android:textStyle="bold|italic"
                 android:visibility="gone" />
 
-            <Button
-                android:id="@+id/crash_report_btn"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/crash_report"
-                android:textColor="@color/md_red_700" />
-
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

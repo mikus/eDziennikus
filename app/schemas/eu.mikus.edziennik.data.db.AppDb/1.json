@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "4c141460d807d32d00faad4fb3c12522",
+    "identityHash": "f1a805edce1aadfd2409b8a6f4bb839c",
     "entities": [
       {
         "tableName": "grades",
@@ -640,7 +640,7 @@
       },
       {
         "tableName": "events",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `eventId` INTEGER NOT NULL, `eventDate` TEXT NOT NULL, `eventTime` TEXT, `eventTopic` TEXT NOT NULL, `eventColor` INTEGER, `eventType` INTEGER NOT NULL, `teacherId` INTEGER NOT NULL, `subjectId` INTEGER NOT NULL, `teamId` INTEGER NOT NULL, `addedDate` INTEGER NOT NULL, `eventAddedManually` INTEGER NOT NULL, `eventSharedBy` TEXT, `eventSharedByName` TEXT, `eventBlacklisted` INTEGER NOT NULL, `eventIsDone` INTEGER NOT NULL, `eventIsDownloaded` INTEGER NOT NULL, `homeworkBody` TEXT, `attachmentIds` TEXT, `attachmentNames` TEXT, `keep` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `eventId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `eventId` INTEGER NOT NULL, `eventDate` TEXT NOT NULL, `eventTime` TEXT, `eventTopic` TEXT NOT NULL, `eventColor` INTEGER, `eventType` INTEGER NOT NULL, `teacherId` INTEGER NOT NULL, `subjectId` INTEGER NOT NULL, `teamId` INTEGER NOT NULL, `addedDate` INTEGER NOT NULL, `eventAddedManually` INTEGER NOT NULL, `eventBlacklisted` INTEGER NOT NULL, `eventIsDone` INTEGER NOT NULL, `eventIsDownloaded` INTEGER NOT NULL, `homeworkBody` TEXT, `attachmentIds` TEXT, `attachmentNames` TEXT, `keep` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `eventId`))",
         "fields": [
           {
             "fieldPath": "profileId",
@@ -713,18 +713,6 @@
             "columnName": "eventAddedManually",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "sharedBy",
-            "columnName": "eventSharedBy",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "sharedByName",
-            "columnName": "eventSharedByName",
-            "affinity": "TEXT",
-            "notNull": false
           },
           {
             "fieldPath": "blacklisted",
@@ -892,7 +880,7 @@
       },
       {
         "tableName": "profiles",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `loginStoreId` INTEGER NOT NULL, `loginStoreType` INTEGER NOT NULL, `name` TEXT NOT NULL, `subname` TEXT, `studentNameLong` TEXT NOT NULL, `studentNameShort` TEXT NOT NULL, `accountName` TEXT, `studentData` TEXT NOT NULL, `image` TEXT, `empty` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `syncEnabled` INTEGER NOT NULL, `enableSharedEvents` INTEGER NOT NULL, `registration` INTEGER NOT NULL, `userCode` TEXT NOT NULL, `archiveId` INTEGER, `studentNumber` INTEGER NOT NULL, `studentClassName` TEXT, `studentSchoolYearStart` INTEGER NOT NULL, `dateSemester1Start` TEXT NOT NULL, `dateSemester2Start` TEXT NOT NULL, `dateYearEnd` TEXT NOT NULL, `disabledNotifications` TEXT, `lastReceiversSync` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `loginStoreId` INTEGER NOT NULL, `loginStoreType` INTEGER NOT NULL, `name` TEXT NOT NULL, `subname` TEXT, `studentNameLong` TEXT NOT NULL, `studentNameShort` TEXT NOT NULL, `accountName` TEXT, `studentData` TEXT NOT NULL, `image` TEXT, `empty` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `syncEnabled` INTEGER NOT NULL, `userCode` TEXT NOT NULL, `archiveId` INTEGER, `studentNumber` INTEGER NOT NULL, `studentClassName` TEXT, `studentSchoolYearStart` INTEGER NOT NULL, `dateSemester1Start` TEXT NOT NULL, `dateSemester2Start` TEXT NOT NULL, `dateYearEnd` TEXT NOT NULL, `disabledNotifications` TEXT, `lastReceiversSync` INTEGER NOT NULL, PRIMARY KEY(`profileId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -969,18 +957,6 @@
           {
             "fieldPath": "syncEnabled",
             "columnName": "syncEnabled",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "unused1",
-            "columnName": "enableSharedEvents",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "registration",
-            "columnName": "registration",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -2158,7 +2134,7 @@
       },
       {
         "tableName": "notes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `noteId` INTEGER NOT NULL, `noteOwnerType` TEXT, `noteOwnerId` INTEGER, `noteReplacesOriginal` INTEGER NOT NULL, `noteTopic` TEXT, `noteBody` TEXT NOT NULL, `noteColor` INTEGER, `noteSharedBy` TEXT, `noteSharedByName` TEXT, `addedDate` INTEGER NOT NULL, PRIMARY KEY(`noteId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` INTEGER NOT NULL, `noteId` INTEGER NOT NULL, `noteOwnerType` TEXT, `noteOwnerId` INTEGER, `noteReplacesOriginal` INTEGER NOT NULL, `noteTopic` TEXT, `noteBody` TEXT NOT NULL, `noteColor` INTEGER, `addedDate` INTEGER NOT NULL, PRIMARY KEY(`noteId`))",
         "fields": [
           {
             "fieldPath": "profileId",
@@ -2206,18 +2182,6 @@
             "fieldPath": "color",
             "columnName": "noteColor",
             "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
-            "fieldPath": "sharedBy",
-            "columnName": "noteSharedBy",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "sharedByName",
-            "columnName": "noteSharedByName",
-            "affinity": "TEXT",
             "notNull": false
           },
           {
@@ -2314,7 +2278,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4c141460d807d32d00faad4fb3c12522')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f1a805edce1aadfd2409b8a6f4bb839c')"
     ]
   }
 }
