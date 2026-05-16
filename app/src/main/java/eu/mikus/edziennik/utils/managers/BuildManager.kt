@@ -100,12 +100,12 @@ class BuildManager(val app: App) : CoroutineScope {
 
     // Tint color (ARGB) for the badge background, mirroring versionBadge's
     // branches. Three-tier semantics:
-    //   - dark (0x60000000)  = stable release, you can trust this build
-    //   - amber (0xa0ffa000) = pre-release / dev (nightly, daily, debug)
-    //   - red (0xa0ff0000)   = unsigned/unofficial, treat with caution
+    //   - dark, ~19% alpha (0x30000000)  = stable release, present but unobtrusive
+    //   - amber, ~63% alpha (0xa0ffa000) = pre-release / dev (nightly, daily, debug)
+    //   - red,   ~63% alpha (0xa0ff0000) = unsigned/unofficial, treat with caution
     val versionBadgeColor: Int = when {
         isSigned && (isNightly || isDaily) -> 0xa0ffa000.toInt()
-        isSigned -> 0x60000000.toInt()
+        isSigned -> 0x30000000.toInt()
         isDebug -> 0xa0ffa000.toInt()
         else -> 0xa0ff0000.toInt()
     }
