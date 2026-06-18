@@ -1,0 +1,111 @@
+/*
+ * Copyright (c) Mikolaj Olszewski 2026-6-18.
+ */
+
+package eu.mikus.edziennik.ui.announcements
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.db.full.AnnouncementFull
+
+@Composable
+fun AnnouncementsScreen(
+    state: AnnouncementsUiState,
+    onAnnouncementClick: (AnnouncementFull) -> Unit,
+    modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
+) {
+    when (state) {
+        AnnouncementsUiState.Loading ->
+            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        AnnouncementsUiState.Empty ->
+            Box(modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.school_notices_no_data),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontStyle = FontStyle.Italic,
+                )
+            }
+        is AnnouncementsUiState.Content ->
+            LazyColumn(modifier = modifier.fillMaxSize(), state = listState) {
+                items(state.announcements, key = { it.id }) { item ->
+                    AnnouncementCard(item = item, onClick = { onAnnouncementClick(item) })
+                    HorizontalDivider()
+                }
+            }
+    }
+}
+
+@Composable
+private fun AnnouncementCard(
+    item: AnnouncementFull,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val unseen = !item.seen
+    val weight = if (unseen) FontWeight.Bold else FontWeight.Normal
+    Row(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val initials = item.teacherName
+            ?.split(" ")
+            ?.mapNotNull { it.firstOrNull()?.uppercaseChar() }
+            ?.take(2)
+            ?.joinToString("")
+            ?.ifEmpty { "?" } ?: "?"
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(initials, color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleMedium)
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(item.teacherName ?: "", style = MaterialTheme.typography.titleSmall, fontWeight = weight, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.subject, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            item.text?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(announcementDateText(item), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun announcementDateText(item: AnnouncementFull): String {
+    val start = item.startDate ?: return ""
+    val end = item.endDate ?: return start.formattedString
+    return stringResource(R.string.date_relative_format, start.formattedStringShort, end.formattedStringShort)
+}

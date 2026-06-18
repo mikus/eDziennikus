@@ -22,6 +22,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
+/**
+ * NOTE: The Compose UI test for `AnnouncementsScreen` (Task 5) was deferred — `createComposeRule`
+ * fails to host under Robolectric here (`RuntimeException at RoboMonitoringInstrumentation`), a
+ * known Robolectric+Compose instrumentation limitation. Per the plan's pre-authorized fallback,
+ * the screen's behavior is covered by these ViewModel mapping tests plus the Phase 0 manual matrix;
+ * `androidTest` is intentionally not wired up. Revisit when Robolectric/Compose interop improves.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AnnouncementsViewModelTest {
 
