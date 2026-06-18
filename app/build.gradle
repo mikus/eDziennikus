@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'kotlin-parcelize'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 apply from: 'git-info.gradle'
 
@@ -54,14 +55,15 @@ android {
         buildConfig = true
         dataBinding = true
         viewBinding = true
+        compose = true
     }
     compileOptions {
         coreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
     packagingOptions {
         resources {
@@ -87,6 +89,7 @@ android {
                 // The Vintage engine is also on the classpath so Robolectric's
                 // @RunWith(RobolectricTestRunner.class) JUnit 4 tests still run.
                 useJUnitPlatform()
+                jvmArgs '-Djdk.attach.allowAttachSelf=true', '-XX:+EnableDynamicAgentLoading', '-Xshare:off'
             }
         }
     }
@@ -136,8 +139,8 @@ dependencies {
     implementation "androidx.cardview:cardview:1.0.0"
     implementation "androidx.constraintlayout:constraintlayout:2.1.4"
     implementation "androidx.core:core-ktx:1.9.0"
-    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.5.1"
-    implementation "androidx.navigation:navigation-fragment-ktx:2.5.2"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
+    implementation "androidx.navigation:navigation-fragment-ktx:2.9.5"
     implementation "androidx.recyclerview:recyclerview:1.2.1"
     implementation "androidx.room:room-runtime:2.4.3"
     implementation "androidx.room:room-ktx:2.4.3"
@@ -147,6 +150,17 @@ dependencies {
     // Google design libs
     implementation "com.google.android.material:material:1.6.1"
     implementation "com.google.android.flexbox:flexbox:3.0.0"
+
+    // Jetpack Compose — Material 3 foundation (Phase 0). Stable material3 (no Expressive yet).
+    implementation platform("androidx.compose:compose-bom:2026.06.00")
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-tooling-preview"
+    implementation "androidx.compose.material3:material3"
+    implementation "androidx.compose.foundation:foundation"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
+    debugImplementation "androidx.compose.ui:ui-tooling"
 
     // Play Services
     implementation "com.google.android.gms:play-services-wearable:17.1.0"
@@ -227,9 +241,10 @@ dependencies {
     // Kotlin test helpers — assertEquals / assertNotNull / assertTrue that work
     // with both engines.
     testImplementation "org.jetbrains.kotlin:kotlin-test-junit5"
-    // Matches the transitive kotlinx-coroutines-core version (1.6.4) — keep these
+    // Matches the transitive kotlinx-coroutines-core version — keep these
     // pinned together; mismatched coroutines-test breaks runBlocking semantics.
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2"
 
     // Kotlin-friendly mocking.
     testImplementation "io.mockk:mockk:1.13.13"
@@ -242,4 +257,8 @@ dependencies {
     // in place of ApplicationProvider.getApplicationContext(). Revisit if/when
     // we raise minSdk or need fragment/activity test scaffolds.
     testImplementation "org.robolectric:robolectric:4.14.1"
+
+    // Compose UI tests run under Robolectric in app/src/test (no androidTest, no emulator).
+    testImplementation "androidx.compose.ui:ui-test-junit4"
+    testImplementation "androidx.compose.ui:ui-test-manifest"
 }
