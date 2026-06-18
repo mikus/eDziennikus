@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 import android.widget.FrameLayout
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -54,37 +55,39 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
 
     fun getRootView() = b.root
 
-    override fun onBackPressed() {
-        val destination = nav.currentDestination ?: run {
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            val destination = nav.currentDestination ?: run {
+                nav.navigateUp()
+                return
+            }
+            if (destination.id == R.id.loginSyncErrorFragment)
+                return
+            if (destination.id == R.id.loginProgressFragment)
+                return
+            if (destination.id == R.id.loginSyncFragment)
+                return
+            if (destination.id == R.id.loginFinishFragment)
+                return
+            if (destination.id == R.id.loginChooserFragment && loginStores.isEmpty()) {
+                setResult(Activity.RESULT_CANCELED)
+                finish()
+                return
+            }
+            if (destination.id == R.id.loginSummaryFragment) {
+                MaterialAlertDialogBuilder(this@LoginActivity)
+                        .setTitle(R.string.are_you_sure)
+                        .setMessage(R.string.login_cancel_confirmation)
+                        .setPositiveButton(R.string.yes) { _, _ ->
+                            setResult(Activity.RESULT_CANCELED)
+                            finish()
+                        }
+                        .setNegativeButton(R.string.no, null)
+                        .show()
+                return
+            }
             nav.navigateUp()
-            return
         }
-        if (destination.id == R.id.loginSyncErrorFragment)
-            return
-        if (destination.id == R.id.loginProgressFragment)
-            return
-        if (destination.id == R.id.loginSyncFragment)
-            return
-        if (destination.id == R.id.loginFinishFragment)
-            return
-        if (destination.id == R.id.loginChooserFragment && loginStores.isEmpty()) {
-            setResult(Activity.RESULT_CANCELED)
-            finish()
-            return
-        }
-        if (destination.id == R.id.loginSummaryFragment) {
-            MaterialAlertDialogBuilder(this)
-                    .setTitle(R.string.are_you_sure)
-                    .setMessage(R.string.login_cancel_confirmation)
-                    .setPositiveButton(R.string.yes) { _, _ ->
-                        setResult(Activity.RESULT_CANCELED)
-                        finish()
-                    }
-                    .setNegativeButton(R.string.no, null)
-                    .show()
-            return
-        }
-        nav.navigateUp()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,6 +104,7 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
         b = LoginActivityBinding.inflate(layoutInflater)
         setContentView(b.root)
         errorSnackbar.setCoordinator(b.coordinator, b.snackbarAnchor)
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or SYSTEM_UI_FLAG_LIGHT_STATUS_BAR

@@ -15,6 +15,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -127,6 +128,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
           \____/|_| |_|  \_____|_|  \___|\__,_|\__\__*/
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 
         d(TAG, "Activity created")
 
@@ -1080,7 +1083,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     fun navigateUp(skipBeforeNavigate: Boolean = false) {
         if (!popBackStack(skipBeforeNavigate)) {
-            super.onBackPressed()
+            finish()
         }
     }
 
@@ -1211,15 +1214,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         drawer.addProfileSettings(*drawerProfiles.toTypedArray())
     }
 
-    override fun onBackPressed() {
-        if (App.config.ui.openDrawerOnBackPressed) {
-            if (drawer.isOpen)
-                navigateUp()
-            else if (!navView.onBackPressed())
-                drawer.open()
-        } else {
-            if (!navView.onBackPressed())
-                navigateUp()
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (App.config.ui.openDrawerOnBackPressed) {
+                if (drawer.isOpen)
+                    navigateUp()
+                else if (!navView.onBackPressed())
+                    drawer.open()
+            } else {
+                if (!navView.onBackPressed())
+                    navigateUp()
+            }
         }
     }
 
