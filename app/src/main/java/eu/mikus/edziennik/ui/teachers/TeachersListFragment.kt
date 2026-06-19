@@ -1,89 +1,78 @@
 /*
- * Copyright (c) Antoni Czaplicki 2021-10-15.
+ * Copyright (c) Mikolaj Olszewski 2026-6-18.
  */
 
 package eu.mikus.edziennik.ui.teachers
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.isVisible
+import android.widget.Toast
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
-import androidx.recyclerview.widget.LinearLayoutManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.withContext
-import eu.mikus.edziennik.*
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import eu.mikus.edziennik.MainActivity
+import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.db.entity.Teacher
 import eu.mikus.edziennik.databinding.TeachersListFragmentBinding
-import eu.mikus.edziennik.ext.isNotNullNorEmpty
-import eu.mikus.edziennik.ext.startCoroutineTimer
-import eu.mikus.edziennik.ui.messages.MessagesUtils
-import eu.mikus.edziennik.utils.SimpleDividerItemDecoration
-import kotlin.coroutines.CoroutineContext
+import eu.mikus.edziennik.ext.Intent
+import eu.mikus.edziennik.ext.copyToClipboard
+import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 
-class TeachersListFragment : Fragment(), CoroutineScope {
+class TeachersListFragment : Fragment() {
+
     companion object {
         private const val TAG = "TeachersListFragment"
     }
 
-    private lateinit var app: App
     private lateinit var activity: MainActivity
-    private lateinit var b: TeachersListFragmentBinding
-
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
+    private var b: TeachersListFragmentBinding? = null
+    private lateinit var viewModel: TeachersViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        activity = (getActivity() as MainActivity?) ?: return null
-        context ?: return null
-        app = activity.application as App
-        b = TeachersListFragmentBinding.inflate(inflater)
-        return b.root
+        activity = (getActivity() as? MainActivity) ?: return null
+        if (context == null) return null
+        val binding = TeachersListFragmentBinding.inflate(inflater, container, false)
+        b = binding
+        return binding.root
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) { startCoroutineTimer(100L) {
-        if (!isAdded) return@startCoroutineTimer
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val b = b ?: return
+        if (!isAdded) return
 
-        val adapter = TeachersAdapter(activity)
+        viewModel = ViewModelProvider(this, TeachersViewModel.Factory)[TeachersViewModel::class.java]
 
-        adapter.subjectList = withContext(Dispatchers.IO) {
-            App.db.subjectDao().getAllNow(App.profileId)
+        b.teachersCompose.setAppThemeContent {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            TeachersScreen(
+                state = state,
+                onCopy = ::onCopy,
+                onSendMessage = ::onSendMessage,
+            )
         }
+    }
 
-        app.db.teacherDao().getAllTeachers(App.profileId).observe(viewLifecycleOwner, Observer { items ->
-            if (!isAdded) return@Observer
+    private fun onCopy(name: String) {
+        name.copyToClipboard(activity)
+        Toast.makeText(activity, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show()
+    }
 
-            // load & configure the adapter
-            adapter.items = items.sortedWith(compareBy(
-                { it.subjects.isEmpty() },
-                { it.type == 0 },
-            ))
-            adapter.items.forEach {
-                it.image = it.image ?: MessagesUtils.getProfileImage(48, 24, 16, 12, 1, it.fullName)
-            }
-            if (items.isNotNullNorEmpty() && b.list.adapter == null) {
-                b.list.adapter = adapter
-                b.list.apply {
-                    setHasFixedSize(true)
-                    layoutManager = LinearLayoutManager(context)
-                    addItemDecoration(SimpleDividerItemDecoration(context))
-                }
-            }
-            adapter.notifyDataSetChanged()
+    private fun onSendMessage(teacher: Teacher) {
+        val intent = Intent(
+            Intent.ACTION_MAIN,
+            "fragmentId" to NavTarget.MESSAGE_COMPOSE,
+            "messageRecipientId" to teacher.id,
+        )
+        activity.sendBroadcast(intent)
+    }
 
-            // show/hide relevant views
-            b.progressBar.isVisible = false
-            if (items.isNullOrEmpty()) {
-                b.list.isVisible = false
-                b.noData.isVisible = true
-            } else {
-                b.list.isVisible = true
-                b.noData.isVisible = false
-            }
-        })
-    }}
+    override fun onDestroyView() {
+        super.onDestroyView()
+        b = null
+    }
 }
