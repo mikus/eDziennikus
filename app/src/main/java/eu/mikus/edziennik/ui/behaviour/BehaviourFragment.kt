@@ -53,20 +53,25 @@ class BehaviourFragment : Fragment() {
 
         viewModel = ViewModelProvider(this, BehaviourViewModel.Factory)[BehaviourViewModel::class.java]
 
-        activity.bottomSheet.prependItems(
-            BottomSheetPrimaryItem(true)
-                .withTitle(R.string.menu_mark_as_read)
-                .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                .withOnClickListener {
-                    activity.bottomSheet.close()
-                    lifecycleScope.launch {
-                        withContext(Dispatchers.IO) {
-                            App.db.metadataDao().setAllSeen(App.profileId, MetadataType.NOTICE, true)
+        // Defer the prepend one navlib settle-pass past onViewCreated so it lands after navlib's
+        // post-navigation bottom-sheet reset (the legacy fragment used startCoroutineTimer(100L)).
+        view.postDelayed({
+            if (!isAdded) return@postDelayed
+            activity.bottomSheet.prependItems(
+                BottomSheetPrimaryItem(true)
+                    .withTitle(R.string.menu_mark_as_read)
+                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
+                    .withOnClickListener {
+                        activity.bottomSheet.close()
+                        lifecycleScope.launch {
+                            withContext(Dispatchers.IO) {
+                                App.db.metadataDao().setAllSeen(App.profileId, MetadataType.NOTICE, true)
+                            }
+                            Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
                         }
-                        Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
                     }
-                }
-        )
+            )
+        }, 100)
 
         b.behaviourCompose.setAppThemeContent {
             val listState = rememberLazyListState()
