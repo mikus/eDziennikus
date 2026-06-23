@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Kuba Szczodrzyński 2021-10-27.
+ * Copyright (c) Mikolaj Olszewski 2026-6-23.
  */
 
 package eu.mikus.edziennik.ui.notes
@@ -8,149 +8,93 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.isVisible
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
-import kotlinx.coroutines.*
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Note
 import eu.mikus.edziennik.data.db.entity.Noteable
 import eu.mikus.edziennik.databinding.NotesFragmentBinding
-import eu.mikus.edziennik.utils.SimpleDividerItemDecoration
-import kotlin.coroutines.CoroutineContext
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-class NotesFragment : Fragment(), CoroutineScope {
+class NotesFragment : Fragment() {
+
     companion object {
         private const val TAG = "NotesFragment"
     }
 
     private lateinit var app: App
     private lateinit var activity: MainActivity
-    private lateinit var b: NotesFragmentBinding
+    private var b: NotesFragmentBinding? = null
+    private lateinit var viewModel: NotesViewModel
 
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    private val manager
-        get() = app.noteManager
-
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View? {
-        activity = getActivity() as? MainActivity ?: return null
-        context ?: return null
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        activity = (getActivity() as? MainActivity) ?: return null
+        if (context == null) return null
         app = activity.application as App
-        b = NotesFragmentBinding.inflate(inflater)
-        return b.root
-    }
-
-    private fun onNoteClick(note: Note) = launch {
-        val owner = withContext(Dispatchers.IO) {
-            manager.getOwner(note)
-        } as? Noteable
-
-        NoteDetailsDialog(
-            activity = activity,
-            owner = owner,
-            note = note,
-        ).show()
-    }
-
-    private fun onNoteEditClick(note: Note) = launch {
-        val owner = withContext(Dispatchers.IO) {
-            manager.getOwner(note)
-        } as? Noteable
-
-        NoteEditorDialog(
-            activity = activity,
-            owner = owner,
-            editingNote = note,
-            profileId = App.profileId,
-        ).show()
-    }
-
-    private fun onNoteAddClick(view: View?) {
-        NoteEditorDialog(
-            activity = activity,
-            owner = null,
-            editingNote = null,
-            profileId = App.profileId,
-        ).show()
+        val binding = NotesFragmentBinding.inflate(inflater, container, false)
+        b = binding
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val b = b ?: return
         if (!isAdded) return
 
+        viewModel = ViewModelProvider(this, NotesViewModel.Factory)[NotesViewModel::class.java]
+
+        // FAB add (owner-less note) — this is the first Compose host to also arm the FAB.
         activity.navView.apply {
             bottomBar.apply {
                 fabEnable = true
                 fabExtendedText = getString(R.string.notes_action_add)
                 fabIcon = CommunityMaterial.Icon3.cmd_text_box_plus_outline
             }
-
-            setFabOnClickListener(this@NotesFragment::onNoteAddClick)
+            setFabOnClickListener(::onNoteAddClick)
         }
         activity.gainAttentionFAB()
 
-        val adapter = NoteListAdapter(
-            activity = activity,
-            onNoteClick = this::onNoteClick,
-            onNoteEditClick = this::onNoteEditClick,
-        )
-
-        app.db.noteDao().getAll(profileId = App.profileId).observe(activity) { allNotes ->
-            if (!isAdded) return@observe
-
-            // show/hide relevant views
-            b.progressBar.isVisible = false
-            b.list.isVisible = allNotes.isNotEmpty()
-            b.noData.isVisible = allNotes.isEmpty()
-            if (allNotes.isEmpty()) {
-                return@observe
-            }
-
-            val notes = allNotes.groupBy { it.ownerType }.flatMap { (ownerType, notes) ->
-                if (ownerType != null) {
-                    // construct a dummy note, used as the category separator
-                    val categoryItem = Note(
-                        profileId = 0,
-                        id = 0,
-                        ownerType = ownerType,
-                        ownerId = 0,
-                        topic = null,
-                        body = "",
-                        color = null,
-                    )
-                    categoryItem.isCategoryItem = true
-                    val mutableNotes = notes.toMutableList()
-                    mutableNotes.add(0, categoryItem)
-                    return@flatMap mutableNotes
-                }
-                return@flatMap notes
-            }
-
-            // apply the new note list
-            adapter.setAllItems(notes, addSearchField = true)
-
-            // configure the adapter & recycler view
-            if (b.list.adapter == null) {
-                b.list.adapter = adapter
-                b.list.apply {
-                    //setHasFixedSize(true)
-                    isNestedScrollingEnabled = false
-                    layoutManager = LinearLayoutManager(context)
-                    addItemDecoration(SimpleDividerItemDecoration(context))
-                }
-            }
-
-            // reapply the filter
-            adapter.getSearchField()?.applyTo(adapter)
+        b.notesCompose.setAppThemeContent {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            NotesScreen(
+                state = state,
+                onQueryChange = viewModel::setQuery,
+                onNoteClick = ::onNoteClick,
+                onNoteEditClick = ::onNoteEditClick,
+            )
         }
+    }
+
+    private fun onNoteAddClick(view: View?) {
+        NoteEditorDialog(activity = activity, owner = null, editingNote = null, profileId = App.profileId).show()
+    }
+
+    // Controller: resolve the owner off the main thread, then show the legacy dialog (the one real
+    // coordination responsibility — mirrors the legacy NotesFragment + the Announcements precedent).
+    private fun onNoteClick(note: Note) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val owner = withContext(Dispatchers.IO) { app.noteManager.getOwner(note) } as? Noteable
+            NoteDetailsDialog(activity = activity, owner = owner, note = note).show()
+        }
+    }
+
+    private fun onNoteEditClick(note: Note) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val owner = withContext(Dispatchers.IO) { app.noteManager.getOwner(note) } as? Noteable
+            NoteEditorDialog(activity = activity, owner = owner, editingNote = note, profileId = App.profileId).show()
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        b = null
     }
 }
