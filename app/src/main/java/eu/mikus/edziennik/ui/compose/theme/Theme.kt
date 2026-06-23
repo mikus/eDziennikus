@@ -5,11 +5,14 @@
 package eu.mikus.edziennik.ui.compose.theme
 
 import android.os.Build
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import eu.mikus.edziennik.utils.Themes
 
@@ -47,6 +50,13 @@ fun AppTheme(content: @Composable () -> Unit) {
         colorScheme = colorScheme,
         typography = AppTypography,
         shapes = AppShapes,
-        content = content,
-    )
+    ) {
+        // Provide a themed Surface so the hosted content gets colorScheme.background +
+        // onBackground as LocalContentColor (bare Text() would otherwise default to black).
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            content = content,
+        )
+    }
 }
