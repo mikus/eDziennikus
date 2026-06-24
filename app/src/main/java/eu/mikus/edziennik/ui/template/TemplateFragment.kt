@@ -14,13 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
-import eu.mikus.edziennik.R
 import eu.mikus.edziennik.databinding.TemplateFragmentBinding
-import eu.mikus.edziennik.ext.Bundle
 import eu.mikus.edziennik.ext.addOnPageSelectedListener
 import eu.mikus.edziennik.ui.base.lazypager.FragmentLazyPagerAdapter
-import eu.mikus.edziennik.ui.homework.HomeworkDate
-import eu.mikus.edziennik.ui.homework.HomeworkListFragment
 import kotlin.coroutines.CoroutineContext
 
 class TemplateFragment : Fragment(), CoroutineScope {
@@ -55,14 +51,6 @@ class TemplateFragment : Fragment(), CoroutineScope {
             parentFragmentManager,
                 b.refreshLayout,
                 listOf(
-                        HomeworkListFragment().apply {
-                            arguments = Bundle("homeworkDate" to HomeworkDate.CURRENT)
-                        } to getString(R.string.homework_tab_current),
-
-                        HomeworkListFragment().apply {
-                            arguments = Bundle("homeworkDate" to HomeworkDate.PAST)
-                        } to getString(R.string.homework_tab_past),
-
                         TemplatePageFragment() to "Pager 0",
                         TemplatePageFragment() to "Pager 1",
                         TemplatePageFragment() to "Pager 2",
