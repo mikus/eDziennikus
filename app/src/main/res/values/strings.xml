@@ -544,6 +544,8 @@
     <string name="homework_subject_teacher_format" translatable="false">%s, %s</string>
     <string name="homework_tab_current">Aktualne</string>
     <string name="homework_tab_past">Minione</string>
+    <string name="homework_search_results">Znaleziono %d zadań</string>
+    <string name="homework_search_no_results">Brak pasujących zadań</string>
     <string name="homework_team_date_format" translatable="false">%s %s</string>
     <string name="i_agree">Zgadzam się</string>
     <string name="i_disagree">Nie zgadzam się</string>
