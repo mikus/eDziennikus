@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Kuba Szczodrzyński 2019-11-12.
+ * Copyright (c) Mikolaj Olszewski 2026-6-24.
  */
 
 package eu.mikus.edziennik.ui.messages.single
@@ -9,290 +9,142 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.view.isVisible
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.mikepenz.iconics.IconicsDrawable
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
-import com.mikepenz.iconics.utils.sizeDp
-import kotlinx.coroutines.*
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
-import eu.mikus.edziennik.*
+import eu.mikus.edziennik.App
+import eu.mikus.edziennik.MainActivity
+import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
-import eu.mikus.edziennik.data.api.events.MessageGetEvent
 import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.databinding.MessageFragmentBinding
-import eu.mikus.edziennik.ext.*
+import eu.mikus.edziennik.ext.Bundle
 import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.MessagesConfigDialog
-import eu.mikus.edziennik.ui.messages.MessagesUtils
 import eu.mikus.edziennik.ui.messages.list.MessagesFragment
-import eu.mikus.edziennik.ui.notes.setupNotesButton
-import eu.mikus.edziennik.utils.Anim
-import eu.mikus.edziennik.utils.BetterLink
-import eu.mikus.edziennik.utils.html.BetterHtml
-import eu.mikus.edziennik.utils.models.Date
-import eu.mikus.edziennik.utils.models.Time
+import eu.mikus.edziennik.ui.notes.NoteListDialog
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.colorAttr
-import kotlin.coroutines.CoroutineContext
-import kotlin.math.min
 
-class MessageFragment : Fragment(), CoroutineScope {
+class MessageFragment : Fragment() {
+
     companion object {
         private const val TAG = "MessageFragment"
     }
 
     private lateinit var app: App
     private lateinit var activity: MainActivity
-    private lateinit var b: MessageFragmentBinding
-
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    private val manager
-        get() = app.messageManager
-    private lateinit var message: MessageFull
+    private var b: MessageFragmentBinding? = null
+    private lateinit var viewModel: MessageReadViewModel
+    private var armedFor: Long = -2L
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        activity = (getActivity() as MainActivity?) ?: return null
-        context ?: return null
+        activity = (getActivity() as? MainActivity) ?: return null
+        if (context == null) return null
         app = activity.application as App
-        b = MessageFragmentBinding.inflate(inflater)
-        return b.root
+        val binding = MessageFragmentBinding.inflate(inflater, container, false)
+        b = binding
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val b = b ?: return
         if (!isAdded) return
 
-        activity.bottomSheet.prependItem(
-            BottomSheetPrimaryItem(true)
-                .withTitle(R.string.menu_messages_config)
-                .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                .withOnClickListener {
-                    activity.bottomSheet.close()
-                    MessagesConfigDialog(activity, false, null, null).show()
-                }
-        )
+        val messageId = arguments?.getLong("messageId", -1L) ?: -1L
+        viewModel = ViewModelProvider(
+            this, MessageReadViewModel.Factory(messageId, activity.applicationContext),
+        )[MessageReadViewModel::class.java]
 
-        b.closeButton.setImageDrawable(
-                IconicsDrawable(activity, CommunityMaterial.Icon3.cmd_window_close).apply {
-                    colorAttr(activity, android.R.attr.textColorSecondary)
-                    sizeDp = 24
-                }
-        )
-        b.closeButton.setOnClickListener { activity.navigateUp() }
-
-        // click to expand subject and sender
-        b.subject.onClick {
-            it.maxLines = if (it.maxLines == 30) 2 else 30
-        }
-        b.sender.onClick {
-            it.maxLines = if (it.maxLines == 30) 2 else 30
-        }
-
-        val replyDrawable = IconicsDrawable(activity, CommunityMaterial.Icon3.cmd_reply_outline).apply {
-            sizeDp = 24
-            colorAttr(activity, android.R.attr.textColorPrimary)
-        }
-        val forwardDrawable = IconicsDrawable(activity, CommunityMaterial.Icon.cmd_arrow_right).apply {
-            sizeDp = 24
-            colorAttr(activity, android.R.attr.textColorPrimary)
-        }
-        val deleteDrawable = IconicsDrawable(activity, CommunityMaterial.Icon.cmd_delete_outline).apply {
-            sizeDp = 24
-            colorAttr(activity, android.R.attr.textColorPrimary)
-        }
-        val downloadDrawable = IconicsDrawable(activity, CommunityMaterial.Icon.cmd_download_outline).apply {
-            sizeDp = 24
-            colorAttr(activity, android.R.attr.textColorPrimary)
-        }
-        b.replyButton.setCompoundDrawables(null, replyDrawable, null, null)
-        b.forwardButton.setCompoundDrawables(null, forwardDrawable, null, null)
-        b.deleteButton.setCompoundDrawables(null, deleteDrawable, null, null)
-        b.downloadButton.setCompoundDrawables(null, downloadDrawable, null, null)
-
-        b.messageStar.onClick {
-            launch {
-                manager.starMessage(message, !message.isStarred)
-                manager.setStarIcon(b.messageStar, message)
-            }
-        }
-        b.messageStar.attachToastHint(R.string.hint_message_star)
-
-        b.replyButton.onClick {
-            activity.navigate(navTarget = NavTarget.MESSAGE_COMPOSE, args = Bundle(
-                    "message" to app.gson.toJson(message),
-                    "type" to "reply"
-            ))
-        }
-        b.forwardButton.onClick {
-            activity.navigate(navTarget = NavTarget.MESSAGE_COMPOSE, args = Bundle(
-                    "message" to app.gson.toJson(message),
-                    "type" to "forward"
-            ))
-        }
-        b.deleteButton.onClick {
-            MaterialAlertDialogBuilder(activity)
-                    .setTitle(R.string.messages_delete_confirmation)
-                    .setMessage(R.string.messages_delete_confirmation_text)
-                    .setPositiveButton(R.string.ok) { _, _ ->
-                        launch {
-                            manager.markAsDeleted(message)
-                            Toast.makeText(activity, "Wiadomość przeniesiona do usuniętych", Toast.LENGTH_SHORT).show()
-                            activity.navigateUp()
-                        }
+        view.postDelayed({
+            if (!isAdded) return@postDelayed
+            activity.bottomSheet.prependItem(
+                BottomSheetPrimaryItem(true)
+                    .withTitle(R.string.menu_messages_config)
+                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
+                    .withOnClickListener {
+                        activity.bottomSheet.close()
+                        MessagesConfigDialog(activity, false, null, null).show()
                     }
-                    .setNegativeButton(R.string.cancel, null)
-                    .show()
-        }
-        b.downloadButton.isVisible = App.devMode
-        b.downloadButton.onClick {
-            EdziennikTask.messageGet(App.profileId, message).enqueue(activity)
-        }
+            )
+        }, 100)
 
-        launch {
-            message = manager.getMessage(App.profileId, arguments) ?: run {
+        b.messageCompose.setAppThemeContent {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            // Side effects (navigateUp / FAB arm / pageSelection) run in the EFFECT phase, keyed to state —
+            // never in the composition body (the HomeworkFragment precedent does no side effects there).
+            LaunchedEffect(state) { onState(state) }
+            MessageReadScreen(
+                state = state,
+                onClose = { activity.navigateUp() },
+                onStarClick = { msg -> viewModel.setStarred(msg, !msg.isStarred) },
+                onReply = ::reply,
+                onForward = ::forward,
+                onDelete = ::confirmDelete,
+                onDownload = { msg -> EdziennikTask.messageGet(App.profileId, msg).enqueue(activity) },
+                onNotes = { msg ->
+                    NoteListDialog(activity = activity, owner = msg, onShowListener = null, onDismissListener = null).show()
+                },
+            )
+        }
+    }
+
+    private fun onState(state: MessageReadUiState) {
+        when (state) {
+            MessageReadUiState.NotFound -> activity.navigateUp()
+            is MessageReadUiState.Content -> {
+                val m = state.message
+                MessagesFragment.pageSelection = m.type   // back lands on the message's own tab (type == tab index)
+                if (armedFor != m.id) {
+                    armedFor = m.id
+                    if (m.isReceived || m.isDeleted) {
+                        activity.navView.apply {
+                            bottomBar.apply {
+                                fabEnable = true
+                                fabExtendedText = getString(R.string.messages_reply)
+                                fabIcon = CommunityMaterial.Icon3.cmd_reply_outline
+                            }
+                            setFabOnClickListener { reply(m) }
+                        }
+                        activity.gainAttentionFAB()
+                    }
+                }
+            }
+            MessageReadUiState.Loading -> {}
+        }
+    }
+
+    private fun reply(message: MessageFull) {
+        activity.navigate(navTarget = NavTarget.MESSAGE_COMPOSE, args = Bundle(
+            "message" to app.gson.toJson(message), "type" to "reply",
+        ))
+    }
+
+    private fun forward(message: MessageFull) {
+        activity.navigate(navTarget = NavTarget.MESSAGE_COMPOSE, args = Bundle(
+            "message" to app.gson.toJson(message), "type" to "forward",
+        ))
+    }
+
+    private fun confirmDelete(message: MessageFull) {
+        MaterialAlertDialogBuilder(activity)
+            .setTitle(R.string.messages_delete_confirmation)
+            .setMessage(R.string.messages_delete_confirmation_text)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                viewModel.delete(message)
+                Toast.makeText(activity, R.string.messages_deleted, Toast.LENGTH_SHORT).show()
                 activity.navigateUp()
-                return@launch
             }
-            b.subject.text = message.subject
-            checkMessage()
-        }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
-    fun onMessageGetEvent(event: MessageGetEvent) {
-        EventBus.getDefault().removeStickyEvent(event)
-        // TODO remove this: message = event.message
-        showMessage()
-    }
-
-    private fun checkMessage() {
-        if (message.body == null) {
-            EdziennikTask.messageGet(App.profileId, message).enqueue(activity)
-            return
-        }
-
-        if (app.data.messagesConfig.needsReadStatus) {
-            // vulcan: change message status or download attachments
-            if ((message.isReceived || message.isDeleted) && !message.seen || message.attachmentIds == null) {
-                EdziennikTask.messageGet(App.profileId, message).enqueue(activity)
-                return
-            }
-        }
-        else if (!message.readByEveryone) {
-            // if a sent msg is not read by everyone, download it again to check the read status
-            EdziennikTask.messageGet(App.profileId, message).enqueue(activity)
-            return
-        }
-
-        showMessage()
-    }
-
-    private fun showMessage() {
-        b.body.text = MessagesUtils.htmlToSpannable(activity, message.body.toString())
-        b.date.text = getString(R.string.messages_date_time_format, Date.fromMillis(message.addedDate).formattedStringShort, Time.fromMillis(message.addedDate).stringHM)
-
-        val messageInfo = MessagesUtils.getMessageInfo(app, message, 40, 20, 14, 10)
-        b.profileBackground.setImageBitmap(messageInfo.profileImage)
-        b.sender.text = messageInfo.profileName
-
-        b.subject.text = message.subject
-
-        manager.setStarIcon(b.messageStar, message)
-
-        b.replyButton.isVisible = message.isReceived || message.isDeleted
-        b.deleteButton.isVisible = message.isReceived
-        if (message.isReceived || message.isDeleted) {
-            activity.navView.apply {
-                bottomBar.apply {
-                    fabEnable = true
-                    fabExtendedText = getString(R.string.messages_reply)
-                    fabIcon = CommunityMaterial.Icon3.cmd_reply_outline
-                }
-
-                setFabOnClickListener {
-                    b.replyButton.performClick()
-                }
-            }
-            activity.gainAttentionFAB()
-        }
-
-        val messageRecipients = StringBuilder("<ul>")
-        message.recipients?.forEach { recipient ->
-            when (recipient.readDate) {
-                -1L -> messageRecipients.append(getString(
-                        R.string.messages_recipients_list_unknown_state_format,
-                        recipient.fullName
-                ))
-                0L -> messageRecipients.append(getString(
-                        R.string.messages_recipients_list_unread_format,
-                        recipient.fullName
-                ))
-                1L -> messageRecipients.append(getString(
-                        R.string.messages_recipients_list_read_unknown_date_format,
-                        recipient.fullName
-                ))
-                else -> messageRecipients.append(getString(
-                        R.string.messages_recipients_list_read_format,
-                        recipient.fullName,
-                        Date.fromMillis(recipient.readDate).formattedString,
-                        Time.fromMillis(recipient.readDate).stringHM
-                ))
-            }
-        }
-        messageRecipients.append("</ul>")
-        b.recipients.text = BetterHtml.fromHtml(activity, messageRecipients)
-
-        showAttachments()
-
-        BetterLink.attach(b.subject)
-        BetterLink.attach(b.body)
-
-        b.progress.visibility = View.GONE
-        Anim.fadeIn(b.content, 200, null)
-        MessagesFragment.pageSelection = min(message.type, 1)
-
-        b.notesButton.setupNotesButton(
-            activity = activity,
-            owner = message,
-            onShowListener = null,
-            onDismissListener = null,
-        )
-    }
-
-    private fun showAttachments() {
-        if (message.attachmentIds.isNullOrEmpty() || message.attachmentNames.isNullOrEmpty()) {
-            b.attachmentsTitle.isVisible = false
-            b.attachmentsFragment.isVisible = false
-        }
-        else {
-            b.attachmentsTitle.isVisible = true
-            b.attachmentsFragment.isVisible = true
-            b.attachmentsFragment.init(Bundle().also {
-                it.putInt("profileId", message.profileId)
-                it.putLongArray("attachmentIds", message.attachmentIds!!.toLongArray())
-                it.putStringArray("attachmentNames", message.attachmentNames!!.toTypedArray())
-                if (message.attachmentSizes.isNotNullNorEmpty())
-                    it.putLongArray("attachmentSizes", message.attachmentSizes!!.toLongArray())
-            }, owner = message)
-        }
-    }
-
-    override fun onStart() {
-        EventBus.getDefault().register(this)
-        super.onStart()
-    }
-    override fun onStop() {
-        super.onStop()
-        EventBus.getDefault().unregister(this)
-    }
-    override fun onDestroy() {
-        super.onDestroy()
-        job.cancel()
+    override fun onDestroyView() {
+        super.onDestroyView()
+        b = null
     }
 }
