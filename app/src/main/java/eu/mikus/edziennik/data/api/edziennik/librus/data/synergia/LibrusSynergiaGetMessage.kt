@@ -1,10 +1,8 @@
 package eu.mikus.edziennik.data.api.edziennik.librus.data.synergia
 
-import org.greenrobot.eventbus.EventBus
 import org.jsoup.Jsoup
 import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusSynergia
-import eu.mikus.edziennik.data.api.events.MessageGetEvent
 import eu.mikus.edziennik.data.db.entity.Message
 import eu.mikus.edziennik.data.db.entity.Metadata
 import eu.mikus.edziennik.data.db.entity.Teacher
@@ -153,7 +151,6 @@ class LibrusSynergiaGetMessage(override val data: DataLibrus,
                 data.messageList.add(messageObject)
                 data.messageListReplace = true
 
-                EventBus.getDefault().postSticky(MessageGetEvent(messageObject))
                 onSuccess()
             }
         } ?: onSuccess()

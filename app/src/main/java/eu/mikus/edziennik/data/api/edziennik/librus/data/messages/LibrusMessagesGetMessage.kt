@@ -5,10 +5,8 @@
 package eu.mikus.edziennik.data.api.edziennik.librus.data.messages
 
 import android.util.Base64
-import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusMessages
-import eu.mikus.edziennik.data.api.events.MessageGetEvent
 import eu.mikus.edziennik.data.db.entity.Message.Companion.TYPE_RECEIVED
 import eu.mikus.edziennik.data.db.entity.Message.Companion.TYPE_SENT
 import eu.mikus.edziennik.data.db.entity.Metadata
@@ -161,7 +159,6 @@ class LibrusMessagesGetMessage(override val data: DataLibrus,
             data.messageList.add(messageObject)
             data.messageListReplace = true
 
-            EventBus.getDefault().postSticky(MessageGetEvent(messageObject))
             onSuccess()
         }
     } ?: onSuccess()}
