@@ -1412,6 +1412,10 @@
     <string name="discard">Odrzuć</string>
     <string name="messages_compose_draft_saved">Zapisano wersję roboczą</string>
     <string name="messages_tab_draft">Wersje robocze</string>
+    <string name="messages_search_no_results">Brak pasujących wiadomości</string>
+    <string name="messages_deleted">Wiadomość przeniesiona do usuniętych</string>
+    <string name="messages_read_yes">przeczytano</string>
+    <string name="messages_read_no">nie przeczytano</string>
     <string name="messages_compose_send_long">Wyślij wiadomość</string>
     <string name="messages_compose_discard_draft">Usuń wersję roboczą</string>
     <string name="messages_compose_draft_discarded">Usunięto wersję roboczą</string>
