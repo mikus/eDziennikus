@@ -93,13 +93,11 @@ private fun MessageContent(
     val context = LocalContext.current
     val app = context.applicationContext as App
     val info = remember(message) { MessagesUtils.getMessageInfo(app, message, 40, 20, 14, 10) }
-    val dateTime = remember(message) {
-        context.getString(
-            R.string.messages_date_time_format,
-            Date.fromMillis(message.addedDate).formattedStringShort,
-            Time.fromMillis(message.addedDate).stringHM,
-        )
-    }
+    val dateTime = stringResource(
+        R.string.messages_date_time_format,
+        Date.fromMillis(message.addedDate).formattedStringShort,
+        Time.fromMillis(message.addedDate).stringHM,
+    )
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) {
@@ -178,17 +176,18 @@ private fun MessageContent(
 private fun MessageRecipients(message: MessageFull) {
     val recipients = message.recipients ?: return
     if (recipients.isEmpty()) return
-    val context = LocalContext.current
     Spacer(Modifier.size(12.dp))
     Column(Modifier.fillMaxWidth()) {
+        val readNo = stringResource(R.string.messages_read_no)
+        val readYes = stringResource(R.string.messages_read_yes)
         recipients.forEach { r ->
             val name = r.fullName ?: ""
             val unread = r.readDate == 0L
             val status = when (r.readDate) {
                 -1L -> name
-                0L -> "$name — " + context.getString(R.string.messages_read_no)
-                1L -> "$name — " + context.getString(R.string.messages_read_yes)
-                else -> "$name — " + context.getString(R.string.messages_read_yes) + " " + context.getString(
+                0L -> "$name — $readNo"
+                1L -> "$name — $readYes"
+                else -> "$name — $readYes " + stringResource(
                     R.string.messages_reply_date_time_format,
                     Date.fromMillis(r.readDate).formattedString,
                     Time.fromMillis(r.readDate).stringHM,
