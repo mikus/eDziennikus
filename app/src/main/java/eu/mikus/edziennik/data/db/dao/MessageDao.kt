@@ -70,6 +70,10 @@ abstract class MessageDao : BaseDao<Message, MessageFull> {
     fun getNotNotifiedNow() =
             getRawNow("$QUERY WHERE notified = 0 AND messageType = ${Message.TYPE_RECEIVED} $ORDER_BY")
 
+    // GET ONE - LIVE DATA
+    fun getById(profileId: Int, id: Long) =
+            getOne("$QUERY WHERE messages.profileId = $profileId AND messageId = $id")
+
     // GET ONE - NOW
     fun getByIdNow(profileId: Int, id: Long) =
             getOneNow("$QUERY WHERE messages.profileId = $profileId AND messageId = $id")
