@@ -13,15 +13,27 @@ enum class Period { ALL, SEM1, SEM2 }
 
 /**
  * Stable expand key, minted by the builder/aggregator and carried on each header.
- * The VM's expand set is keyed by this; the Screen reuses it for LazyColumn item keys.
+ * The VM's expand set is keyed by this (equals/hashCode). [stableId] is a Bundle-storable string
+ * the Screen uses for LazyColumn item keys — NodeKey itself is not Parcelable, and LazyColumn
+ * requires Bundle-storable keys for its per-item saveable state.
  */
 sealed interface NodeKey {
-    data class SubjectKey(val subjectId: Long) : NodeKey
-    data class MonthKey(val year: Int, val month: Int) : NodeKey
+    val stableId: String
+
+    data class SubjectKey(val subjectId: Long) : NodeKey {
+        override val stableId get() = "S$subjectId"
+    }
+    data class MonthKey(val year: Int, val month: Int) : NodeKey {
+        override val stableId get() = "M$year-$month"
+    }
     /** Keyed on the whole type, not its id: two custom types share baseType.toLong() as id. */
-    data class TypeKey(val type: AttendanceType) : NodeKey
+    data class TypeKey(val type: AttendanceType) : NodeKey {
+        override val stableId get() = "T${type.id}-${type.typeName}-${type.typeSymbol}"
+    }
     /** anchor = the range END encoded as y*10000+m*100+d (stable under the consecutive-day merge). */
-    data class DayRangeKey(val anchor: Long) : NodeKey
+    data class DayRangeKey(val anchor: Long) : NodeKey {
+        override val stableId get() = "D$anchor"
+    }
 }
 
 /**

@@ -303,7 +303,7 @@ private fun SummaryTabContent(
             PreviewPills(tab.stats.counts, useSymbols, colorForType)
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }
-        items(tab.subjects, key = { it.key }) { subject ->
+        items(tab.subjects, key = { it.key.stableId }) { subject ->
             HeaderRow(
                 title = subject.name,
                 expanded = subject.expanded,
@@ -352,7 +352,7 @@ private fun DaysTabContent(
     onItemSeen: (AttendanceFull) -> Unit,
 ) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-        items(tab.dayRanges, key = { it.key }) { range ->
+        items(tab.dayRanges, key = { it.key.stableId }) { range ->
             val start = "${range.rangeStart.day}.${range.rangeStart.month}.${range.rangeStart.year}"
             val end = "${range.rangeEnd.day}.${range.rangeEnd.month}.${range.rangeEnd.year}"
             HeaderRow(
@@ -383,7 +383,7 @@ private fun MonthsTabContent(
     onItemSeen: (AttendanceFull) -> Unit,
 ) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-        items(tab.months, key = { it.key }) { month ->
+        items(tab.months, key = { it.key.stableId }) { month ->
             HeaderRow(
                 title = "${month.month}.${month.year}",
                 expanded = month.expanded,
@@ -417,7 +417,7 @@ private fun TypesTabContent(
     onItemSeen: (AttendanceFull) -> Unit,
 ) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-        items(tab.types, key = { it.key }) { type ->
+        items(tab.types, key = { it.key.stableId }) { type ->
             Row(
                 Modifier.fillMaxWidth().clickable { onNodeToggle(type.key) }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
