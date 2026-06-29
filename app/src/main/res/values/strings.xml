@@ -493,6 +493,7 @@
     <string name="grades_stats_title">Statystyka ocen</string>
     <string name="grades_stats_university">Średnia ocen za studia</string>
     <string name="grades_stats_yearly">całoroczna</string>
+    <string name="grades_university_unsupported">Widok ocen dla uczelni nie jest obsługiwany.</string>
     <string name="grades_value_format">wartość: %s</string>
     <string name="grades_weight_format">waga %s</string>
     <string name="grades_weight_not_counted">nie liczona do śr.</string>
