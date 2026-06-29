@@ -1,75 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  ~ Copyright (c) Kuba Szczodrzyński 2020-3-4.
-  -->
-
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator
         android:id="@+id/refreshLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <FrameLayout
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/gradesCompose"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent" />
 
-            <ProgressBar
-                android:id="@+id/progressBar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center" />
-
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/noData"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:drawablePadding="16dp"
-                android:fontFamily="sans-serif-light"
-                android:gravity="center"
-                android:padding="16dp"
-                android:text="@string/grades_no_data"
-                android:textSize="24sp"
-                android:visibility="gone"
-                app:drawableTopCompat="@drawable/ic_no_grades"
-                tools:visibility="visible" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/semesterLayout"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="8dp"
-                    android:layout_marginVertical="8dp"
-                    android:hint="@string/title_semester"
-                    android:visibility="gone"
-                    tools:visibility="visible">
-
-                    <eu.mikus.edziennik.utils.TextInputDropDown
-                        android:id="@+id/semesterDropdown"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"
-                        tools:text="Semestr zimowy 2024/2025" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/list"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:visibility="gone"
-                    tools:listitem="@layout/grades_item_subject"
-                    tools:visibility="visible" />
-            </LinearLayout>
-        </FrameLayout>
     </eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator>
 </layout>
