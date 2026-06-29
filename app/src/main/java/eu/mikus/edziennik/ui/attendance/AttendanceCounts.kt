@@ -14,7 +14,11 @@ import eu.mikus.edziennik.data.db.full.AttendanceFull
 object AttendanceCounts {
 
     fun snapshot(rows: List<AttendanceFull>): CountSnapshot =
-        CountSnapshot(rows.groupBy { it.typeObject }.map { TypeCount(it.key, it.value.size) })
+        CountSnapshot(
+            rows.groupBy { it.typeObject }
+                .map { TypeCount(it.key, it.value.size) }
+                .sortedBy { it.type }, // canonical AttendanceType.compareTo order
+        )
 
     /** present-counted / counted-total as a 0f..1f fraction; null when counted-total == 0. */
     fun percentage(counts: CountSnapshot): Float? {

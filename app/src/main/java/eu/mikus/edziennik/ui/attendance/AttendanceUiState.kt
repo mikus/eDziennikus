@@ -24,10 +24,12 @@ sealed interface NodeKey {
     data class DayRangeKey(val anchor: Long) : NodeKey
 }
 
-/** An immutable, AttendanceType.compareTo-ordered snapshot of the legacy typeCountMap. */
-class CountSnapshot(byType: List<TypeCount>) {
-    val byType: List<TypeCount> = byType.sortedBy { it.type } // defensive copy + canonical order
-}
+/**
+ * An immutable, AttendanceType.compareTo-ordered snapshot of the legacy typeCountMap.
+ * Constructed only via [AttendanceCounts.snapshot], which supplies a freshly-built, canonically-sorted list.
+ * A data class so it participates in structural equality (Compose recomposition skipping).
+ */
+data class CountSnapshot(val byType: List<TypeCount>)
 
 data class TypeCount(val type: AttendanceType, val count: Int)
 

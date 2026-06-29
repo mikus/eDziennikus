@@ -1273,6 +1273,7 @@
     <string name="attendance_tab_types">Wg typu</string>
     <string name="attendance_type_yearly_format">%d przez cały rok</string>
     <string name="attendance_type_semester_format">%d w tym semestrze</string>
+    <string name="attendance_type_counts_format">Semestr: %1$d · Rok: %2$d</string>
     <string name="attendance_details_teacher">Nauczyciel</string>
     <string name="attendance_details_type">Rodzaj</string>
     <string name="attendance_details_date">Data</string>

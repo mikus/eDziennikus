@@ -1214,6 +1214,7 @@
     <string name="attendance_tab_list">List</string>
     <string name="attendance_lesson_number_format">lesson %d</string>
     <string name="attendance_tab_types">By type</string>
+    <string name="attendance_type_counts_format">Semester: %1$d · Year: %2$d</string>
     <string name="settings_add_student_text">Add new student</string>
     <string name="attendance_details_lesson_topic">Lesson subject</string>
     <string name="register_unavailable_read_more">Read more</string>
