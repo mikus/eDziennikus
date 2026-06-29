@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,6 +50,7 @@ import eu.mikus.edziennik.data.db.entity.AttendanceType
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
 import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
+import eu.mikus.edziennik.utils.models.Week
 import kotlinx.coroutines.launch
 
 @Composable
@@ -216,12 +218,17 @@ private fun LeafRow(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                text = att.subjectLongName.orEmpty(),
+                text = att.subjectLongName ?: att.lessonTopic.orEmpty(),
                 fontWeight = if (leaf.unseen) FontWeight.Bold else FontWeight.Normal,
             )
+            Text(att.typeName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                text = "${att.date.day}.${att.date.month}.${att.date.year}" +
-                    (att.lessonTopic?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+                text = listOfNotNull(
+                    Week.getFullDayName(att.date.weekDay),
+                    att.date.formattedStringShort,
+                    att.startTime?.stringHM,
+                    att.lessonNumber?.let { stringResource(R.string.attendance_lesson_number_format, it) },
+                ).joinToString(" • "),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -310,6 +317,10 @@ private fun SummaryTabContent(
                 hasUnseen = subject.hasUnseen,
                 onClick = { onNodeToggle(subject.key) },
             ) { PercentText(subject.percentage) }
+            AttendanceBarChart(
+                segments = subject.counts.byType.map { Segment(colorForType(it.type), it.count) },
+                modifier = Modifier.padding(start = 32.dp, end = 16.dp, bottom = 8.dp),
+            )
             if (subject.expanded) {
                 if (subject.leaves.isEmpty()) NoneRow()
                 subject.leaves.forEach {
@@ -360,8 +371,29 @@ private fun DaysTabContent(
                 expanded = range.expanded,
                 hasUnseen = range.hasUnseen,
                 onClick = { onNodeToggle(range.key) },
-            ) { Text("${range.leaves.size}") }
-            if (range.expanded) {
+            ) { }
+            if (!range.expanded) {
+                val preview = range.leaves.filter {
+                    it.attendance.baseType != Attendance.TYPE_PRESENT_CUSTOM && it.attendance.baseType != Attendance.TYPE_UNKNOWN
+                }
+                if (preview.isEmpty()) {
+                    Text(
+                        stringResource(R.string.attendance_empty_text),
+                        Modifier.padding(start = 32.dp, end = 16.dp, bottom = 8.dp),
+                        fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    FlowRow(
+                        Modifier.fillMaxWidth().padding(start = 32.dp, end = 16.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        preview.forEach {
+                            AttendancePill(pillText(it.attendance.typeSymbol, it.attendance.typeShort, useSymbols), colorForAttendance(it.attendance))
+                        }
+                    }
+                }
+            } else {
                 range.leaves.forEach {
                     LeafRow(it, useSymbols, colorForAttendance, icon, onLeafClick, onItemSeen)
                 }
@@ -390,15 +422,17 @@ private fun MonthsTabContent(
                 hasUnseen = month.hasUnseen,
                 onClick = { onNodeToggle(month.key) },
             ) { PercentText(month.percentage) }
+            AttendanceBarChart(
+                segments = month.counts.byType.map { Segment(colorForType(it.type), it.count) },
+                modifier = Modifier.padding(start = 32.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+            )
             if (month.expanded) {
-                AttendanceBarChart(
-                    segments = month.counts.byType.map { Segment(colorForType(it.type), it.count) },
-                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
-                )
                 if (month.leaves.isEmpty()) NoneRow()
                 month.leaves.forEach {
                     LeafRow(it, useSymbols, colorForAttendance, icon, onLeafClick, onItemSeen)
                 }
+            } else {
+                PreviewPills(month.counts, useSymbols, colorForType)
             }
         }
     }
@@ -434,12 +468,15 @@ private fun TypesTabContent(
                 Column(Modifier.weight(1f)) {
                     Text(type.type.typeName, fontWeight = FontWeight.Medium)
                     Text(
-                        stringResource(R.string.attendance_type_counts_format, type.semesterCount, type.yearCount),
+                        listOf(
+                            stringResource(R.string.attendance_percentage_format, (type.sharePercent ?: 0f) * 100f),
+                            stringResource(R.string.attendance_type_yearly_format, type.yearCount),
+                            stringResource(R.string.attendance_type_semester_format, type.semesterCount),
+                        ).joinToString(" • "),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                PercentText(type.sharePercent)
             }
             if (type.expanded) {
                 type.leaves.forEach {
