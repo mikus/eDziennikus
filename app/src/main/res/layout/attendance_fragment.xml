@@ -3,34 +3,17 @@
   ~ Copyright (c) Kuba Szczodrzyński 2020-4-30.
   -->
 
-<layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
 
     <eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator
         android:id="@+id/refreshLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/composeView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="match_parent" />
 
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/colorSurface_6dp"
-                app:tabIndicatorColor="?colorPrimary"
-                app:tabMode="auto"
-                app:tabSelectedTextColor="?colorPrimary"
-                app:tabTextColor="?android:textColorPrimary" />
-
-            <eu.mikus.edziennik.ui.base.lazypager.LazyViewPager
-                android:id="@+id/viewPager"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:layout_behavior="@string/appbar_scrolling_view_behavior" />
-        </LinearLayout>
     </eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator>
 </layout>
