@@ -11,7 +11,7 @@ import eu.mikus.edziennik.utils.models.Date
 
 /**
  * Pure, Android-free. Builds the calendar dot-map + the selected day's items, replicating the legacy
- * AgendaFragmentDefault rules: lesson-changes group by displayDate (null dropped); teacher-absences expand
+ * agenda screen's rules: lesson-changes group by displayDate (null dropped); teacher-absences expand
  * across [dateFrom, dateTo]; never mutate the source entities (stepForward mutates, so iterate a fresh cursor).
  * The selected day's events preserve input order, so `events` is expected pre-sorted by date/time
  * (as `EventDao.getAll` returns them: ORDER BY eventDate, eventTime, addedDate).
