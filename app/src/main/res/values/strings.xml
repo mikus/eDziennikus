@@ -50,6 +50,9 @@
     <string name="add">Dodaj</string>
     <string name="agenda_lesson_changes">Zmiany planu lekcji</string>
     <string name="agenda_teacher_absence">Nieobecni nauczyciele</string>
+    <string name="agenda_no_events_day">Brak wydarzeń w tym dniu</string>
+    <string name="agenda_lesson_changes_summary">Zmiany w lekcjach: %1$d</string>
+    <string name="agenda_teacher_absence_summary">Nieobecności nauczycieli: %1$d</string>
     <string name="ago_format">%s temu</string>
     <string name="app_manager_dialog_text">Na urządzeniu prawdopodobnie zainstalowany jest menedżer aplikacji, który może powodować problemy z synchronizacją automatyczną.\n\nNależy wyłączyć w ustawieniach telefonu optymalizację baterii dla aplikacji eDziennikus.\n\nKliknij OK, aby przejść do ustawień telefonu.</string>
     <string name="app_manager_dialog_title">Wykryto problem z synchronizacją</string>

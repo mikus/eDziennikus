@@ -50,6 +50,9 @@
     <string name="add">Add</string>
     <string name="agenda_lesson_changes">Timetable changes</string>
     <string name="agenda_teacher_absence">Absent teachers</string>
+    <string name="agenda_no_events_day">No events on this day</string>
+    <string name="agenda_lesson_changes_summary">Lesson changes: %1$d</string>
+    <string name="agenda_teacher_absence_summary">Teacher absences: %1$d</string>
     <string name="ago_format">%s ago</string>
     <string name="app_manager_dialog_text">There may be an app manager running on this device, which could cause issues with automatic synchronisation.\n\nIn order to prevent this issue, turn off battery optimization for eDziennikus.\n\nPress OK to go to system settings.</string>
     <string name="app_manager_dialog_title">There was a problem with synchronization</string>
