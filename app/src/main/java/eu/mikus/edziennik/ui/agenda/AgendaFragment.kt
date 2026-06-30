@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Kacper Ziubryniewicz 2020-1-25
+ * Copyright (c) Mikolaj Olszewski 2026-6-30.
  */
 
 package eu.mikus.edziennik.ui.agenda
@@ -9,195 +9,115 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.databinding.ViewDataBinding
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.Fragment
-import com.applandeo.materialcalendarview.CalendarDay
-import com.applandeo.materialcalendarview.EventDay
-import com.applandeo.materialcalendarview.listeners.OnCalendarDayClickListener
-import com.applandeo.materialcalendarview.listeners.OnDayClickListener
-import com.mikepenz.iconics.IconicsDrawable
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
-import com.mikepenz.iconics.utils.colorInt
-import com.mikepenz.iconics.utils.sizeDp
-import eu.szkolny.font.SzkolnyFont
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.db.entity.EventType
-import eu.mikus.edziennik.data.db.entity.Profile
-import eu.mikus.edziennik.data.db.enums.MetadataType
-import eu.mikus.edziennik.databinding.FragmentAgendaCalendarBinding
-import eu.mikus.edziennik.databinding.FragmentAgendaDefaultBinding
+import eu.mikus.edziennik.databinding.AgendaFragmentBinding
+import eu.mikus.edziennik.ui.agenda.lessonchanges.LessonChangesDialog
+import eu.mikus.edziennik.ui.agenda.teacherabsence.TeacherAbsenceDialog
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.AgendaConfigDialog
+import eu.mikus.edziennik.ui.event.EventDetailsDialog
 import eu.mikus.edziennik.ui.event.EventManualDialog
-import eu.mikus.edziennik.utils.Themes
-import eu.mikus.edziennik.utils.models.Date
+import eu.szkolny.font.SzkolnyFont
+import java.time.YearMonth
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
-import kotlin.coroutines.CoroutineContext
 
-class AgendaFragment : Fragment(), CoroutineScope {
+class AgendaFragment : Fragment() {
+    companion object {
+        private const val TAG = "AgendaFragment"
+    }
 
+    private lateinit var app: App
     private lateinit var activity: MainActivity
-    private lateinit var b: ViewDataBinding
-
-    private val app by lazy { activity.app }
-
-    private var job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    private var type: Int = Profile.AGENDA_DEFAULT
-
-    private var agendaDefault: AgendaFragmentDefault? = null
+    private var b: AgendaFragmentBinding? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        if (getActivity() == null || context == null) return null
-        activity = getActivity() as MainActivity
-        context?.theme?.applyStyle(Themes.appTheme, true)
-        type = app.profile.config.ui.agendaViewType
-        b = when (type) {
-            Profile.AGENDA_DEFAULT -> FragmentAgendaDefaultBinding.inflate(inflater, container, false)
-            Profile.AGENDA_CALENDAR -> FragmentAgendaCalendarBinding.inflate(inflater, container, false)
-            else -> return null
-        }
-        return b.root
+        activity = (getActivity() as? MainActivity) ?: return null
+        if (context == null) return null
+        app = activity.application as App
+        val binding = AgendaFragmentBinding.inflate(inflater, container, false)
+        b = binding
+        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val b = b ?: return
         if (!isAdded) return
 
-        activity.bottomSheet.prependItems(
+        val viewModel = ViewModelProvider(
+            this, AgendaViewModel.Factory(activity.applicationContext),
+        )[AgendaViewModel::class.java]
+
+        activity.gainAttention()
+
+        view.postDelayed({
+            if (!isAdded) return@postDelayed
+            activity.bottomSheet.prependItems(
                 BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_add_event)
-                        .withDescription(R.string.menu_add_event_desc)
-                        .withIcon(SzkolnyFont.Icon.szf_calendar_plus_outline)
-                        .withOnClickListener {
-                            activity.bottomSheet.close()
-                            EventManualDialog(
-                                activity,
-                                app.profileId,
-                                defaultDate = AgendaFragmentDefault.selectedDate
-                            ).show()
-                        },
+                    .withTitle(R.string.menu_add_event)
+                    .withDescription(R.string.menu_add_event_desc)
+                    .withIcon(SzkolnyFont.Icon.szf_calendar_plus_outline)
+                    .withOnClickListener(View.OnClickListener {
+                        activity.bottomSheet.close()
+                        EventManualDialog(activity, App.profileId, defaultDate = viewModel.selectedDate.value).show()
+                    }),
                 BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_agenda_config)
-                        .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                        .withOnClickListener {
-                            activity.bottomSheet.close()
-                            AgendaConfigDialog(activity, true, null, null).show()
-                        },
-                BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_agenda_change_view)
-                        .withIcon(if (type == Profile.AGENDA_DEFAULT) CommunityMaterial.Icon.cmd_calendar_outline else CommunityMaterial.Icon2.cmd_format_list_bulleted_square)
-                        .withOnClickListener {
-                            activity.bottomSheet.close()
-                            type =
-                                if (type == Profile.AGENDA_DEFAULT) Profile.AGENDA_CALENDAR else Profile.AGENDA_DEFAULT
-                            app.profile.config.ui.agendaViewType = type
-                            activity.reloadTarget()
-                        },
+                    .withTitle(R.string.menu_agenda_config)
+                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
+                    .withOnClickListener(View.OnClickListener {
+                        activity.bottomSheet.close()
+                        AgendaConfigDialog(activity, true, null, null).show()
+                    }),
                 BottomSheetSeparatorItem(true),
                 BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_mark_as_read)
-                        .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                        .withOnClickListener {
-                            launch {
-                                activity.bottomSheet.close()
-                                withContext(Dispatchers.Default) {
-                                    App.db.metadataDao()
-                                        .setAllSeen(app.profileId, MetadataType.EVENT, true)
-                                }
-                                Toast.makeText(
-                                    activity,
-                                    R.string.main_menu_mark_as_read_success,
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-        )
+                    .withTitle(R.string.menu_mark_as_read)
+                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
+                    .withOnClickListener(View.OnClickListener {
+                        activity.bottomSheet.close()
+                        viewModel.markAllSeen()
+                        Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+                    }),
+            )
+        }, 100)
 
         activity.navView.bottomBar.fabEnable = true
         activity.navView.bottomBar.fabExtendedText = getString(R.string.add)
         activity.navView.bottomBar.fabIcon = CommunityMaterial.Icon3.cmd_plus
         activity.navView.setFabOnClickListener {
-            EventManualDialog(
-                activity,
-                app.profileId,
-                defaultDate = AgendaFragmentDefault.selectedDate
-            ).show()
+            EventManualDialog(activity, App.profileId, defaultDate = viewModel.selectedDate.value).show()
         }
-
-        activity.gainAttention()
         activity.gainAttentionFAB()
 
-        when (type) {
-            Profile.AGENDA_DEFAULT -> createDefaultAgendaView()
-            Profile.AGENDA_CALENDAR -> createCalendarAgendaView()
+        val startMonth = YearMonth.of(app.profile.dateSemester1Start.year, app.profile.dateSemester1Start.month)
+        val endMonth = YearMonth.of(app.profile.dateYearEnd.year, app.profile.dateYearEnd.month)
+
+        b.composeView.setAppThemeContent {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            AgendaScreen(
+                state = state,
+                startMonth = startMonth,
+                endMonth = endMonth,
+                onDaySelected = viewModel::setSelectedDate,
+                onEventClick = { EventDetailsDialog(activity, it).show() },
+                onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
+                onItemSeen = viewModel::markSeen,
+                onLessonChangesClick = { LessonChangesDialog(activity, App.profileId, defaultDate = it).show() },
+                onTeacherAbsenceClick = { TeacherAbsenceDialog(activity, App.profileId, date = it).show() },
+                setRefreshEnabled = { b.refreshLayout.isEnabled = it },
+            )
         }
     }
 
-    private suspend fun checkEventTypes() {
-        withContext(Dispatchers.Default) {
-            app.db.eventTypeDao().getAllWithDefaults(app.profile)
-        }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        b = null
     }
-
-    private fun createDefaultAgendaView() { (b as? FragmentAgendaDefaultBinding)?.let { b -> launch {
-        if (!isAdded)
-            return@launch
-        checkEventTypes()
-        delay(500)
-
-        agendaDefault = AgendaFragmentDefault(activity, app, b)
-        agendaDefault?.initView(this@AgendaFragment)
-    }}}
-
-    private fun createCalendarAgendaView() { (b as? FragmentAgendaCalendarBinding)?.let { b -> launch {
-        checkEventTypes()
-        delay(300)
-
-        val dayList = mutableListOf<EventDay>()
-
-        val events = withContext(Dispatchers.Default) { app.db.eventDao().getAllNow(app.profileId) }
-        val unreadEventDates = mutableSetOf<Int>()
-
-        events.forEach { event ->
-            val eventIcon = IconicsDrawable(activity).apply {
-                icon = CommunityMaterial.Icon.cmd_checkbox_blank_circle
-                sizeDp = 10
-                colorInt = event.eventColor
-            }
-
-            dayList.add(EventDay(event.startTimeCalendar, eventIcon))
-
-            if (!event.seen) unreadEventDates.add(event.date.value)
-        }
-
-        b.agendaCalendarView.setEvents(dayList)
-        b.agendaCalendarView.setOnCalendarDayClickListener(object : OnCalendarDayClickListener {
-            override fun onClick(day: CalendarDay) {
-                this@AgendaFragment.launch {
-                    val date = Date.fromCalendar(day.calendar)
-
-                    if (date.value in unreadEventDates) {
-                        withContext(Dispatchers.Default) {
-                            app.db.eventDao().setSeenByDate(app.profileId, date, true)
-                        }
-                        unreadEventDates.remove(date.value)
-                    }
-
-                    DayDialog(activity, app.profileId, date).show()
-                }
-            }
-        })
-
-        b.progressBar.visibility = View.GONE
-    }}}
 }
