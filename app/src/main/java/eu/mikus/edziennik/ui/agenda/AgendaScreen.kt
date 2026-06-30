@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.os.ConfigurationCompat
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
@@ -46,6 +47,7 @@ import eu.mikus.edziennik.ui.event.EventRow
 import eu.mikus.edziennik.utils.models.Date
 import java.time.YearMonth
 import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun AgendaScreen(
@@ -118,7 +120,7 @@ private fun AgendaContent(
                 )
             },
             monthHeader = { month ->
-                val locale = LocalConfiguration.current.locales[0]
+                val locale = ConfigurationCompat.getLocales(LocalConfiguration.current).get(0) ?: Locale.ROOT
                 val ym = month.yearMonth
                 val label = ym.month
                     .getDisplayName(TextStyle.FULL_STANDALONE, locale)
