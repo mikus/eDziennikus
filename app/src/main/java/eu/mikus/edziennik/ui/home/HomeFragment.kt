@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Kuba Szczodrzyński 2019-11-23.
+ * Copyright (c) Mikolaj Olszewski 2026-6-30.
  */
 
 package eu.mikus.edziennik.ui.home
@@ -7,249 +7,158 @@ package eu.mikus.edziennik.ui.home
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.core.view.AccessibilityDelegateCompat
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
-import androidx.core.widget.NestedScrollView
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerViewAccessibilityDelegate
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.card.MaterialCardView
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial.Icon
 import eu.szkolny.font.SzkolnyFont
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import eu.mikus.edziennik.App
-import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.db.enums.FeatureType
-import eu.mikus.edziennik.databinding.FragmentHomeBinding
-import eu.mikus.edziennik.ext.hasUIFeature
-import eu.mikus.edziennik.ext.onClick
+import eu.mikus.edziennik.data.db.entity.Noteable
+import eu.mikus.edziennik.databinding.HomeFragmentBinding
+import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.HomeConfigDialog
 import eu.mikus.edziennik.ui.dialogs.settings.StudentNumberDialog
+import eu.mikus.edziennik.ui.event.EventDetailsDialog
+import eu.mikus.edziennik.ui.event.EventManualDialog
 import eu.mikus.edziennik.ui.home.cards.HomeArchiveCard
 import eu.mikus.edziennik.ui.home.cards.HomeAvailabilityCard
-import eu.mikus.edziennik.ui.home.cards.HomeEventsCard
-import eu.mikus.edziennik.ui.home.cards.HomeGradesCard
-import eu.mikus.edziennik.ui.home.cards.HomeLuckyNumberCard
-import eu.mikus.edziennik.ui.home.cards.HomeNotesCard
 import eu.mikus.edziennik.ui.home.cards.HomeTimetableCard
+import eu.mikus.edziennik.ui.notes.NoteDetailsDialog
+import eu.mikus.edziennik.ui.notes.NoteEditorDialog
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
-import kotlin.coroutines.CoroutineContext
 
-class HomeFragment : Fragment(), CoroutineScope {
+class HomeFragment : Fragment() {
     companion object {
         private const val TAG = "HomeFragment"
-
-        fun swapCards(fromPosition: Int, toPosition: Int, cardAdapter: HomeCardAdapter): Boolean {
-            val fromCard = cardAdapter.items[fromPosition]
-            val toCard = cardAdapter.items[toPosition]
-            if (fromCard.id >= 100 || toCard.id >= 100) {
-                // debug & archive cards are not swappable
-                return false
-            }
-            cardAdapter.items[fromPosition] = cardAdapter.items[toPosition]
-            cardAdapter.items[toPosition] = fromCard
-            cardAdapter.notifyItemMoved(fromPosition, toPosition)
-
-            val homeCards = App.profile.config.ui.homeCards.toMutableList()
-            val fromIndex = homeCards.indexOfFirst { it.cardId == fromCard.id }
-            val toIndex = homeCards.indexOfFirst { it.cardId == toCard.id }
-            val fromPair = homeCards[fromIndex]
-            homeCards[fromIndex] = homeCards[toIndex]
-            homeCards[toIndex] = fromPair
-            App.profile.config.ui.homeCards = homeCards
-            return true
-        }
-
-        fun removeCard(position: Int, cardAdapter: HomeCardAdapter) {
-            val homeCards = App.profile.config.ui.homeCards.toMutableList()
-            if (position >= homeCards.size)
-                return
-            val card = cardAdapter.items[position]
-            if (card.id >= 100) {
-                // debug & archive cards are not removable
-                //cardAdapter.notifyDataSetChanged()
-                return
-            }
-            homeCards.removeAll { it.cardId == card.id }
-            App.profile.config.ui.homeCards = homeCards
-        }
     }
 
     private lateinit var app: App
     private lateinit var activity: MainActivity
-    private lateinit var b: FragmentHomeBinding
+    private var b: HomeFragmentBinding? = null
 
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-    private val manager
-        get() = app.permissionManager
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        activity = (getActivity() as MainActivity?) ?: return null
-        context ?: return null
+        activity = (getActivity() as? MainActivity) ?: return null
+        if (context == null) return null
         app = activity.application as App
-        b = FragmentHomeBinding.inflate(inflater)
-        b.refreshLayout.setParent(activity.swipeRefreshLayout)
-        return b.root
+        val binding = HomeFragmentBinding.inflate(inflater, container, false)
+        b = binding
+        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // TODO check if app, activity, b can be null
-        if (!isAdded)
-            return
+        val b = b ?: return
+        if (!isAdded) return
 
-        if (!manager.isNotificationPermissionGranted) {
-            manager.requestNotificationsPermission(activity, 0, false){}
-        }
+        val viewModel = ViewModelProvider(
+            this, HomeViewModel.Factory(activity.applicationContext),
+        )[HomeViewModel::class.java]
 
-        activity.bottomSheet.prependItems(
+        activity.gainAttention()
+
+        view.postDelayed({
+            if (!isAdded) return@postDelayed
+            activity.bottomSheet.prependItems(
                 BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_add_remove_cards)
-                        .withIcon(Icon.cmd_card_bulleted_settings_outline)
-                        .withOnClickListener(OnClickListener {
-                            activity.bottomSheet.close()
-                            HomeCardsDialog(activity, reloadOnDismiss = true).show()
-                        }),
+                    .withTitle(R.string.menu_add_remove_cards)
+                    .withIcon(Icon.cmd_card_bulleted_settings_outline)
+                    .withOnClickListener(View.OnClickListener {
+                        activity.bottomSheet.close()
+                        HomeCardsDialog(activity, reloadOnDismiss = true).show()
+                    }),
                 BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_home_config)
-                        .withIcon(Icon.cmd_cog_outline)
-                        .withOnClickListener(OnClickListener {
-                            activity.bottomSheet.close()
-                            HomeConfigDialog(activity, reloadOnDismiss = true).show()
-                        }),
+                    .withTitle(R.string.menu_home_config)
+                    .withIcon(Icon.cmd_cog_outline)
+                    .withOnClickListener(View.OnClickListener {
+                        activity.bottomSheet.close()
+                        HomeConfigDialog(activity, reloadOnDismiss = true).show()
+                    }),
                 BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_set_student_number)
-                        .withIcon(SzkolnyFont.Icon.szf_clipboard_list_outline)
-                        .withOnClickListener(OnClickListener {
-                            activity.bottomSheet.close()
-                            StudentNumberDialog(activity, app.profile) {
-                                app.profileSave()
-                            }
-                        }),
+                    .withTitle(R.string.menu_set_student_number)
+                    .withIcon(SzkolnyFont.Icon.szf_clipboard_list_outline)
+                    .withOnClickListener(View.OnClickListener {
+                        activity.bottomSheet.close()
+                        StudentNumberDialog(activity, app.profile) { app.profileSave() }
+                    }),
                 BottomSheetSeparatorItem(true),
                 BottomSheetPrimaryItem(true)
-                        .withTitle(R.string.menu_mark_everything_as_read)
-                        .withIcon(Icon.cmd_eye_check_outline)
-                        .withOnClickListener(OnClickListener {
-                            activity.bottomSheet.close()
-                            launch { withContext(Dispatchers.Default) {
+                    .withTitle(R.string.menu_mark_everything_as_read)
+                    .withIcon(Icon.cmd_eye_check_outline)
+                    .withOnClickListener(View.OnClickListener {
+                        activity.bottomSheet.close()
+                        lifecycleScope.launch {
+                            withContext(Dispatchers.Default) {
                                 if (!app.data.uiConfig.enableMarkAsReadAnnouncements) {
                                     app.db.metadataDao().setAllSeenExceptMessagesAndAnnouncements(App.profileId, true)
                                 } else {
                                     app.db.metadataDao().setAllSeenExceptMessages(App.profileId, true)
                                 }
-                            } }
-
+                            }
                             Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
-                        })
-        )
-
-        val homeCardsLocked = app.profile.config.ui.homeCardsLocked
-        if (homeCardsLocked) {
-            b.configHintText.setText(R.string.home_configure_locked)
-            b.configureCards.setText(R.string.home_configure_settings)
-        }
-        b.configureCards.onClick {
-            if (homeCardsLocked)
-                HomeConfigDialog(activity, reloadOnDismiss = true).show()
-            else
-                HomeCardsDialog(activity, reloadOnDismiss = true).show()
-        }
-
-        b.scrollView.setOnScrollChangeListener { _: NestedScrollView?, _: Int, scrollY: Int, _: Int, _: Int ->
-            b.refreshLayout.isEnabled = scrollY == 0
-        }
-
-        val cards = app.profile.config.ui.homeCards.filter { it.profileId == app.profile.id }.toMutableList()
-        if (cards.isEmpty()) {
-            cards += listOfNotNull(
-                    HomeCardModel(app.profile.id, HomeCard.CARD_LUCKY_NUMBER).takeIf { app.profile.hasUIFeature(FeatureType.LUCKY_NUMBER) },
-                    HomeCardModel(app.profile.id, HomeCard.CARD_TIMETABLE).takeIf { app.profile.hasUIFeature(FeatureType.TIMETABLE) },
-                    HomeCardModel(app.profile.id, HomeCard.CARD_EVENTS).takeIf { app.profile.hasUIFeature(FeatureType.AGENDA) },
-                    HomeCardModel(app.profile.id, HomeCard.CARD_GRADES).takeIf { app.profile.hasUIFeature(FeatureType.GRADES) },
-                    HomeCardModel(app.profile.id, HomeCard.CARD_NOTES),
+                        }
+                    }),
             )
-            app.profile.config.ui.homeCards = app.profile.config.ui.homeCards.toMutableList().also { it.addAll(cards) }
-        }
+        }, 100)
 
-        val items = mutableListOf<HomeCard>()
-        cards.mapNotNullTo(items) {
-            @Suppress("USELESS_CAST")
-            when (it.cardId) {
-                HomeCard.CARD_LUCKY_NUMBER -> HomeLuckyNumberCard(it.cardId, app, activity, this, app.profile)
-                HomeCard.CARD_TIMETABLE -> HomeTimetableCard(it.cardId, app, activity, this, app.profile)
-                HomeCard.CARD_GRADES -> HomeGradesCard(it.cardId, app, activity, this, app.profile)
-                HomeCard.CARD_EVENTS -> HomeEventsCard(it.cardId, app, activity, this, app.profile)
-                HomeCard.CARD_NOTES -> HomeNotesCard(it.cardId, app, activity, this, app.profile)
-                else -> null
-            } as HomeCard?
-        }
-        //if (App.devMode)
-        //    items += HomeDebugCard(100, app, activity, this, app.profile)
-        if (app.profile.archived)
-            items.add(0, HomeArchiveCard(101, app, activity, this, app.profile))
-
-        // The home-screen "register unavailable" notice was tied to the
-        // szkolny.eu availability backend (gone). The card is now only added
-        // when a newer GitHub release is available.
-        val update = app.config.update
-        if (update != null && update.versionCode > BuildConfig.VERSION_CODE) {
-            items.add(0, HomeAvailabilityCard(102, app, activity, this, app.profile))
-        }
-
-        val adapter = HomeCardAdapter(items)
-        b.list.layoutManager = LinearLayoutManager(activity)
-        b.list.adapter = adapter
-
-        if (!homeCardsLocked) {
-            val itemTouchHelper = ItemTouchHelper(CardItemTouchHelperCallback(adapter, b.refreshLayout))
-            adapter.itemTouchHelper = itemTouchHelper
-            b.list.setAccessibilityDelegateCompat(object : RecyclerViewAccessibilityDelegate(b.list) {
-                override fun getItemDelegate(): AccessibilityDelegateCompat {
-                    return object : ItemDelegate(this) {
-                        override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
-                            super.onInitializeAccessibilityNodeInfo(host, info)
-                            val position: Int = b.list.getChildLayoutPosition(host)
-                            if (position != 0) {
-                                info.addAction(AccessibilityActionCompat(
-                                        R.id.move_card_up_action,
-                                        host.resources.getString(R.string.card_action_move_up)
-                                ))
-                            }
-                            if (position != adapter.itemCount - 1) {
-                                info.addAction(AccessibilityActionCompat(
-                                        R.id.move_card_down_action,
-                                        host.resources.getString(R.string.card_action_move_down)
-                                ))
-                            }
-                        }
-
-                        override fun performAccessibilityAction(host: View, action: Int, args: Bundle?): Boolean {
-                            val fromPosition: Int = b.list.getChildLayoutPosition(host)
-                            if (action == R.id.move_card_down_action) {
-                                swapCards(fromPosition, fromPosition + 1, adapter)
-                                return true
-                            } else if (action == R.id.move_card_up_action) {
-                                swapCards(fromPosition, fromPosition - 1, adapter)
-                                return true
-                            }
-                            return super.performAccessibilityAction(host, action, args)
-                        }
+        b.composeView.setAppThemeContent {
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+            HomeScreen(
+                state = state,
+                onReorder = viewModel::reorder,
+                onRemove = viewModel::removeCard,
+                onConfigureCards = { HomeCardsDialog(activity, reloadOnDismiss = true).show() },
+                gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
+                onLuckyClick = { StudentNumberDialog(activity, app.profile) { app.profileSave() } },
+                onEventClick = { EventDetailsDialog(activity, it).show() },
+                onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
+                onOpenAgenda = { activity.navigate(navTarget = NavTarget.AGENDA) },
+                onOpenGrades = { activity.navigate(navTarget = NavTarget.GRADES) },
+                onNoteClick = { note ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val owner = withContext(Dispatchers.IO) { app.noteManager.getOwner(note) } as? Noteable
+                        NoteDetailsDialog(activity, owner, note).show()
                     }
-                }
-            })
-            itemTouchHelper.attachToRecyclerView(b.list)
+                },
+                onAddNote = { NoteEditorDialog(activity, owner = null, editingNote = null, profileId = App.profileId).show() },
+                onOpenNotes = { activity.navigate(navTarget = NavTarget.NOTES) },
+                wrappedCardContent = { cardId -> WrappedCard(cardId) },
+                setRefreshEnabled = { b.refreshLayout.isEnabled = it },
+            )
         }
+    }
+
+    /** Hosts a legacy HomeCard (Timetable/Archive/Availability) inside Compose via its existing bind(). */
+    @androidx.compose.runtime.Composable
+    private fun WrappedCard(cardId: Int) {
+        AndroidView(factory = { ctx ->
+            val root = LayoutInflater.from(ctx).inflate(R.layout.card_home, null) as MaterialCardView
+            val holder = HomeCardAdapter.ViewHolder(root)
+            val card: HomeCard = when (cardId) {
+                102 -> HomeAvailabilityCard(102, app, activity, this, app.profile)
+                101 -> HomeArchiveCard(101, app, activity, this, app.profile)
+                else -> HomeTimetableCard(HomeCard.CARD_TIMETABLE, app, activity, this, app.profile)
+            }
+            card.bind(0, holder)
+            root
+        })
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        b = null
     }
 }
