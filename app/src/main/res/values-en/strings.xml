@@ -1370,4 +1370,8 @@
     <string name="home_timetable_all_lessons">All lessons:</string>
     <string name="login_type_demo">Use without login</string>
     <string name="login_mode_demo">Demo version</string>
+    <string name="home_card_no_events">No upcoming events</string>
+    <string name="home_card_no_grades">No grades</string>
+    <string name="home_card_no_notes">No notes</string>
+    <string name="home_configure_cards">Configure cards</string>
 </resources>

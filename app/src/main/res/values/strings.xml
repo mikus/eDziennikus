@@ -1511,4 +1511,8 @@
     <string name="menu_home_config">Ustawienia strony głównej</string>
     <string name="home_configure_settings">Ustawienia</string>
     <string name="home_configure_locked">Zmiana ułożenia kart została zablokowana w Ustawieniach</string>
+    <string name="home_card_no_events">Brak nadchodzących wydarzeń</string>
+    <string name="home_card_no_grades">Brak ocen</string>
+    <string name="home_card_no_notes">Brak notatek</string>
+    <string name="home_configure_cards">Skonfiguruj karty</string>
 </resources>
