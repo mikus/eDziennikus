@@ -8,9 +8,9 @@ import eu.mikus.edziennik.data.db.entity.Grade.Companion.TYPE_NO_GRADE
 import eu.mikus.edziennik.data.db.full.GradeFull
 
 /**
- * Pure port of HomeGradesCard's per-subject grouping. Groups recent grades by subject in first-seen
- * order, dropping no-grade entries and grades whose subject name is unknown. The card (later task)
- * renders each row's grades in a FlowRow (natural wrapping replaces the legacy manual pixel ellipsis).
+ * Pure port of the legacy home grades card's per-subject grouping. Groups recent grades by subject in
+ * first-seen order, dropping no-grade entries and grades whose subject name is unknown. The Compose
+ * grades card renders each row's grades in a FlowRow (natural wrapping replaces the legacy manual pixel ellipsis).
  */
 object HomeGradesGrouper {
     fun group(grades: List<GradeFull>): List<SubjectGradeRow> {

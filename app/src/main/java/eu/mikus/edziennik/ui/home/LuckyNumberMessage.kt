@@ -8,7 +8,7 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.utils.models.Date
 
 /**
- * Pure port of HomeLuckyNumberCard's title/emoji/subtext selection. Android-free: returns resource
+ * Pure port of the legacy home lucky-number card's title/emoji/subtext selection. Android-free: returns resource
  * ids + format args; the Screen resolves them with stringResource. Pass the lucky number's own
  * value/date (null when there is no row) plus today + the profile's student number.
  */
