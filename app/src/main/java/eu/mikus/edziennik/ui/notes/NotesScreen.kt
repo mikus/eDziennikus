@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,11 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -36,17 +32,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.ColorUtils
-import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Note
 import eu.mikus.edziennik.ext.resolveAttr
-import eu.mikus.edziennik.ui.compose.IconicsIcon
-import eu.mikus.edziennik.ui.compose.toAnnotatedString
-import eu.mikus.edziennik.ui.compose.withSearchHighlight
-import eu.mikus.edziennik.utils.models.Date
 
 @Composable
 fun NotesScreen(
@@ -91,7 +80,7 @@ fun NotesScreen(
                         items(state.rows, key = { rowKey(it) }) { row ->
                             when (row) {
                                 is NoteRow.Header -> SectionHeader(row.ownerType)
-                                is NoteRow.Item -> NoteItemRow(row.note, state.query, highlightColor, onNoteClick, onNoteEditClick)
+                                is NoteRow.Item -> NoteCard(note = row.note, onNoteClick = onNoteClick, query = state.query, highlightColor = highlightColor, onNoteEditClick = onNoteEditClick)
                             }
                         }
                     }
@@ -159,55 +148,6 @@ private fun headerRes(t: Note.OwnerType): Pair<Int, Int>? = when (t) {
     Note.OwnerType.LESSON -> R.string.notes_type_lesson to R.drawable.ic_timetable
     Note.OwnerType.MESSAGE -> R.string.notes_type_message to R.drawable.ic_message
     else -> null
-}
-
-@Composable
-private fun NoteItemRow(
-    note: Note,
-    query: String,
-    highlightColor: Color,
-    onNoteClick: (Note) -> Unit,
-    onNoteEditClick: (Note) -> Unit,
-) {
-    val container = note.color?.let { Color(ColorUtils.setAlphaComponent(it.toInt(), 0x50)) }
-        ?: MaterialTheme.colorScheme.surfaceContainerHigh
-    val display = remember(note, query) {
-        (note.topicHtml ?: note.bodyHtml).toAnnotatedString().withSearchHighlight(query, highlightColor)
-    }
-    Card(
-        onClick = { onNoteClick(note) },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = container),
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = display,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(4.dp))
-                val date = remember(note.addedDate) { Date.fromMillis(note.addedDate).formattedString }
-                Text(
-                    text = stringResource(R.string.notes_added_by_you_format, date),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = { onNoteEditClick(note) }) {
-                IconicsIcon(
-                    CommunityMaterial.Icon3.cmd_pencil_outline,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
 }
 
 @Composable
