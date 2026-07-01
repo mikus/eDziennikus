@@ -164,6 +164,8 @@ dependencies {
     // Compose calendar (Phase 7 Agenda) — replaces the legacy Applandeo Material-Calendar-View.
     // (agendacalendarview stays: still used by NoteManager's DayDialog day-popup.)
     implementation "com.kizitonwose.calendar:compose:2.10.1"
+    // Compose drag-and-drop reorderable list (Phase 8 Home dashboard cards).
+    implementation "sh.calvin.reorderable:reorderable:2.4.3"
 
     // Play Services
     implementation "com.google.android.gms:play-services-wearable:17.1.0"
