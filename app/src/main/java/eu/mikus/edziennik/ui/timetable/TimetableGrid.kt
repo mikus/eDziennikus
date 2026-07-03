@@ -8,6 +8,7 @@ import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -57,8 +58,7 @@ fun TimetableGrid(
 ) {
     val minuteHeight: Dp = lessonHeight.dp / 30f
     val totalMinutes = (endHour - startHour) * 60
-    val hourDivider = MaterialTheme.colorScheme.outline
-    val halfHourDivider = MaterialTheme.colorScheme.outlineVariant
+    val hourDivider = MaterialTheme.colorScheme.outlineVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val nowColor = MaterialTheme.colorScheme.error
     val labelStyle = MaterialTheme.typography.labelSmall.copy(color = labelColor)
@@ -90,6 +90,7 @@ fun TimetableGrid(
     Box(
         modifier
             .fillMaxWidth()
+            .padding(horizontal = 12.dp)
             .verticalScroll(scrollState),
     ) {
         Layout(
@@ -111,7 +112,6 @@ fun TimetableGrid(
                     minuteHeight = minuteHeight,
                     gutterWidth = GutterWidth,
                     hourColor = hourDivider,
-                    halfHourColor = halfHourDivider,
                     nowMinute = if (isToday && nowMinute in startHour * 60..endHour * 60) nowMinute else null,
                     nowColor = nowColor,
                     labelStyle = labelStyle,
@@ -146,14 +146,13 @@ fun TimetableGrid(
     }
 }
 
-/** Draws hour labels + hour/half-hour dividers + optional now-line behind the block layer. */
+/** Draws the hour labels (centred on their gridline) + hour dividers + optional now-line behind the block layer. */
 private fun Modifier.drawGrid(
     startHour: Int,
     endHour: Int,
     minuteHeight: Dp,
     gutterWidth: Dp,
     hourColor: Color,
-    halfHourColor: Color,
     nowMinute: Int?,
     nowColor: Color,
     labelStyle: TextStyle,
@@ -169,17 +168,8 @@ private fun Modifier.drawGrid(
             end = Offset(size.width, y),
             strokeWidth = 1.dp.toPx(),
         )
-        if (h < endHour) {
-            val yHalf = y + 30 * minutePx
-            drawLine(
-                halfHourColor,
-                start = Offset(gutterPx, yHalf),
-                end = Offset(size.width, yHalf),
-                strokeWidth = 1.dp.toPx(),
-            )
-        }
         val label = textMeasurer.measure("$h:00", labelStyle)
-        drawText(label, topLeft = Offset(0f, y))
+        drawText(label, topLeft = Offset(0f, y - label.size.height / 2f))
     }
     if (nowMinute != null) {
         val y = (nowMinute - startHour * 60) * minutePx

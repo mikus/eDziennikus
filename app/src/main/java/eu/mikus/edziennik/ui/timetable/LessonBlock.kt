@@ -12,7 +12,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,10 +32,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Lesson
@@ -41,12 +46,13 @@ import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.utils.Colors
 
-private val BlockShape = RoundedCornerShape(4.dp)
+private val BlockShape = RoundedCornerShape(6.dp)
 
 /**
- * Full-parity Compose port of the legacy `timetable_lesson` view (TimetableDayFragment.buildLessonViews).
- * Renders the subject (optionally colour-backed + strikethrough for cancelled/shifted-source), the lesson
- * number, the change annotation, old→new struck teacher/team/classroom, event dots and the attendance icon.
+ * Full-parity Compose port of the legacy `timetable_lesson` view (TimetableDayFragment.buildLessonViews):
+ * a big bold subject with the large lesson number + attendance check top-right, the exact time range and
+ * teacher • team below, optional colour-backed background + strikethrough for cancelled/shifted-source,
+ * the change annotation, old→new struck teacher/team/classroom, and event dots.
  */
 @Composable
 fun LessonBlock(
@@ -73,64 +79,107 @@ fun LessonBlock(
         else -> Color(0xFFAAAAAA)
     }
 
+    val annotation = annotationText(block.annotation, lesson)
+
     Box(
         modifier
             .fillMaxSize()
-            .padding(1.dp)
+            .padding(vertical = 2.dp)
             .clip(BlockShape)
             .background(subjectColor ?: MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 3.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                lesson.displayLessonNumber?.let {
-                    Text("$it", style = MaterialTheme.typography.labelSmall, color = onSubjectSecondary)
-                    Box(Modifier.width(6.dp))
-                }
+        Column(Modifier.fillMaxSize()) {
+            // Top row: subject (grows) + unread dot + attendance check + big lesson number
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Text(
                     text = subjectText(lesson.displaySubjectName ?: "", struck),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     color = onSubject,
-                    maxLines = 1,
+                    maxLines = if (annotation != null) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.weight(1f),
                 )
                 if (block.unseen) {
-                    Box(Modifier.width(4.dp))
-                    Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.error))
-                }
-            }
-
-            val annotation = annotationText(block.annotation, lesson)
-            if (annotation != null) {
-                Text(annotation, style = MaterialTheme.typography.labelSmall, color = onSubjectSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-
-            // teacher / team / classroom — old→new strikethrough when the id/value changed
-            val teacher = fieldText(unchanged = lesson.teacherId != null && lesson.teacherId == lesson.oldTeacherId, oldVal = lesson.oldTeacherName, newVal = lesson.teacherName)
-            val team = fieldText(unchanged = lesson.teamId != null && lesson.teamId == lesson.oldTeamId, oldVal = lesson.oldTeamName, newVal = lesson.teamName)
-            val room = fieldText(unchanged = lesson.classroom != null && lesson.classroom == lesson.oldClassroom, oldVal = lesson.oldClassroom, newVal = lesson.classroom)
-            val details = listOf(teacher, team, room).filter { it.isNotEmpty() }
-            if (details.isNotEmpty()) {
-                Text(joinAnnotated(details), style = MaterialTheme.typography.labelSmall, color = onSubjectSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                block.events.forEach { ev ->
-                    Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(ev.eventColor)))
-                    Box(Modifier.width(3.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(MaterialTheme.colorScheme.error))
                 }
                 block.attendance?.let { att ->
                     val ctx = LocalContext.current
                     val drawable = attendanceIconFactory(ctx, att)
                     if (drawable != null) {
+                        Spacer(Modifier.width(8.dp))
                         AndroidView(
                             factory = { context -> ImageView(context) },
                             update = { it.setImageDrawable(drawable) },
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(24.dp),
                         )
                     }
+                }
+                lesson.displayLessonNumber?.let {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "$it",
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Light,
+                        color = onSubject,
+                    )
+                }
+            }
+
+            if (annotation != null) {
+                Text(
+                    text = annotation,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontStyle = FontStyle.Italic,
+                    color = onSubjectSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+
+            // Exact time range (+ classroom old→new when present)
+            val timeLine = timeText(lesson)
+            if (timeLine.isNotEmpty()) {
+                Text(
+                    text = timeLine,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onSubject,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+
+            // Teacher • team (old→new struck when changed), with event dots pinned to the end
+            val teacher = fieldText(
+                unchanged = lesson.teacherId != null && lesson.teacherId == lesson.oldTeacherId,
+                oldVal = lesson.oldTeacherName, newVal = lesson.teacherName,
+            )
+            val team = fieldText(
+                unchanged = lesson.teamId != null && lesson.teamId == lesson.oldTeamId,
+                oldVal = lesson.oldTeamName, newVal = lesson.teamName,
+            )
+            val teacherTeam = joinAnnotated(listOf(teacher, team).filter { it.isNotEmpty() }, " • ")
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (teacherTeam.isNotEmpty()) {
+                    Text(
+                        text = teacherTeam,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onSubjectSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                block.events.forEach { ev ->
+                    Spacer(Modifier.width(4.dp))
+                    Box(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(Color(ev.eventColor)))
                 }
             }
         }
@@ -139,6 +188,21 @@ fun LessonBlock(
 
 private fun subjectText(name: String, struck: Boolean): AnnotatedString = buildAnnotatedString {
     if (struck) withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(name) } else append(name)
+}
+
+/** "H:MM - H:MM" from the lesson's display times, plus the classroom (old→new when changed). */
+private fun timeText(lesson: LessonFull): AnnotatedString = buildAnnotatedString {
+    val start = lesson.displayStartTime?.stringHM
+    val end = lesson.displayEndTime?.stringHM
+    if (start != null && end != null) append("$start - $end")
+    val room = fieldText(
+        unchanged = lesson.classroom != null && lesson.classroom == lesson.oldClassroom,
+        oldVal = lesson.oldClassroom, newVal = lesson.classroom,
+    )
+    if (room.isNotEmpty()) {
+        if (length > 0) append(" • ")
+        append(room)
+    }
 }
 
 /** "old" struck-through, then "new" — or just the single value when unchanged. Empty if nothing. */
@@ -152,9 +216,9 @@ private fun fieldText(unchanged: Boolean, oldVal: String?, newVal: String?): Ann
     if (newVal != null) append(newVal)
 }
 
-private fun joinAnnotated(parts: List<AnnotatedString>): AnnotatedString = buildAnnotatedString {
+private fun joinAnnotated(parts: List<AnnotatedString>, separator: String): AnnotatedString = buildAnnotatedString {
     parts.forEachIndexed { i, p ->
-        if (i > 0) append(", ")
+        if (i > 0) append(separator)
         append(p)
     }
 }

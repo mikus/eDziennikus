@@ -68,7 +68,7 @@ class TimetableFragment : Fragment() {
         attendanceManager.getAttendanceIcon(att)?.let { icon ->
             IconicsDrawable(ctx, icon).apply {
                 colorInt = attendanceManager.getAttendanceColor(att)
-                sizeDp = 18
+                sizeDp = 24
             }
         }
     }
