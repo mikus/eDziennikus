@@ -193,7 +193,6 @@ dependencies {
     implementation "pl.szczodrzynski:navlib:0.8.0"
     implementation "pl.szczodrzynski:numberslidingpicker:2921225f76"
     implementation "pl.szczodrzynski:recyclertablayout:700f980584"
-    implementation "pl.szczodrzynski:tachyon:551943a6b5"
     kapt "eu.szkolny.selective-dao:codegen:27f8f3f194"
 
     // Iconics & related
