@@ -7,6 +7,8 @@ package eu.mikus.edziennik.ui.home
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.data.db.entity.Note
+import eu.mikus.edziennik.data.db.full.LessonFull
+import eu.mikus.edziennik.utils.models.Date
 
 /** Stateless render model for the Home dashboard. */
 sealed interface HomeUiState {
@@ -54,7 +56,19 @@ sealed interface HomeCardUi {
         override val cardId: Int get() = HomeCard.CARD_NOTES
     }
 
-    /** Timetable (id 2, draggable) + Archive (101) / Availability (102) — rendered via AndroidView. */
+    /** Native timetable card (id 2, draggable). Carries the profile-filtered 7-day lesson window +
+     *  session-fixed config; the composable resolves the displayed day + owns the live counter. */
+    data class Timetable(
+        val lessons: List<LessonFull>,
+        val notPublic: Boolean,
+        val bellSyncDiffMillis: Long,
+        val countInSeconds: Boolean,
+        val today: Date,
+    ) : HomeCardUi {
+        override val cardId: Int get() = HomeCard.CARD_TIMETABLE
+    }
+
+    /** Archive (101) / Availability (102) — rendered via AndroidView. */
     data class Wrapped(override val cardId: Int) : HomeCardUi
 }
 
