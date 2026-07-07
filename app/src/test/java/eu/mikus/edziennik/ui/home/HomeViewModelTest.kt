@@ -7,6 +7,7 @@ package eu.mikus.edziennik.ui.home
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.GradeFull
+import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.data.db.full.LuckyNumberFull
 import eu.mikus.edziennik.data.db.entity.Note
 import eu.mikus.edziennik.utils.models.Date
@@ -30,7 +31,10 @@ class HomeViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val today = Date(2026, 6, 1)
-    private val cfg = HomeBuilder.Config(agendaSubjectImportant = false, homeEventsWeeks = 4)
+    private val cfg = HomeBuilder.Config(
+        agendaSubjectImportant = false, homeEventsWeeks = 4,
+        bellSyncDiffMillis = 0L, countInSeconds = false, notPublic = false,
+    )
     private val allFeatures = setOf(FeatureType.LUCKY_NUMBER, FeatureType.TIMETABLE, FeatureType.AGENDA, FeatureType.GRADES)
 
     private fun vm(
@@ -42,6 +46,7 @@ class HomeViewModelTest {
         eventsSource = { flowOf(emptyList<EventFull>()) },
         gradesSource = { flowOf(emptyList<GradeFull>()) },
         notesSource = { flowOf(emptyList<Note>()) },
+        timetableSource = { flowOf(emptyList<LessonFull>()) },
         loadCards = { initialCards },
         saveCards = { saved.add(it) },
         availableFeatures = allFeatures,
@@ -114,6 +119,7 @@ class HomeViewModelTest {
         val model = HomeViewModel(
             luckyNumberSource = { flowOf<LuckyNumberFull?>(null) }, eventsSource = { flowOf(emptyList()) },
             gradesSource = { flowOf(emptyList()) }, notesSource = { flowOf(emptyList()) },
+            timetableSource = { flowOf(emptyList()) },
             loadCards = { listOf(HomeCardModel(1, HomeCard.CARD_GRADES), HomeCardModel(1, HomeCard.CARD_NOTES)) },
             saveCards = { saved.add(it) }, availableFeatures = emptySet(), archived = false, updateAvailable = false,
             locked = false, studentNumber = 7, profileName = "Jan", today = today, config = cfg,

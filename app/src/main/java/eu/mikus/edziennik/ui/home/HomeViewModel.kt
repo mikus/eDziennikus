@@ -14,8 +14,10 @@ import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.GradeFull
+import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.data.db.full.LuckyNumberFull
 import eu.mikus.edziennik.data.db.entity.Note
+import eu.mikus.edziennik.ext.getStudentData
 import eu.mikus.edziennik.ext.hasUIFeature
 import eu.mikus.edziennik.utils.models.Date
 import kotlinx.coroutines.CoroutineDispatcher
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -34,6 +37,7 @@ class HomeViewModel(
     eventsSource: () -> Flow<List<EventFull>>,
     gradesSource: () -> Flow<List<GradeFull>>,
     notesSource: () -> Flow<List<Note>>,
+    timetableSource: () -> Flow<List<LessonFull>>,
     private val loadCards: () -> List<HomeCardModel>,
     private val saveCards: (List<HomeCardModel>) -> Unit,
     private val availableFeatures: Set<FeatureType>,
@@ -51,14 +55,17 @@ class HomeViewModel(
 
     private val _cards = MutableStateFlow(seedIfEmpty(loadCards()))
 
-    val uiState = combine(
-        luckyNumberSource(), eventsSource(), gradesSource(), notesSource(), _cards,
-    ) { lucky, events, grades, notes, cards ->
+    private val dataFlow = combine(
+        luckyNumberSource(), eventsSource(), gradesSource(), notesSource(), timetableSource(),
+    ) { lucky, events, grades, notes, timetable ->
+        HomeBuilder.Data(lucky, events, grades, notes, timetable)
+    }
+
+    val uiState = combine(dataFlow, _cards) { data, cards ->
         HomeBuilder.build(
             cards = cards, availableFeatures = availableFeatures, archived = archived,
             updateAvailable = updateAvailable, locked = locked, studentNumber = studentNumber,
-            profileName = profileName, today = today, config = config,
-            data = HomeBuilder.Data(lucky, events, grades, notes),
+            profileName = profileName, today = today, config = config, data = data,
         )
     }.flowOn(dispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState.Loading)
 
@@ -98,6 +105,11 @@ class HomeViewModel(
                 HomeCardModel(profileId, HomeCard.CARD_NOTES),
             )
             val update = app.config.update
+            val tt = app.config.timetable
+            val bellSyncDiffMillis = tt.bellSyncDiff?.let {
+                (it.hour * 3600L + it.minute * 60L + it.second) * 1000L * tt.bellSyncMultiplier
+            } ?: 0L
+            val notPublic = profile.getStudentData("timetableNotPublic", false)
             return HomeViewModel(
                 luckyNumberSource = { app.db.luckyNumberDao().getNearestFuture(profileId, today).asFlow() },
                 eventsSource = {
@@ -106,6 +118,12 @@ class HomeViewModel(
                 },
                 gradesSource = { app.db.gradeDao().getAllFromDate(profileId, gradesFrom).asFlow() },
                 notesSource = { app.db.noteDao().getAllNoOwner(profileId).asFlow() },
+                timetableSource = {
+                    if (FeatureType.TIMETABLE in available && !notPublic)
+                        app.db.timetableDao().getBetweenDates(today, today.clone().stepForward(0, 0, 7)).asFlow()
+                            .map { list -> list.filter { it.profileId == profileId } }   // getBetweenDates is cross-profile
+                    else flowOf(emptyList())
+                },
                 loadCards = { ui.homeCards.filter { it.profileId == profileId } },
                 saveCards = { cards -> ui.homeCards = HomeCardOrder.mergeForProfile(ui.homeCards, profileId, cards) },
                 availableFeatures = available,
@@ -115,7 +133,13 @@ class HomeViewModel(
                 studentNumber = profile.studentNumber,
                 profileName = profile.name,
                 today = today,
-                config = HomeBuilder.Config(ui.agendaSubjectImportant, ui.homeEventsWeeks),
+                config = HomeBuilder.Config(
+                    agendaSubjectImportant = ui.agendaSubjectImportant,
+                    homeEventsWeeks = ui.homeEventsWeeks,
+                    bellSyncDiffMillis = bellSyncDiffMillis,
+                    countInSeconds = tt.countInSeconds,
+                    notPublic = notPublic,
+                ),
                 defaultCards = defaults,
                 profileId = profileId,
             ) as T

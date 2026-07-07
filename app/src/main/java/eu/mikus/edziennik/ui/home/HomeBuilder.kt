@@ -7,6 +7,7 @@ package eu.mikus.edziennik.ui.home
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.GradeFull
+import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.data.db.full.LuckyNumberFull
 import eu.mikus.edziennik.data.db.entity.Note
 import eu.mikus.edziennik.utils.models.Date
@@ -22,6 +23,9 @@ object HomeBuilder {
     data class Config(
         val agendaSubjectImportant: Boolean,
         val homeEventsWeeks: Int,
+        val bellSyncDiffMillis: Long,
+        val countInSeconds: Boolean,
+        val notPublic: Boolean,
     )
 
     data class Data(
@@ -29,6 +33,7 @@ object HomeBuilder {
         val events: List<EventFull>,
         val grades: List<GradeFull>,
         val notes: List<Note>,
+        val timetableLessons: List<LessonFull>,
     )
 
     fun build(
@@ -55,7 +60,13 @@ object HomeBuilder {
                         luckyCard(data.luckyNumber, studentNumber, profileName, today) else null
                 HomeCard.CARD_TIMETABLE ->
                     if (FeatureType.TIMETABLE in availableFeatures)
-                        HomeCardUi.Wrapped(HomeCard.CARD_TIMETABLE) else null
+                        HomeCardUi.Timetable(
+                            lessons = data.timetableLessons,
+                            notPublic = config.notPublic,
+                            bellSyncDiffMillis = config.bellSyncDiffMillis,
+                            countInSeconds = config.countInSeconds,
+                            today = today,
+                        ) else null
                 HomeCard.CARD_EVENTS ->
                     if (FeatureType.AGENDA in availableFeatures) eventsCard(data.events, today, config) else null
                 HomeCard.CARD_GRADES ->

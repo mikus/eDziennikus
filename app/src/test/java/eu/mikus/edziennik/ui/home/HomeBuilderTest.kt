@@ -18,8 +18,13 @@ class HomeBuilderTest {
 
     private val today = Date(2026, 6, 1)
     private val allFeatures = setOf(FeatureType.LUCKY_NUMBER, FeatureType.TIMETABLE, FeatureType.AGENDA, FeatureType.GRADES)
-    private val cfg = HomeBuilder.Config(agendaSubjectImportant = false, homeEventsWeeks = 4)
-    private val noData = HomeBuilder.Data(luckyNumber = null, events = emptyList(), grades = emptyList(), notes = emptyList())
+    private val cfg = HomeBuilder.Config(
+        agendaSubjectImportant = false, homeEventsWeeks = 4,
+        bellSyncDiffMillis = 0L, countInSeconds = false, notPublic = false,
+    )
+    private val noData = HomeBuilder.Data(
+        luckyNumber = null, events = emptyList(), grades = emptyList(), notes = emptyList(), timetableLessons = emptyList(),
+    )
 
     private fun model(id: Int) = HomeCardModel(profileId = 1, cardId = id)
 
@@ -57,9 +62,9 @@ class HomeBuilderTest {
     }
 
     @Test
-    fun `timetable maps to Wrapped`() {
+    fun `timetable maps to native Timetable variant`() {
         val content = build(listOf(model(HomeCard.CARD_TIMETABLE)))
-        assertEquals(HomeCardUi.Wrapped(HomeCard.CARD_TIMETABLE), content.cards.single())
+        assertTrue(content.cards.single() is HomeCardUi.Timetable)
     }
 
     @Test
