@@ -4,6 +4,7 @@
 
 package eu.mikus.edziennik.ui.home
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,17 +26,20 @@ import kotlinx.coroutines.withContext
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.db.entity.Noteable
+import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.HomeFragmentBinding
+import eu.mikus.edziennik.ext.JsonObject
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
+import eu.mikus.edziennik.ui.dialogs.BellSyncTimeChooseDialog
 import eu.mikus.edziennik.ui.dialogs.settings.HomeConfigDialog
 import eu.mikus.edziennik.ui.dialogs.settings.StudentNumberDialog
 import eu.mikus.edziennik.ui.event.EventDetailsDialog
 import eu.mikus.edziennik.ui.event.EventManualDialog
 import eu.mikus.edziennik.ui.home.cards.HomeArchiveCard
 import eu.mikus.edziennik.ui.home.cards.HomeAvailabilityCard
-import eu.mikus.edziennik.ui.home.cards.HomeTimetableCard
 import eu.mikus.edziennik.ui.notes.NoteDetailsDialog
 import eu.mikus.edziennik.ui.notes.NoteEditorDialog
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
@@ -135,6 +139,16 @@ class HomeFragment : Fragment() {
                 },
                 onAddNote = { NoteEditorDialog(activity, owner = null, editingNote = null, profileId = App.profileId).show() },
                 onOpenNotes = { activity.navigate(navTarget = NavTarget.NOTES) },
+                onOpenTimetable = { activity.navigate(navTarget = NavTarget.TIMETABLE) },
+                onTimetableBellSync = { BellSyncTimeChooseDialog(activity).show() },
+                onTimetableFullscreen = { activity.startActivity(Intent(activity, CounterActivity::class.java)) },
+                onTimetableSync = { weekStart ->
+                    EdziennikTask.syncProfile(
+                        profileId = App.profileId,
+                        featureTypes = setOf(FeatureType.TIMETABLE),
+                        arguments = JsonObject("weekStart" to weekStart),
+                    ).enqueue(activity)
+                },
                 wrappedCardContent = { cardId -> WrappedCard(cardId) },
                 setRefreshEnabled = { b.refreshLayout.isEnabled = it },
             )
@@ -149,8 +163,7 @@ class HomeFragment : Fragment() {
             val holder = HomeCardAdapter.ViewHolder(root)
             val card: HomeCard = when (cardId) {
                 102 -> HomeAvailabilityCard(102, app, activity, this, app.profile)
-                101 -> HomeArchiveCard(101, app, activity, this, app.profile)
-                else -> HomeTimetableCard(HomeCard.CARD_TIMETABLE, app, activity, this, app.profile)
+                else -> HomeArchiveCard(101, app, activity, this, app.profile)
             }
             card.bind(0, holder)
             root

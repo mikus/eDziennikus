@@ -61,6 +61,10 @@ fun HomeScreen(
     onNoteClick: (Note) -> Unit,
     onAddNote: () -> Unit,
     onOpenNotes: () -> Unit,
+    onOpenTimetable: () -> Unit,
+    onTimetableBellSync: () -> Unit,
+    onTimetableFullscreen: () -> Unit,
+    onTimetableSync: (String) -> Unit,
     wrappedCardContent: @Composable (cardId: Int) -> Unit,
     setRefreshEnabled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -106,11 +110,13 @@ fun HomeScreen(
                     }
                     SwipeToDismissBox(state = dismiss, backgroundContent = {}) {
                         HomeCardItem(card, cardModifier, gradeColor, onLuckyClick, onEventClick, onEventEditClick,
-                            onOpenAgenda, onOpenGrades, onNoteClick, onAddNote, onOpenNotes, wrappedCardContent)
+                            onOpenAgenda, onOpenGrades, onNoteClick, onAddNote, onOpenNotes,
+                            onOpenTimetable, onTimetableBellSync, onTimetableFullscreen, onTimetableSync, wrappedCardContent)
                     }
                 } else {
                     HomeCardItem(card, cardModifier, gradeColor, onLuckyClick, onEventClick, onEventEditClick,
-                        onOpenAgenda, onOpenGrades, onNoteClick, onAddNote, onOpenNotes, wrappedCardContent)
+                        onOpenAgenda, onOpenGrades, onNoteClick, onAddNote, onOpenNotes,
+                        onOpenTimetable, onTimetableBellSync, onTimetableFullscreen, onTimetableSync, wrappedCardContent)
                 }
             }
         }
@@ -130,6 +136,10 @@ private fun HomeCardItem(
     onNoteClick: (Note) -> Unit,
     onAddNote: () -> Unit,
     onOpenNotes: () -> Unit,
+    onOpenTimetable: () -> Unit,
+    onTimetableBellSync: () -> Unit,
+    onTimetableFullscreen: () -> Unit,
+    onTimetableSync: (String) -> Unit,
     wrappedCardContent: @Composable (cardId: Int) -> Unit,
 ) {
     when (card) {
@@ -137,8 +147,9 @@ private fun HomeCardItem(
         is HomeCardUi.Events -> EventsCard(card, modifier, onEventClick, onEventEditClick, onOpenAgenda)
         is HomeCardUi.Grades -> GradesCard(card, modifier, gradeColor, onOpenGrades)
         is HomeCardUi.Notes -> NotesCard(card, modifier, onNoteClick, onAddNote, onOpenNotes)
-        // TEMP (T2→T4 compile bridge): route Timetable through the legacy wrapped card; T4 replaces this with TimetableHomeCard.
-        is HomeCardUi.Timetable -> Box(modifier.fillMaxWidth()) { wrappedCardContent(card.cardId) }
+        is HomeCardUi.Timetable -> TimetableHomeCard(
+            card, onOpenTimetable, onTimetableBellSync, onTimetableFullscreen, onTimetableSync, modifier,
+        )
         is HomeCardUi.Wrapped -> Box(modifier.fillMaxWidth()) { wrappedCardContent(card.cardId) }
     }
 }
