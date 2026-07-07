@@ -137,6 +137,8 @@ private fun HomeCardItem(
         is HomeCardUi.Events -> EventsCard(card, modifier, onEventClick, onEventEditClick, onOpenAgenda)
         is HomeCardUi.Grades -> GradesCard(card, modifier, gradeColor, onOpenGrades)
         is HomeCardUi.Notes -> NotesCard(card, modifier, onNoteClick, onAddNote, onOpenNotes)
+        // TEMP (T2→T4 compile bridge): route Timetable through the legacy wrapped card; T4 replaces this with TimetableHomeCard.
+        is HomeCardUi.Timetable -> Box(modifier.fillMaxWidth()) { wrappedCardContent(card.cardId) }
         is HomeCardUi.Wrapped -> Box(modifier.fillMaxWidth()) { wrappedCardContent(card.cardId) }
     }
 }
