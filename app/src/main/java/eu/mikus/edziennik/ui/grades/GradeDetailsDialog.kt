@@ -54,7 +54,6 @@ import eu.mikus.edziennik.utils.BetterLink
 import eu.mikus.edziennik.utils.managers.NoteManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 class GradeDetailsDialog(
     activity: AppCompatActivity,
@@ -146,7 +145,7 @@ private fun GradeDetailsContent(
                     Text(
                         stringResource(
                             R.string.grades_value_format,
-                            String.format(Locale.getDefault(), "%.02f", gradeValue),
+                            "%.02f".format(gradeValue),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )

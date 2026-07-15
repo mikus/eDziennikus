@@ -43,7 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import eu.mikus.edziennik.R
 import java.text.DecimalFormat
-import java.util.Locale
 
 /**
  * Stateless what-if Grades editor. Mirrors the legacy [GradesEditorFragment] flow, but the
@@ -145,7 +144,7 @@ private fun AveragePill(avg: Float, gradeColor: (String) -> Color) {
     val color = gradeColor(GradesEditorCalculator.colorGradeInt(avg).toString())
     val textColor = if (color.luminance() > 0.25f) Color(0xAA000000) else Color(0xCCFFFFFF)
     Text(
-        String.format(Locale.getDefault(), "%.02f", avg),
+        "%.02f".format(avg),
         color = textColor,
         fontWeight = FontWeight.Bold,
         modifier = Modifier
@@ -180,7 +179,7 @@ private fun EditorRow(
             }
             Spacer(Modifier.width(8.dp))
             Text(
-                stringResource(R.string.grades_value_format, String.format(Locale.getDefault(), "%.02f", g.value)),
+                stringResource(R.string.grades_value_format, "%.02f".format(g.value)),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }

@@ -49,7 +49,6 @@ import eu.mikus.edziennik.utils.managers.GradesManager.Companion.YEAR_1_AVG_2_SE
 import eu.mikus.edziennik.utils.managers.GradesManager.Companion.YEAR_1_SEM_2_AVG
 import eu.mikus.edziennik.utils.managers.GradesManager.Companion.YEAR_1_SEM_2_SEM
 import eu.mikus.edziennik.utils.managers.GradesManager.Companion.YEAR_ALL_GRADES
-import java.util.Locale
 
 /**
  * Grades configuration dialog, now a [ComposeDialog] launcher. Keeps the exact `.show()` + ctor
@@ -302,7 +301,7 @@ private fun CustomValueRow(
             )
             if (checked) {
                 Text(
-                    String.format(Locale.getDefault(), "%.2f", value),
+                    "%.2f".format(value),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
