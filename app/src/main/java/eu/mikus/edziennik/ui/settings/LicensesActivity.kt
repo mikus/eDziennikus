@@ -18,12 +18,20 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
+import eu.mikus.edziennik.utils.Themes
 import eu.mikus.edziennik.utils.Utils
 
 class LicensesActivity : AppCompatActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        // AppCompatActivity requires a Theme.AppCompat descendant; the app's @style/AppTheme
+        // (parent NavView) is not one, so set a MaterialComponents NoActionBar theme at runtime
+        // (the Compose Scaffold provides the top bar). Mirrors the legacy SettingsLicenseActivity.
+        setTheme(
+            if (Themes.isDark) R.style.Theme_MaterialComponents_NoActionBar
+            else R.style.Theme_MaterialComponents_Light_NoActionBar
+        )
         super.onCreate(savedInstanceState)
         setContentView(
             ComposeView(this).apply {
