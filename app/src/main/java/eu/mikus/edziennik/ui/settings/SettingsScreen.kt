@@ -38,10 +38,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.R
@@ -145,8 +146,12 @@ private fun SettingsRow(
 
 @Composable
 private fun TitleRow(item: SettingsItem.Title, content: Color) {
+    val context = LocalContext.current
+    val iconPainter = remember(item.iconRes) {
+        ContextCompat.getDrawable(context, item.iconRes)?.let { BitmapPainter(it.toBitmap().asImageBitmap()) }
+    }
     Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Image(painterResource(item.iconRes), contentDescription = null, modifier = Modifier.size(56.dp))
+        if (iconPainter != null) Image(iconPainter, contentDescription = null, modifier = Modifier.size(56.dp))
         Spacer(Modifier.width(16.dp))
         Column {
             Text(stringResource(item.titleRes), style = MaterialTheme.typography.titleLarge, color = content)
