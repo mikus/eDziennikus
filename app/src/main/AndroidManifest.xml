@@ -160,7 +160,7 @@
         <activity android:name=".ui.home.CounterActivity"
             android:exported="false"
             android:theme="@style/AppTheme.Black" />
-        <activity android:name=".ui.settings.SettingsLicenseActivity"
+        <activity android:name=".ui.settings.LicensesActivity"
             android:configChanges="orientation|keyboardHidden"
             android:exported="false"
             android:theme="@style/AppTheme" />
