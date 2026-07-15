@@ -108,10 +108,6 @@
         <item name="colorOnFab">#ffffff</item>
         <item name="colorIcon">#8a000000</item>
 
-        <item name="mal_color_primary">?android:textColorPrimary</item>
-        <item name="mal_color_secondary">?android:textColorSecondary</item>
-        <item name="mal_card_background">?colorSurface</item>
-
         <item name="timetable_lesson_bg">@drawable/timetable_lesson_bg_light</item>
         <item name="timetable_lesson_cancelled_color">#9f9f9f</item>
         <item name="timetable_lesson_change_color">#ffb300</item>
@@ -130,10 +126,6 @@
         <item name="colorFabIcon">#c8e6c9</item>
         <item name="colorOnFab">#ffffff</item>
         <item name="colorIcon">#b4ffffff</item>
-
-        <item name="mal_color_primary">@color/primaryTextDark</item>
-        <item name="mal_color_secondary">@color/secondaryTextDark</item>
-        <item name="mal_card_background">?colorSurface</item>
 
         <item name="timetable_lesson_bg">@drawable/timetable_lesson_bg_dark</item>
         <item name="timetable_lesson_cancelled_color">#838383</item>
