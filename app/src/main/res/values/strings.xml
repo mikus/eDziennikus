@@ -456,12 +456,14 @@
     <string name="grades_editor_modify_help">Przesuń ocenę w lewo, aby ją zmienić lub usunąć. Kliknij przycisk poniżej, aby dodać nową ocenę.</string>
     <string name="grades_editor_new_grade">Nowa ocena</string>
     <string name="grades_editor_restore">Przywróć wszystkie</string>
+    <string name="grades_editor_semester_average">Średnia semestralna</string>
     <string name="grades_editor_semester_average_after">Średnia po zmianie ocen:</string>
     <string name="grades_editor_semester_average_before">Twoja średnia na semestr:</string>
     <string name="grades_editor_semester_year_average_after">Średnia na k. roku po zmianie ocen:</string>
     <string name="grades_editor_semester_year_average_before">Twoja średnia na koniec roku:</string>
     <string name="grades_editor_weight_format">waga %s</string>
     <string name="grades_editor_weight_other">inna waga</string>
+    <string name="grades_editor_year_average">Średnia roczna</string>
     <string name="grades_empty_text">Nie ma ocen w tym semestrze.</string>
     <string name="grades_improvement_category_format">(poprawa) %s</string>
     <string name="grades_max_points_format">max %s pkt</string>
