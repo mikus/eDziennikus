@@ -52,6 +52,8 @@ import eu.mikus.edziennik.ui.dialogs.settings.GradesConfigDialog
 import eu.mikus.edziennik.ui.notes.setupNotesButton
 import eu.mikus.edziennik.utils.BetterLink
 import eu.mikus.edziennik.utils.managers.NoteManager
+import eu.mikus.edziennik.utils.models.Date
+import eu.mikus.edziennik.utils.models.Time
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -82,6 +84,7 @@ class GradeDetailsDialog(
             gradeColor = Color(manager.getGradeColor(grade)),
             weightText = manager.getWeightString(activity, grade),
             gradeValue = if (grade.weight == 0f || grade.value < 0f) null else manager.getGradeValue(grade),
+            devId = if (App.devMode) grade.id else null,
             history = history,
             historyColor = { Color(manager.getGradeColor(it)) },
             showCustomValue = manager.plusValue != null || manager.minusValue != null,
@@ -102,6 +105,7 @@ private fun GradeDetailsContent(
     gradeColor: Color,
     weightText: String?,
     gradeValue: Float?,
+    devId: Long?,
     history: List<GradeFull>,
     historyColor: (GradeFull) -> Color,
     showCustomValue: Boolean,
@@ -138,17 +142,16 @@ private fun GradeDetailsContent(
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                if (weightText != null) {
-                    Text(weightText, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.dialog_grade_details_semester_format, grade.semester),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                grade.subjectLongName?.let {
+                    Text(it, style = MaterialTheme.typography.titleMedium)
                 }
-                if (gradeValue != null) {
-                    Text(
-                        stringResource(
-                            R.string.grades_value_format,
-                            "%.02f".format(gradeValue),
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+                weightText?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -182,6 +185,46 @@ private fun GradeDetailsContent(
                     }
                 },
             )
+        }
+
+        // Details rows (always: category / description / added date; conditional: rest)
+        LabeledRow(
+            stringResource(R.string.dialog_grade_details_category),
+            grade.category?.takeIf { it.isNotBlank() } ?: stringResource(R.string.dialog_grade_details_no_category),
+        )
+        LabeledRow(
+            stringResource(R.string.dialog_grade_details_description),
+            grade.description?.takeIf { it.isNotBlank() } ?: stringResource(R.string.dialog_grade_details_no_description),
+        )
+        grade.classAverage?.takeIf { it != -1f }?.let {
+            LabeledRow(
+                stringResource(R.string.dialog_grade_details_class_average),
+                stringResource(R.string.dialog_grade_details_class_average_format, it),
+            )
+        }
+        gradeValue?.let {
+            LabeledRow(
+                stringResource(R.string.dialog_grade_details_value),
+                stringResource(R.string.dialog_grade_details_class_average_format, it),
+            )
+        }
+        LabeledRow(
+            stringResource(R.string.dialog_grade_details_added_date),
+            stringResource(
+                R.string.dialog_grade_details_date_format,
+                Date.fromMillis(grade.addedDate).getFormattedString(),
+                Time.fromMillis(grade.addedDate).getStringHM(),
+            ),
+        )
+        if (grade.isImproved) {
+            Text(
+                stringResource(R.string.dialog_grade_details_improved),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        devId?.let {
+            LabeledRow(stringResource(R.string.dialog_grade_details_id), it.toString())
         }
 
         // Child-grade history (recursion: tap opens another GradeDetailsDialog)
@@ -261,5 +304,17 @@ private fun GradeDetailsContent(
                 },
             )
         }
+    }
+}
+
+@Composable
+private fun LabeledRow(label: String, value: String) {
+    Column {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(value, style = MaterialTheme.typography.bodyMedium)
     }
 }
