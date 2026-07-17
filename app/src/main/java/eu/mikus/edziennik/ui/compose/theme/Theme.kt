@@ -4,6 +4,7 @@
 
 package eu.mikus.edziennik.ui.compose.theme
 
+import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
@@ -29,23 +30,26 @@ fun resolveColorScheme(isDark: Boolean, isBlack: Boolean): ColorScheme = when {
 }
 
 /**
- * The single Compose theme entry point. Dynamic color (Material You) on API >= 31,
- * else the brand Blue scheme from [resolveColorScheme]. Reads [Themes] at composition
- * time; a theme change still flows through the existing Activity-recreate path.
+ * The exact [ColorScheme] [AppTheme] resolves — dynamic color (Material You) on API >= 31, else the
+ * brand Blue scheme from [resolveColorScheme]. Not @Composable, so it can also be read off-composition
+ * (e.g. to tint a dialog window's background to match the hosted Compose content). Reads [Themes]
+ * statically; a theme change still flows through the existing Activity-recreate path.
+ */
+fun appColorScheme(context: Context): ColorScheme = when {
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        val dynamic = if (Themes.isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        if (Themes.isBlack) dynamic.forceBlack() else dynamic  // same override as the static path
+    }
+    else -> resolveColorScheme(Themes.isDark, Themes.isBlack)
+}
+
+/**
+ * The single Compose theme entry point.
  * Structured Expressive-ready: swap MaterialTheme -> MaterialExpressiveTheme when material3 1.5.0 is stable.
  */
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
-    val isDark = Themes.isDark
-    val isBlack = Themes.isBlack
-    val context = LocalContext.current
-    val colorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val dynamic = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            if (isBlack) dynamic.forceBlack() else dynamic  // same override as the static path
-        }
-        else -> resolveColorScheme(isDark, isBlack)
-    }
+    val colorScheme = appColorScheme(LocalContext.current)
     MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
