@@ -245,16 +245,6 @@ private fun GradesConfigContent(app: App) {
 }
 
 @Composable
-private fun SectionHeader(labelRes: Int) {
-    Text(
-        stringResource(labelRes),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-    )
-}
-
-@Composable
 private fun RadioRow(labelRes: Int, selected: Boolean, onSelect: () -> Unit) {
     Row(
         modifier = Modifier
@@ -263,22 +253,6 @@ private fun RadioRow(labelRes: Int, selected: Boolean, onSelect: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = selected, onClick = onSelect)
-        Text(stringResource(labelRes), style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-private fun CheckboxRow(
-    labelRes: Int,
-    checked: Boolean,
-    modifier: Modifier = Modifier.fillMaxWidth(),
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = modifier.clickable { onCheckedChange(!checked) },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Text(stringResource(labelRes), style = MaterialTheme.typography.bodyMedium)
     }
 }
