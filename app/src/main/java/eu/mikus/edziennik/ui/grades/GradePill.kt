@@ -6,11 +6,14 @@ package eu.mikus.edziennik.ui.grades
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -40,18 +43,20 @@ fun GradePill(
         color.luminance() > 0.3f -> Color(0xAA000000)
         else -> Color(0xCCFFFFFF)
     }
-    val base = if (proposed) {
-        modifier.border(1.dp, color, shape)
-    } else {
-        modifier.background(color, shape)
+    // Uniform box: single-char ("5") and multi-char ("5+", "5-", "nb", "4+") grades render at the same
+    // size via a square defaultMinSize; longer period-textual labels still grow past the minimum.
+    val minSize = if (big) 40.dp else 28.dp
+    val cell = modifier.defaultMinSize(minWidth = minSize, minHeight = minSize)
+    val base = if (proposed) cell.border(1.dp, color, shape) else cell.background(color, shape)
+    Box(base, contentAlignment = Alignment.Center) {
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = if (big) 22.sp else 13.sp,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
     }
-    Text(
-        text = text,
-        color = textColor,
-        fontSize = if (big) 24.sp else 14.sp,
-        maxLines = 1,
-        modifier = base.padding(horizontal = if (big) 4.dp else 5.dp, vertical = if (big) 2.dp else 0.dp),
-    )
 }
 
 @Composable

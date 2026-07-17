@@ -165,6 +165,7 @@ private fun SubjectHeader(
                             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                         }
                     }
+                    Spacer(Modifier.width(8.dp))
                     ProposedFinalRow(subject.proposedGrade, subject.finalGrade, formatters.gradeColor, onItemSeen)
                 }
             }
