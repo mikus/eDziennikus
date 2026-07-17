@@ -41,9 +41,7 @@ import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
 @Composable
 fun GradesScreen(
     state: GradesUiState,
-    gradeColor: (Grade) -> Color,
-    averageText: (AveragesSnapshot) -> String?,
-    yearSummaryText: (Int, AveragesSnapshot) -> CharSequence,
+    formatters: GradesFormatters,
     onSubjectToggle: (Long) -> Unit,
     onSemesterToggle: (Long, Int) -> Unit,
     onGradeClick: (GradeFull) -> Unit,
@@ -59,7 +57,7 @@ fun GradesScreen(
             Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         GradesUiState.Empty -> CenteredMessage(modifier, R.string.grades_no_data)
         GradesUiState.Unsupported -> CenteredMessage(modifier, R.string.grades_university_unsupported)
-        is GradesUiState.Content -> GradesList(state, gradeColor, averageText, yearSummaryText,
+        is GradesUiState.Content -> GradesList(state, formatters,
             onSubjectToggle, onSemesterToggle, onGradeClick, onEditorClick, onItemSeen, setRefreshEnabled, modifier)
     }
 }
@@ -74,9 +72,7 @@ private fun CenteredMessage(modifier: Modifier, res: Int) {
 @Composable
 private fun GradesList(
     state: GradesUiState.Content,
-    gradeColor: (Grade) -> Color,
-    averageText: (AveragesSnapshot) -> String?,
-    yearSummaryText: (Int, AveragesSnapshot) -> CharSequence,
+    formatters: GradesFormatters,
     onSubjectToggle: (Long) -> Unit,
     onSemesterToggle: (Long, Int) -> Unit,
     onGradeClick: (GradeFull) -> Unit,
@@ -90,12 +86,12 @@ private fun GradesList(
     LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(vertical = 8.dp)) {
         state.subjects.forEach { subject ->
             item(key = "s${subject.subjectId}") {
-                SubjectHeader(subject, gradeColor, averageText, yearSummaryText, onItemSeen) { onSubjectToggle(subject.subjectId) }
+                SubjectHeader(subject, formatters, onItemSeen) { onSubjectToggle(subject.subjectId) }
             }
             if (subject.expanded) {
                 subject.semesters.forEach { semester ->
                     item(key = "s${subject.subjectId}-sem${semester.number}") {
-                        SemesterHeader(semester, gradeColor, averageText, onItemSeen,
+                        SemesterHeader(semester, formatters, onItemSeen,
                             onToggle = { onSemesterToggle(subject.subjectId, semester.number) },
                             onEditor = { onEditorClick(subject.subjectId, semester.number) })
                     }
@@ -111,7 +107,7 @@ private fun GradesList(
                             }
                         }
                         items(semester.grades, key = { "g${it.id}" }) { grade ->
-                            GradeRow(grade, gradeColor, onGradeClick, onItemSeen)
+                            GradeRow(grade, formatters, onGradeClick, onItemSeen)
                         }
                     }
                 }
@@ -124,9 +120,7 @@ private fun GradesList(
 @Composable
 private fun SubjectHeader(
     subject: SubjectItem,
-    gradeColor: (Grade) -> Color,
-    averageText: (AveragesSnapshot) -> String?,
-    yearSummaryText: (Int, AveragesSnapshot) -> CharSequence,
+    formatters: GradesFormatters,
     onItemSeen: (GradeFull) -> Unit,
     onToggle: () -> Unit,
 ) {
@@ -142,11 +136,11 @@ private fun SubjectHeader(
             Chevron(subject.expanded)
         }
         if (subject.expanded) {
-            Text(yearSummaryText(subject.gradeCount, subject.averages).toString(),
+            Text(formatters.yearSummaryText(subject.gradeCount, subject.averages).toString(),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ProposedFinalRow(subject.proposedGrade, subject.finalGrade, gradeColor, onItemSeen)
+            ProposedFinalRow(subject.proposedGrade, subject.finalGrade, formatters.gradeColor, onItemSeen)
         } else {
-            averageText(subject.averages)?.let {
+            formatters.averageText(subject.averages)?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -156,8 +150,7 @@ private fun SubjectHeader(
 @Composable
 private fun SemesterHeader(
     semester: SemesterItem,
-    gradeColor: (Grade) -> Color,
-    averageText: (AveragesSnapshot) -> String?,
+    formatters: GradesFormatters,
     onItemSeen: (GradeFull) -> Unit,
     onToggle: () -> Unit,
     onEditor: () -> Unit,
@@ -169,11 +162,11 @@ private fun SemesterHeader(
         if (semester.hasUnseen) UnreadDot()
         Text(stringResource(R.string.grades_semester_format, semester.number),
             style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-        averageText(semester.averages)?.let {
+        formatters.averageText(semester.averages)?.let {
             Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 8.dp))
         }
-        ProposedFinalRow(semester.proposedGrade, semester.finalGrade, gradeColor, onItemSeen)
+        ProposedFinalRow(semester.proposedGrade, semester.finalGrade, formatters.gradeColor, onItemSeen)
         if (!semester.hideEditor) {
             IconicsIcon(CommunityMaterial.Icon.cmd_calculator, contentDescription = null,
                 modifier = Modifier.clickable(onClick = onEditor).padding(start = 8.dp))
@@ -185,7 +178,7 @@ private fun SemesterHeader(
 @Composable
 private fun GradeRow(
     grade: GradeFull,
-    gradeColor: (Grade) -> Color,
+    formatters: GradesFormatters,
     onGradeClick: (GradeFull) -> Unit,
     onItemSeen: (GradeFull) -> Unit,
 ) {
@@ -195,7 +188,7 @@ private fun GradeRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (grade.showAsUnseen) UnreadDot()
-        GradePill(grade, gradeColor(grade), big = true)
+        GradePill(grade, formatters.gradeColor(grade), big = true)
         Column(Modifier.padding(start = 12.dp).weight(1f)) {
             val desc = grade.description?.takeIf { it.isNotBlank() } ?: grade.category
             if (!desc.isNullOrBlank()) Text(desc, style = MaterialTheme.typography.bodyMedium)

@@ -18,12 +18,14 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.db.entity.Grade
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.databinding.GradesListFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.GradesConfigDialog
+import eu.mikus.edziennik.utils.models.Date
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 
@@ -86,9 +88,19 @@ class GradesListFragment : Fragment() {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             GradesScreen(
                 state = state,
-                gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
-                averageText = { snap -> app.gradesManager.getAverageString(ctx, snap.toGradesAverages())?.toString() },
-                yearSummaryText = { count, snap -> app.gradesManager.getYearSummaryString(ctx, count, snap.toGradesAverages()) },
+                formatters = GradesFormatters(
+                    gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
+                    averageText = { snap -> app.gradesManager.getAverageString(ctx, snap.toGradesAverages())?.toString() },
+                    semesterAverageText = { snap, n ->
+                        app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true, showSemester = n)?.toString()
+                    },
+                    yearAverageText = { snap ->
+                        app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true)?.toString()
+                    },
+                    yearSummaryText = { count, snap -> app.gradesManager.getYearSummaryString(ctx, count, snap.toGradesAverages()) },
+                    weightText = { app.gradesManager.getWeightString(ctx, it, showClassAverage = true)?.toString() },
+                    gradeDateText = ::gradeDateText,
+                ),
                 onSubjectToggle = viewModel::toggleSubject,
                 onSemesterToggle = viewModel::toggleSemester,
                 onGradeClick = ::onGradeClick,
@@ -101,6 +113,12 @@ class GradesListFragment : Fragment() {
 
     private fun onGradeClick(grade: GradeFull) {
         GradeDetailsDialog(activity, grade).show()
+    }
+
+    private fun gradeDateText(grade: Grade): String? {
+        if (grade.addedDate == 0L || grade.type == Grade.TYPE_NO_GRADE) return null
+        val d = Date.fromMillis(grade.addedDate)
+        return d.getRelativeString(app, 5) ?: d.formattedStringShort
     }
 
     private fun onEditorClick(subjectId: Long, semester: Int) {
