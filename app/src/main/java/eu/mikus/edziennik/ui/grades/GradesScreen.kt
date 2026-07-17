@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.R
@@ -213,10 +214,33 @@ private fun GradeRow(
     ) {
         if (grade.showAsUnseen) UnreadDot()
         GradePill(grade, formatters.gradeColor(grade), big = true)
+        val texts = gradeRowTexts(grade.description, grade.category, grade.isImprovement)
+        val category = if (texts.categoryIsImprovement)
+            stringResource(R.string.grades_improvement_category_format, texts.categoryText)
+        else texts.categoryText
         Column(Modifier.padding(start = 12.dp).weight(1f)) {
-            val desc = grade.description?.takeIf { it.isNotBlank() } ?: grade.category
-            if (!desc.isNullOrBlank()) Text(desc, style = MaterialTheme.typography.bodyMedium)
-            grade.teacherName?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(texts.topText, style = MaterialTheme.typography.bodyMedium, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                formatters.gradeDateText(grade)?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                formatters.weightText(grade)?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
+                if (category.isNotBlank()) {
+                    Text(category, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                grade.teacherName?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                        modifier = Modifier.padding(start = 8.dp))
+                }
+            }
         }
     }
 }
