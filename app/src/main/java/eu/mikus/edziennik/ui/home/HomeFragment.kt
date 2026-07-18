@@ -96,7 +96,7 @@ class HomeFragment : Fragment() {
                     .withIcon(SzkolnyFont.Icon.szf_clipboard_list_outline)
                     .withOnClickListener(View.OnClickListener {
                         activity.bottomSheet.close()
-                        StudentNumberDialog(activity, app.profile) { app.profileSave() }
+                        StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show()
                     }),
                 BottomSheetSeparatorItem(true),
                 BottomSheetPrimaryItem(true)
@@ -126,7 +126,7 @@ class HomeFragment : Fragment() {
                 onRemove = viewModel::removeCard,
                 onConfigureCards = { HomeCardsDialog(activity, reloadOnDismiss = true).show() },
                 gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
-                onLuckyClick = { StudentNumberDialog(activity, app.profile) { app.profileSave() } },
+                onLuckyClick = { StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show() },
                 onEventClick = { EventDetailsDialog(activity, it).show() },
                 onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
                 onOpenAgenda = { activity.navigate(navTarget = NavTarget.AGENDA) },
