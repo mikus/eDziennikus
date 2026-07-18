@@ -1,107 +1,69 @@
 /*
  * Copyright (c) Kuba Szczodrzyński 2021-3-20.
+ * Copyright (c) Mikolaj Olszewski 2026-7-18.
  */
-
 package eu.mikus.edziennik.ui.dialogs.settings
 
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
 import eu.mikus.edziennik.utils.models.Time
-import kotlin.coroutines.CoroutineContext
 
 class QuietHoursConfigDialog(
-    val activity: AppCompatActivity,
-    val onChangeListener: (() -> Unit)? = null,
-    val onShowListener: ((tag: String) -> Unit)? = null,
-    val onDismissListener: ((tag: String) -> Unit)? = null
-) : CoroutineScope {
-    companion object {
-        private const val TAG = "QuietHoursConfigDialog"
+    activity: AppCompatActivity,
+    private val onChangeListener: (() -> Unit)? = null,
+    onShowListener: ((tag: String) -> Unit)? = null,
+    onDismissListener: ((tag: String) -> Unit)? = null,
+) : ComposeDialog(activity, onShowListener, onDismissListener) {
+
+    override val TAG = "QuietHoursConfigDialog"
+    override fun getTitleRes() = R.string.settings_sync_quiet_hours_dialog_title
+    override fun getNegativeButtonText() = R.string.cancel
+
+    @Composable
+    override fun Content() {
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Row(R.string.settings_sync_quiet_hours_set_beginning) { launchTimePicker(isStart = true) }
+            Row(R.string.settings_sync_quiet_hours_set_end) { launchTimePicker(isStart = false) }
+        }
     }
 
-    private lateinit var app: App
-    private lateinit var dialog: AlertDialog
+    @Composable
+    private fun Row(labelRes: Int, onClick: () -> Unit) {
+        Text(
+            stringResource(labelRes),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.fillMaxWidth().clickable { dialog.dismiss(); onClick() }.padding(horizontal = 24.dp, vertical = 16.dp),
+        )
+    }
 
-    private val job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    // local variables go here
-
-    init { run {
-        if (activity.isFinishing)
-            return@run
-        onShowListener?.invoke(TAG)
-        app = activity.applicationContext as App
-
-        dialog = MaterialAlertDialogBuilder(activity)
-            .setTitle(R.string.settings_sync_quiet_hours_dialog_title)
-            .setItems(arrayOf(
-                activity.getString(R.string.settings_sync_quiet_hours_set_beginning),
-                activity.getString(R.string.settings_sync_quiet_hours_set_end)
-            )) { dialog, which ->
-                when (which) {
-                    0 -> configStartTime()
-                    1 -> configEndTime()
-                }
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .setOnDismissListener {
-                onDismissListener?.invoke(TAG)
-            }
-            .show()
-    }}
-
-    private fun configStartTime() {
-        onShowListener?.invoke(TAG + "Start")
-
-        val time = app.config.sync.quietHoursStart ?: return
+    private fun launchTimePicker(isStart: Boolean) {
+        val time = (if (isStart) app.config.sync.quietHoursStart else app.config.sync.quietHoursEnd) ?: return
         val picker = MaterialTimePicker.Builder()
-            .setTitleText(R.string.settings_sync_quiet_hours_set_beginning)
+            .setTitleText(if (isStart) R.string.settings_sync_quiet_hours_set_beginning else R.string.settings_sync_quiet_hours_set_end)
             .setTimeFormat(TimeFormat.CLOCK_24H)
             .setHour(time.hour)
             .setMinute(time.minute)
             .build()
-
         picker.show(activity.supportFragmentManager, TAG)
         picker.addOnPositiveButtonClickListener {
             app.config.sync.quietHoursEnabled = true
-            app.config.sync.quietHoursStart = Time(picker.hour, picker.minute, 0)
+            if (isStart) app.config.sync.quietHoursStart = Time(picker.hour, picker.minute, 0)
+            else app.config.sync.quietHoursEnd = Time(picker.hour, picker.minute, 0)
             onChangeListener?.invoke()
-        }
-        picker.addOnDismissListener {
-            onDismissListener?.invoke(TAG + "Start")
-        }
-    }
-
-    private fun configEndTime() {
-        onShowListener?.invoke(TAG + "End")
-
-        val time = app.config.sync.quietHoursEnd ?: return
-        val picker = MaterialTimePicker.Builder()
-            .setTitleText(R.string.settings_sync_quiet_hours_set_end)
-            .setTimeFormat(TimeFormat.CLOCK_24H)
-            .setHour(time.hour)
-            .setMinute(time.minute)
-            .build()
-
-        picker.show(activity.supportFragmentManager, TAG)
-        picker.addOnPositiveButtonClickListener {
-            app.config.sync.quietHoursEnabled = true
-            app.config.sync.quietHoursEnd = Time(picker.hour, picker.minute, 0)
-            onChangeListener?.invoke()
-        }
-        picker.addOnDismissListener {
-            onDismissListener?.invoke(TAG + "End")
         }
     }
 }

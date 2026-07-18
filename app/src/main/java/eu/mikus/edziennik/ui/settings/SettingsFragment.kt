@@ -121,7 +121,7 @@ class SettingsFragment : Fragment() {
             SettingsAction.AppBackground -> chooseAppBackground()
 
             SettingsAction.SyncInterval -> SyncIntervalDialog(activity, onChangeListener = { viewModel.refresh() }).show()
-            SettingsAction.QuietHours -> QuietHoursConfigDialog(activity, onChangeListener = { viewModel.refresh() })
+            SettingsAction.QuietHours -> QuietHoursConfigDialog(activity, onChangeListener = { viewModel.refresh() }).show()
             SettingsAction.NotificationFilter -> NotificationFilterDialog(activity).show()
             SettingsAction.NotificationSystem -> openNotificationSystemSettings()
 
