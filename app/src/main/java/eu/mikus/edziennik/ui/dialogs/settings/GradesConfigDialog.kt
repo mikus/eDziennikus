@@ -5,7 +5,6 @@
 package eu.mikus.edziennik.ui.dialogs.settings
 
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +17,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -241,19 +239,6 @@ private fun GradesConfigContent(app: App) {
             yearMode = YEAR_1_SEM_2_SEM
             profileConfig.yearAverageMode = YEAR_1_SEM_2_SEM
         }
-    }
-}
-
-@Composable
-private fun RadioRow(labelRes: Int, selected: Boolean, onSelect: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onSelect),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = onSelect)
-        Text(stringResource(labelRes), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
