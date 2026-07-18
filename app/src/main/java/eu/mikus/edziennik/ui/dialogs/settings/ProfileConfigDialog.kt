@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import com.mikepenz.materialdrawer.view.BezelImageView
-import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Profile

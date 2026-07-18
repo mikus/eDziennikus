@@ -68,12 +68,15 @@ class BellSyncDialog(
             Image(
                 painter = painterResource(if (wtf) R.drawable.ic_bell_wtf else R.drawable.ic_bell),
                 contentDescription = null,
-                modifier = Modifier.size(96.dp).clickable { confirmSync(bellDiff, multiplier, bellDiffText) },
+                modifier = Modifier.size(96.dp).clickable { confirmSync() },
             )
         }
     }
 
-    private fun confirmSync(bellDiff: Time, multiplier: Int, bellDiffText: String) {
+    private fun confirmSync() {
+        // Recompute fresh at tap-time (not from the ≤500 ms-stale composition values) — matches legacy.
+        val (bellDiff, multiplier) = bellSyncActualDiff(Time.getNow(), bellTime)
+        val bellDiffText = (if (multiplier == -1) '-' else '+') + bellDiff.stringHMS
         app.config.timetable.bellSyncDiff = bellDiff
         app.config.timetable.bellSyncMultiplier = multiplier
         MaterialAlertDialogBuilder(activity)

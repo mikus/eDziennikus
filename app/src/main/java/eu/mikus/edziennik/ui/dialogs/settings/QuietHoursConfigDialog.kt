@@ -17,7 +17,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
-import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
 import eu.mikus.edziennik.utils.models.Time
