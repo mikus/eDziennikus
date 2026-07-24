@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.databinding.DialogLessonDetailsBinding
 import kotlin.coroutines.CoroutineContext
 
 class ErrorDialog(
@@ -29,7 +28,6 @@ class ErrorDialog(
         get() = job + Dispatchers.Main
 
     private val app by lazy { activity.application as App }
-    private lateinit var b: DialogLessonDetailsBinding
     private lateinit var dialog: AlertDialog
 
     init { run {
