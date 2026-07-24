@@ -6,7 +6,7 @@ package eu.mikus.edziennik.ui.dialogs.base
 
 import android.text.InputType
 import android.view.Gravity
-import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -65,9 +65,13 @@ fun RichTextFieldBridge(
                 this.hint = hint
             }
             val edit = TextInputKeyboardEdit(ctx).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                // TextInputLayout.addView() re-parents the EditText and copies the child's
+                // layoutParams onto its internal inputFrame, which it later casts to
+                // LinearLayout.LayoutParams — so the child MUST carry LinearLayout.LayoutParams.
+                // A plain ViewGroup.LayoutParams (or the auto-generated default) → ClassCastException.
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                 )
                 // All three rich-text fields (note topic/body, event topic) are declared
                 // textMultiLine in the legacy layouts, so MULTI_LINE is always enabled; minLines
