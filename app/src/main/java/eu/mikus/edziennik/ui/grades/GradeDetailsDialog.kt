@@ -48,6 +48,7 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
+import eu.mikus.edziennik.ui.dialogs.base.LabeledRow
 import eu.mikus.edziennik.ui.dialogs.settings.GradesConfigDialog
 import eu.mikus.edziennik.ui.notes.setupNotesButton
 import eu.mikus.edziennik.utils.BetterLink
@@ -304,17 +305,5 @@ private fun GradeDetailsContent(
                 },
             )
         }
-    }
-}
-
-@Composable
-private fun LabeledRow(label: String, value: String) {
-    Column {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(value, style = MaterialTheme.typography.bodyMedium)
     }
 }
