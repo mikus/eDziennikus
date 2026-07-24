@@ -177,11 +177,12 @@ class EventDetailsDialog(
         val app = activity.applicationContext as App
         val observed by remember { app.db.eventDao().getById(event.profileId, event.id).asFlow() }
             .collectAsStateWithLifecycle(null)
-        val ev = observed ?: event
+        // filterNotes() (Unit) is folded into the ev computation so it runs once per emission
+        // before the legend/topic read the notes — a bare remember{ filterNotes() } would return Unit.
+        val ev = remember(observed) { (observed ?: event).also { it.filterNotes() } }
 
         LaunchedEffect(observed) { observed?.let { event = it } }
         LaunchedEffect(ev.id) { if (!ev.seen) app.eventManager.markAsSeen(ev) }
-        remember(ev) { ev.filterNotes() }
 
         val monthName = remember(ev) {
             runCatching { app.resources.getStringArray(R.array.months_day_of_array)[ev.date.month - 1] }.getOrNull()
