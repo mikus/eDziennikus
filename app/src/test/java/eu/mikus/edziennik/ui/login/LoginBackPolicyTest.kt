@@ -32,6 +32,10 @@ class LoginBackPolicyTest {
         assertEquals(LoginBackAction.Up, loginBackPolicy(LoginRoute.FORM, false))
     }
 
+    @Test fun `parameterized form route goes up`() {
+        assertEquals(LoginBackAction.Up, loginBackPolicy("${LoginRoute.FORM}/LIBRUS/LIBRUS", false))
+    }
+
     @Test fun `unknown or null route goes up`() {
         assertEquals(LoginBackAction.Up, loginBackPolicy(null, false))
         assertEquals(LoginBackAction.Up, loginBackPolicy("nonsense", true))

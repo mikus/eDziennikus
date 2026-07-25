@@ -26,9 +26,11 @@ sealed interface LoginBackAction {
  * Pure back-navigation policy — a faithful port of LoginActivity.onBackPressedCallback's
  * per-destination switch. Drives both the system BackHandler and the Chooser's Cancel button.
  */
-fun loginBackPolicy(route: String?, hasLoginStores: Boolean): LoginBackAction = when (route) {
-    LoginRoute.PROGRESS, LoginRoute.SYNC, LoginRoute.SYNC_ERROR, LoginRoute.FINISH -> LoginBackAction.Consume
-    LoginRoute.SUMMARY -> LoginBackAction.ConfirmCancel
-    LoginRoute.CHOOSER -> if (!hasLoginStores) LoginBackAction.CancelToHost else LoginBackAction.Up
-    else -> LoginBackAction.Up
-}
+fun loginBackPolicy(route: String?, hasLoginStores: Boolean): LoginBackAction =
+    // The Form route is parameterized ("form/{loginType}/{loginMode}"); match on the base segment.
+    when (route?.substringBefore("/")) {
+        LoginRoute.PROGRESS, LoginRoute.SYNC, LoginRoute.SYNC_ERROR, LoginRoute.FINISH -> LoginBackAction.Consume
+        LoginRoute.SUMMARY -> LoginBackAction.ConfirmCancel
+        LoginRoute.CHOOSER -> if (!hasLoginStores) LoginBackAction.CancelToHost else LoginBackAction.Up
+        else -> LoginBackAction.Up
+    }

@@ -6,13 +6,13 @@ package eu.mikus.edziennik.ui.login.destinations
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.enums.LoginMode
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.ext.Bundle
-import eu.mikus.edziennik.ext.getEnum
 import eu.mikus.edziennik.ui.dialogs.QrScannerDialog
 import eu.mikus.edziennik.ui.login.FormSubmit
 import eu.mikus.edziennik.ui.login.LoginFormScreen
@@ -21,28 +21,29 @@ import eu.mikus.edziennik.ui.login.LoginRoute
 import eu.mikus.edziennik.ui.login.LoginViewModel
 
 @Composable
-fun LoginFormDestination(vm: LoginViewModel, navController: NavHostController, activity: AppCompatActivity) {
+fun LoginFormDestination(
+    vm: LoginViewModel, navController: NavHostController, activity: AppCompatActivity, entry: NavBackStackEntry,
+) {
     val app = activity.application as App
-    val args = vm.loginArgs
-    val loginType = args.getEnum<LoginType>("loginType") ?: return
+    // loginType/loginMode ride the nav route (persisted across process death), NOT the transient
+    // vm.loginArgs — so the Form re-renders intact after a low-memory kill.
+    val loginType = entry.arguments?.getString("loginType")
+        ?.let { runCatching { LoginType.valueOf(it) }.getOrNull() } ?: return
     val register = LoginInfo.list.firstOrNull { it.loginType == loginType } ?: return
-    val loginMode = args.getEnum<LoginMode>("loginMode") ?: return
+    val loginMode = entry.arguments?.getString("loginMode")
+        ?.let { runCatching { LoginMode.valueOf(it) }.getOrNull() } ?: return
     val mode = register.loginModes.firstOrNull { it.loginMode == loginMode } ?: return
 
-    val fields = remember(mode) { mode.credentials.filterIsInstance<LoginInfo.FormField>() }
-    val checkboxes = remember(mode) { mode.credentials.filterIsInstance<LoginInfo.FormCheckbox>() }
-    val initialValues = remember(mode) { fields.associate { it.keyName to (args.getString(it.keyName) ?: "") } }
-    val initialChecks = remember(mode) {
-        checkboxes.filter { args.containsKey(it.keyName) }.associate { it.keyName to args.getBoolean(it.keyName) }
-    }
     // One-shot read+clear of vm.lastError, once per Form entry (spec §10 risk 1).
     val errorSeed = remember { mapLastError(vm, mode) }
 
     LoginFormScreen(
         register = register,
         mode = mode,
-        initialValues = initialValues,
-        initialChecks = initialChecks,
+        // Fresh seeds only — the field values persist via LoginFormScreen's own rememberSaveable
+        // (back-stack retention) and the QR apply-callback, so no back-prefill from args is needed.
+        initialValues = emptyMap(),
+        initialChecks = emptyMap(),
         initialFieldErrors = errorSeed.first,
         initialBannerError = errorSeed.second,
         onBack = { navController.popBackStack() },

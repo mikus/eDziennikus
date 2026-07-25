@@ -21,8 +21,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -70,7 +72,13 @@ fun LoginRoot(vm: LoginViewModel) {
             popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) },
         ) {
             composable(LoginRoute.CHOOSER) { LoginChooserDestination(vm, navController, activity) }
-            composable(LoginRoute.FORM) { LoginFormDestination(vm, navController, activity) }
+            composable(
+                route = LoginRoute.FORM + "/{loginType}/{loginMode}",
+                arguments = listOf(
+                    navArgument("loginType") { type = NavType.StringType },
+                    navArgument("loginMode") { type = NavType.StringType },
+                ),
+            ) { entry -> LoginFormDestination(vm, navController, activity, entry) }
             composable(LoginRoute.PROGRESS) { LoginProgressDestination(vm, navController, snackbarHostState) }
             composable(LoginRoute.SUMMARY) { LoginSummaryDestination(vm, navController) }
             composable(LoginRoute.SYNC) { LoginSyncDestination(vm, navController) }

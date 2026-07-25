@@ -87,8 +87,14 @@ private fun navigateToLoginMode(
     vm: LoginViewModel, navController: NavHostController,
     register: LoginInfo.Register, mode: LoginInfo.Mode,
 ) {
-    vm.stageLoginArgs(Bundle("loginType" to register.loginType, "loginMode" to mode.loginMode))
-    // DEMO / empty-credentials modes skip the Form entirely (spec §8 — removes the legacy self-bounce loop).
-    if (mode.credentials.isEmpty()) navController.navigate(LoginRoute.PROGRESS)
-    else navController.navigate(LoginRoute.FORM)
+    if (mode.credentials.isEmpty()) {
+        // DEMO / empty-credentials modes skip the Form entirely (spec §8 — removes the legacy self-bounce
+        // loop); their args ride the VM straight to Progress.
+        vm.stageLoginArgs(Bundle("loginType" to register.loginType, "loginMode" to mode.loginMode))
+        navController.navigate(LoginRoute.PROGRESS)
+    } else {
+        // Credentialed modes carry loginType/loginMode as route args so they survive process death
+        // (nav-compose persists the back stack + args; the VM's loginArgs does not).
+        navController.navigate("${LoginRoute.FORM}/${register.loginType.name}/${mode.loginMode.name}")
+    }
 }
