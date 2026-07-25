@@ -141,6 +141,8 @@ dependencies {
     implementation "androidx.core:core-ktx:1.9.0"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_version"
     implementation "androidx.navigation:navigation-fragment-ktx:2.9.5"
+    implementation "androidx.navigation:navigation-compose:2.9.5"
+    implementation "androidx.activity:activity-compose:1.8.2"
     implementation "androidx.recyclerview:recyclerview:1.2.1"
     implementation "androidx.room:room-runtime:2.4.3"
     implementation "androidx.room:room-ktx:2.4.3"
