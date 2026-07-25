@@ -62,7 +62,7 @@ fun LoginFormScreen(
     initialBannerError: Int?,
     onBack: () -> Unit,
     onSubmit: (FormSubmit) -> Unit,
-    onQrScan: (LoginInfo.FormField) -> Unit,
+    onQrScan: (field: LoginInfo.FormField, apply: (Map<String, String>) -> Unit) -> Unit,
 ) {
     val fields = remember(mode) { mode.credentials.filterIsInstance<LoginInfo.FormField>() }
     val checkboxes = remember(mode) { mode.credentials.filterIsInstance<LoginInfo.FormCheckbox>() }
@@ -127,7 +127,7 @@ fun LoginFormScreen(
                         value = values[field.keyName] ?: "",
                         errorRes = fieldErrors[field.keyName],
                         onValueChange = { values[field.keyName] = it; fieldErrors[field.keyName] = null },
-                        onQrScan = { onQrScan(field) },
+                        onQrScan = { onQrScan(field) { decoded -> decoded.forEach { (k, v) -> values[k] = v } } },
                     )
                 }
             }

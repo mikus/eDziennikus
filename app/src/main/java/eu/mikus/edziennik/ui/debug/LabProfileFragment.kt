@@ -152,8 +152,6 @@ class LabProfileFragment : LazyFragment(), CoroutineScope {
             catch (e: Exception) {
                 if (activity is MainActivity)
                     (activity as MainActivity).error(ApiError.fromThrowable(TAG, e))
-                if (activity is LoginActivity)
-                    (activity as LoginActivity).error(ApiError.fromThrowable(TAG, e))
             }
         })
 

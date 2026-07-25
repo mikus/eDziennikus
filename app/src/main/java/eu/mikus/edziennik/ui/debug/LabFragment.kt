@@ -18,7 +18,6 @@ import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.databinding.TemplateFragmentBinding
 import eu.mikus.edziennik.ext.addOnPageSelectedListener
 import eu.mikus.edziennik.ui.base.lazypager.FragmentLazyPagerAdapter
-import eu.mikus.edziennik.ui.login.LoginActivity
 import eu.mikus.edziennik.utils.SwipeRefreshLayoutNoTouch
 import kotlin.coroutines.CoroutineContext
 
@@ -45,7 +44,6 @@ class LabFragment : Fragment(), CoroutineScope {
         b = TemplateFragmentBinding.inflate(inflater)
         when (activity) {
             is MainActivity -> b.refreshLayout.setParent((activity as MainActivity).swipeRefreshLayout)
-            is LoginActivity -> b.refreshLayout.setParent((activity as LoginActivity).swipeRefreshLayout)
         }
         b.refreshLayout.isEnabled = false
         return b.root
