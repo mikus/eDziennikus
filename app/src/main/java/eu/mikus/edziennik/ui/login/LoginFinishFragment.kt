@@ -9,74 +9,48 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import eu.mikus.edziennik.*
-import eu.mikus.edziennik.databinding.LoginFinishFragmentBinding
+import androidx.lifecycle.ViewModelProvider
+import eu.mikus.edziennik.App
+import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.ext.Intent
-import eu.mikus.edziennik.ext.onClick
 import eu.mikus.edziennik.ui.base.enums.NavTarget
-import kotlin.coroutines.CoroutineContext
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 
-class LoginFinishFragment : Fragment(), CoroutineScope {
-    companion object {
-        private const val TAG = "LoginFinishFragment"
-    }
+class LoginFinishFragment : Fragment() {
+    companion object { private const val TAG = "LoginFinishFragment" }
 
     private lateinit var app: App
     private lateinit var activity: LoginActivity
-    private lateinit var b: LoginFinishFragmentBinding
-    private val nav by lazy { activity.nav }
-
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    // local/private variables go here
+    private lateinit var vm: LoginViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as LoginActivity?) ?: return null
         context ?: return null
         app = activity.application as App
-        b = LoginFinishFragmentBinding.inflate(inflater)
-        return b.root
-    }
+        vm = ViewModelProvider(requireActivity(), LoginViewModel.Factory(app))[LoginViewModel::class.java]
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val firstRun = !app.config.loginFinished
         app.config.loginFinished = true
 
-        if (!firstRun) {
-            b.subTitle.setText(R.string.login_finish_subtitle_not_first_run)
+        return ComposeView(inflater.context).apply {
+            setAppThemeContent(forceLight = true) {
+                LoginFinishScreen(firstRun = firstRun, onDone = { finish(firstRun) })
+            }
         }
+    }
 
-        b.finishButton.onClick {
-            val firstProfileId = arguments?.getInt("firstProfileId") ?: 0
-            if (firstProfileId == 0) {
-                activity.finish()
-                return@onClick
+    private fun finish(firstRun: Boolean) {
+        val firstProfileId = vm.firstProfileId
+        if (firstProfileId == 0) { activity.finish(); return }
+        app.profileLoad(firstProfileId) {
+            if (firstRun) {
+                activity.startActivity(Intent(activity, MainActivity::class.java, "profileId" to firstProfileId, "fragmentId" to NavTarget.HOME))
+            } else {
+                activity.setResult(Activity.RESULT_OK, Intent(null, "profileId" to firstProfileId, "fragmentId" to NavTarget.HOME))
             }
-
-            app.profileLoad(firstProfileId) {
-                if (firstRun) {
-                    activity.startActivity(Intent(
-                            activity,
-                            MainActivity::class.java,
-                            "profileId" to firstProfileId,
-                            "fragmentId" to NavTarget.HOME
-                    ))
-                }
-                else {
-                    activity.setResult(Activity.RESULT_OK, Intent(
-                            null,
-                            "profileId" to firstProfileId,
-                            "fragmentId" to NavTarget.HOME
-                    ))
-                }
-                activity.finish()
-            }
+            activity.finish()
         }
     }
 }

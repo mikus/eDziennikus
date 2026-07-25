@@ -125,7 +125,7 @@ fun LoginChooserScreen(
 }
 
 @Composable
-private fun DrawableImage(resId: Int, contentDescription: String?, modifier: Modifier = Modifier) {
+internal fun DrawableImage(resId: Int, contentDescription: String?, modifier: Modifier = Modifier) {
     // painterResource() only supports plain VectorDrawables + rasters; the register/mode logos
     // include an adaptive-icon mipmap (DEMO), so rasterize any drawable via toBitmap (as IconicsIcon does).
     val context = LocalContext.current

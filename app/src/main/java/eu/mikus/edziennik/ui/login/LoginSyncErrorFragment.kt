@@ -8,45 +8,35 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import androidx.lifecycle.ViewModelProvider
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.databinding.LoginSyncErrorFragmentBinding
-import eu.mikus.edziennik.ext.onClick
-import kotlin.coroutines.CoroutineContext
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 
-class LoginSyncErrorFragment : Fragment(), CoroutineScope {
-    companion object {
-        private const val TAG = "LoginSyncErrorFragment"
-    }
+class LoginSyncErrorFragment : Fragment() {
+    companion object { private const val TAG = "LoginSyncErrorFragment" }
 
     private lateinit var app: App
     private lateinit var activity: LoginActivity
-    private lateinit var b: LoginSyncErrorFragmentBinding
+    private lateinit var vm: LoginViewModel
     private val nav by lazy { activity.nav }
-
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    // local/private variables go here
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as LoginActivity?) ?: return null
         context ?: return null
         app = activity.application as App
-        b = LoginSyncErrorFragmentBinding.inflate(inflater)
-        return b.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        b.errorDetails.text = activity.lastError?.getStringReason(activity)
-        activity.lastError = null
-        b.nextButton.onClick {
-            nav.navigate(R.id.loginFinishFragment, arguments, activity.navOptions)
+        vm = ViewModelProvider(requireActivity(), LoginViewModel.Factory(app))[LoginViewModel::class.java]
+        val errorDetail = vm.lastError?.getStringReason(activity)
+        vm.clearError()
+        return ComposeView(inflater.context).apply {
+            setAppThemeContent(forceLight = true) {
+                LoginSyncErrorScreen(
+                    errorDetail = errorDetail,
+                    onNext = { nav.navigate(R.id.loginFinishFragment, null, activity.navOptions) },
+                )
+            }
         }
     }
 }

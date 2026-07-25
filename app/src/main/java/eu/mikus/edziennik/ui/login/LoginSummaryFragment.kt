@@ -8,67 +8,38 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.LinearLayoutManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import eu.mikus.edziennik.*
-import eu.mikus.edziennik.databinding.LoginSummaryFragmentBinding
-import eu.mikus.edziennik.ext.onChange
-import eu.mikus.edziennik.ext.onClick
-import eu.mikus.edziennik.utils.SimpleDividerItemDecoration
-import kotlin.coroutines.CoroutineContext
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import eu.mikus.edziennik.App
+import eu.mikus.edziennik.R
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 
-class LoginSummaryFragment : Fragment(), CoroutineScope {
-    companion object {
-        private const val TAG = "LoginSummaryFragment"
-    }
+class LoginSummaryFragment : Fragment() {
+    companion object { private const val TAG = "LoginSummaryFragment" }
 
     private lateinit var app: App
     private lateinit var activity: LoginActivity
-    private lateinit var b: LoginSummaryFragmentBinding
+    private lateinit var vm: LoginViewModel
     private val nav by lazy { activity.nav }
-
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    // local/private variables go here
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as LoginActivity?) ?: return null
         context ?: return null
         app = activity.application as App
-        b = LoginSummaryFragmentBinding.inflate(inflater)
-        return b.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-
-        val adapter = LoginSummaryAdapter(activity) { _ ->
-            b.finishButton.isEnabled = activity.profiles.any { it.isSelected }
-        }
-
-        adapter.items = activity.profiles
-        b.list.adapter = adapter
-        b.list.apply {
-            isNestedScrollingEnabled = false
-            setHasFixedSize(true)
-            layoutManager = LinearLayoutManager(context)
-            addItemDecoration(SimpleDividerItemDecoration(context))
-        }
-
-        b.anotherButton.onClick {
-            nav.navigate(R.id.loginChooserFragment, null, activity.navOptions)
-        }
-
-        // Cross-user-sharing registration was removed when SzkolnyApi was
-        // dropped from the fork. New profiles are never registered, so the
-        // login flow no longer surfaces the toggle and passes no argument
-        // to the sync fragment (which defaults to REGISTRATION_DISABLED).
-        b.finishButton.onClick {
-            nav.navigate(R.id.loginSyncFragment, null, activity.navOptions)
+        vm = ViewModelProvider(requireActivity(), LoginViewModel.Factory(app))[LoginViewModel::class.java]
+        return ComposeView(inflater.context).apply {
+            setAppThemeContent(forceLight = true) {
+                val profiles by vm.profiles.collectAsStateWithLifecycle()
+                LoginSummaryScreen(
+                    profiles = profiles,
+                    onToggle = vm::toggleSelection,
+                    onAddStudent = { nav.navigate(R.id.loginChooserFragment, null, activity.navOptions) },
+                    onDone = { nav.navigate(R.id.loginSyncFragment, null, activity.navOptions) },
+                )
+            }
         }
     }
 }

@@ -8,163 +8,89 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.api.ERROR_REQUIRES_USER_ACTION
 import eu.mikus.edziennik.data.api.LOGIN_NO_ARGUMENTS
-import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
-import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
-import eu.mikus.edziennik.data.api.events.FirstLoginFinishedEvent
 import eu.mikus.edziennik.data.api.events.UserActionRequiredEvent
 import eu.mikus.edziennik.data.api.models.ApiError
-import eu.mikus.edziennik.data.db.entity.LoginStore
-import eu.mikus.edziennik.data.db.enums.LoginMode
-import eu.mikus.edziennik.data.db.enums.LoginType
-import eu.mikus.edziennik.databinding.LoginProgressFragmentBinding
-import eu.mikus.edziennik.ext.getEnum
-import eu.mikus.edziennik.ext.joinNotNullStrings
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.utils.managers.UserActionManager
-import kotlin.coroutines.CoroutineContext
-import kotlin.math.max
+import kotlinx.coroutines.launch
 
-class LoginProgressFragment : Fragment(), CoroutineScope {
-    companion object {
-        private const val TAG = "LoginProgressFragment"
-    }
+class LoginProgressFragment : Fragment() {
+    companion object { private const val TAG = "LoginProgressFragment" }
 
     private lateinit var app: App
     private lateinit var activity: LoginActivity
-    private lateinit var b: LoginProgressFragmentBinding
+    private lateinit var vm: LoginViewModel
     private val nav by lazy { activity.nav }
-
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    // local/private variables go here
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as LoginActivity?) ?: return null
         context ?: return null
         app = activity.application as App
-        b = LoginProgressFragmentBinding.inflate(inflater)
-        return b.root
+        vm = ViewModelProvider(requireActivity(), LoginViewModel.Factory(app))[LoginViewModel::class.java]
+        return ComposeView(inflater.context).apply {
+            setAppThemeContent(forceLight = true) { LoginProgressScreen() }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         if (!isAdded) return
-
-        EventBus.getDefault().removeStickyEvent(FirstLoginFinishedEvent::class.java)
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    vm.loginResult.collect { result ->
+                        when (result) {
+                            LoginViewModel.LoginResult.ToSummary -> {
+                                activity.errorSnackbar.dismiss()
+                                nav.navigate(R.id.loginSummaryFragment, null, activity.navOptions)
+                            }
+                            LoginViewModel.LoginResult.NoStudents -> showNoStudents()
+                            LoginViewModel.LoginResult.Error -> nav.navigateUp()
+                        }
+                    }
+                }
+                launch {
+                    vm.userActionEvents.collect { event -> runUserAction(event) }
+                }
+            }
+        }
 
         val args = arguments ?: run {
-            activity.error(ApiError(TAG, LOGIN_NO_ARGUMENTS))
+            vm.reportError(ApiError(TAG, LOGIN_NO_ARGUMENTS))
             nav.navigateUp()
             return
         }
-
-        doFirstLogin(args)
-    }
-
-    private fun doFirstLogin(args: Bundle) {
-        launch {
-            activity.errorSnackbar.dismiss()
-
-            val maxProfileId = max(
-                    app.db.profileDao().lastId ?: 0,
-                    activity.profiles.maxByOrNull { it.profile.id }?.profile?.id ?: 0
-            )
-            val loginType = args.getEnum<LoginType>("loginType") ?: return@launch
-            val loginMode = args.getEnum<LoginMode>("loginMode") ?: return@launch
-
-            val loginStore = LoginStore(
-                    id = maxProfileId + 1,
-                    type = loginType,
-                    mode = loginMode
-            )
-            loginStore.copyFrom(args)
-            loginStore.removeLoginData("loginType")
-            loginStore.removeLoginData("loginMode")
-            EdziennikTask.firstLogin(loginStore).enqueue(activity)
-        }
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
-    fun onFirstLoginFinishedEvent(event: FirstLoginFinishedEvent) {
-        EventBus.getDefault().removeStickyEvent(event)
-        if (event.profileList.isEmpty()) {
-            MaterialAlertDialogBuilder(activity)
-                    .setTitle(R.string.login_account_no_students)
-                    .setMessage(R.string.login_account_no_students_text)
-                    .setPositiveButton(R.string.ok, null)
-                    .setOnDismissListener { nav.navigateUp() }
-                    .show()
-            return
-        }
-
-        // update subnames with school years and class name
-        for (profile in event.profileList) {
-            val schoolYearName = "${profile.studentSchoolYearStart}/${profile.studentSchoolYearStart + 1}"
-            profile.subname = joinNotNullStrings(
-                    " - ",
-                    profile.studentClassName,
-                    schoolYearName
-            )
-        }
-
-        activity.loginStores += event.loginStore
-        activity.profiles += event.profileList.map { LoginSummaryAdapter.Item(it) }
         activity.errorSnackbar.dismiss()
-        nav.navigate(R.id.loginSummaryFragment, null, activity.navOptions)
+        if (savedInstanceState == null) vm.startFirstLogin(activity, args)
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
-    fun onSyncErrorEvent(event: ApiTaskErrorEvent) {
-        EventBus.getDefault().removeStickyEvent(event)
-        activity.error(event.error)
-        nav.navigateUp()
+    private fun showNoStudents() {
+        MaterialAlertDialogBuilder(activity)
+            .setTitle(R.string.login_account_no_students)
+            .setMessage(R.string.login_account_no_students_text)
+            .setPositiveButton(R.string.ok, null)
+            .setOnDismissListener { nav.navigateUp() }
+            .show()
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onUserActionRequiredEvent(event: UserActionRequiredEvent) {
+    private fun runUserAction(event: UserActionRequiredEvent) {
         val args = arguments ?: run {
-            activity.error(ApiError(TAG, LOGIN_NO_ARGUMENTS))
-            nav.navigateUp()
-            return
+            vm.reportError(ApiError(TAG, LOGIN_NO_ARGUMENTS)); nav.navigateUp(); return
         }
-
         val callback = UserActionManager.UserActionCallback(
-            onSuccess = { data ->
-                args.putAll(data)
-                doFirstLogin(args)
-            },
-            onFailure = {
-                activity.error(ApiError(TAG, ERROR_REQUIRES_USER_ACTION))
-                nav.navigateUp()
-            },
-            onCancel = {
-                nav.navigateUp()
-            },
+            onSuccess = { data -> args.putAll(data); vm.startFirstLogin(activity, args) },
+            onFailure = { vm.reportError(ApiError(TAG, eu.mikus.edziennik.data.api.ERROR_REQUIRES_USER_ACTION)); nav.navigateUp() },
+            onCancel = { nav.navigateUp() },
         )
-
         app.userActionManager.execute(activity, event, callback)
-    }
-
-    override fun onStart() {
-        EventBus.getDefault().register(this)
-        super.onStart()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        EventBus.getDefault().unregister(this)
     }
 }

@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
@@ -28,12 +29,14 @@ class LoginChooserFragment : Fragment() {
 
     private lateinit var app: App
     private lateinit var activity: LoginActivity
+    private var vm: LoginViewModel? = null
     private val nav by lazy { activity.nav }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as LoginActivity?) ?: return null
         context ?: return null
         app = activity.application as App
+        vm = ViewModelProvider(requireActivity(), LoginViewModel.Factory(app))[LoginViewModel::class.java]
 
         if (!app.permissionManager.isNotificationPermissionGranted) {
             app.permissionManager.requestNotificationsPermission(activity, 0, false) {}
@@ -45,7 +48,7 @@ class LoginChooserFragment : Fragment() {
             Date.fromMillis(app.buildManager.buildTimestamp).stringY_m_d,
         )
 
-        val cancelVisible = activity.loginStores.isNotEmpty() || app.config.loginFinished
+        val cancelVisible = vm?.hasLoginStores == true || app.config.loginFinished
 
         return ComposeView(inflater.context).apply {
             setAppThemeContent(forceLight = true) {
@@ -63,7 +66,7 @@ class LoginChooserFragment : Fragment() {
 
     private fun onCancel() {
         when {
-            activity.loginStores.isNotEmpty() -> nav.navigateUp()
+            vm?.hasLoginStores == true -> nav.navigateUp()
             app.config.loginFinished -> {
                 activity.setResult(Activity.RESULT_CANCELED)
                 activity.finish()

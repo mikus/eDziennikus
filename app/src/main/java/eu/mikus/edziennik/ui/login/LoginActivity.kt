@@ -11,10 +11,14 @@ import android.view.View
 import android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigation
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -25,7 +29,6 @@ import kotlinx.coroutines.launch
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.models.ApiError
-import eu.mikus.edziennik.data.db.entity.LoginStore
 import eu.mikus.edziennik.databinding.LoginActivityBinding
 import eu.mikus.edziennik.ext.dp
 import eu.mikus.edziennik.ui.error.ErrorSnackbar
@@ -38,6 +41,7 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
     }
 
     private val app: App by lazy { applicationContext as App }
+    private val vm: LoginViewModel by viewModels { LoginViewModel.Factory(app) }
     private lateinit var b: LoginActivityBinding
     lateinit var navOptions: NavOptions
     lateinit var navOptionsBuilder: NavOptions.Builder
@@ -50,10 +54,11 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
         get() = job + Dispatchers.Main
 
     var lastError: ApiError? = null
-    val profiles = mutableListOf<LoginSummaryAdapter.Item>()
-    val loginStores = mutableListOf<LoginStore>()
 
     fun getRootView() = b.root
+
+    /** Public error entry point for external callers (e.g. LabProfileFragment); routes through the VM. */
+    fun error(error: ApiError) { vm.reportError(error) }
 
     private val onBackPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -69,7 +74,7 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
                 return
             if (destination.id == R.id.loginFinishFragment)
                 return
-            if (destination.id == R.id.loginChooserFragment && loginStores.isEmpty()) {
+            if (destination.id == R.id.loginChooserFragment && !vm.hasLoginStores) {
                 setResult(Activity.RESULT_CANCELED)
                 finish()
                 return
@@ -106,6 +111,15 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
         errorSnackbar.setCoordinator(b.coordinator, b.snackbarAnchor)
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
 
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.errorEvents.collect { error ->
+                    errorSnackbar.addError(error).show()
+                    lastError = error
+                }
+            }
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             window.decorView.systemUiVisibility = window.decorView.systemUiVisibility or SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
             ViewCompat.setOnApplyWindowInsetsListener(b.root) { view: View, insets: WindowInsetsCompat ->
@@ -124,6 +138,4 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
             }
         }
     }
-
-    fun error(error: ApiError) { errorSnackbar.addError(error).show(); lastError = error }
 }

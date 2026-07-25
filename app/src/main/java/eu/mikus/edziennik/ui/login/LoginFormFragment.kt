@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.enums.LoginMode
@@ -26,12 +27,14 @@ class LoginFormFragment : Fragment() {
 
     private lateinit var app: App
     private lateinit var activity: LoginActivity
+    private var vm: LoginViewModel? = null
     private val nav by lazy { activity.nav }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as LoginActivity?) ?: return null
         context ?: return null
         app = activity.application as App
+        vm = ViewModelProvider(requireActivity(), LoginViewModel.Factory(app))[LoginViewModel::class.java]
 
         val loginType = arguments?.getEnum<LoginType>("loginType") ?: return null
         val register = LoginInfo.list.firstOrNull { it.loginType == loginType } ?: return null
@@ -76,8 +79,8 @@ class LoginFormFragment : Fragment() {
     }
 
     private fun mapLastError(mode: LoginInfo.Mode): Pair<Map<String, Int>, Int?> {
-        val error = activity.lastError ?: return emptyMap<String, Int>() to null
-        activity.lastError = null
+        val error = vm?.lastError ?: return emptyMap<String, Int>() to null
+        vm?.clearError()
         for (credential in mode.credentials) {
             credential.errorCodes[error.errorCode]?.let { return mapOf(credential.keyName to it) to null }
         }

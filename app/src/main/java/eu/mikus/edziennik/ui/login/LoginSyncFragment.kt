@@ -8,123 +8,52 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import androidx.navigation.NavController
-import androidx.navigation.Navigation
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.config.AppData
-import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
-import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
-import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
-import eu.mikus.edziennik.data.api.events.ApiTaskProgressEvent
-import eu.mikus.edziennik.data.api.events.ApiTaskStartedEvent
-import eu.mikus.edziennik.data.db.entity.Profile
-import eu.mikus.edziennik.databinding.LoginSyncFragmentBinding
-import eu.mikus.edziennik.ext.Bundle
-import eu.mikus.edziennik.ext.asBoldSpannable
-import eu.mikus.edziennik.ext.concat
-import eu.mikus.edziennik.ext.ignore
-import kotlin.coroutines.CoroutineContext
-import kotlin.math.roundToInt
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
+import kotlinx.coroutines.launch
 
-class LoginSyncFragment : Fragment(), CoroutineScope {
-    companion object {
-        private const val TAG = "LoginSyncFragment"
-    }
+class LoginSyncFragment : Fragment() {
+    companion object { private const val TAG = "LoginSyncFragment" }
 
     private lateinit var app: App
     private lateinit var activity: LoginActivity
-    private lateinit var b: LoginSyncFragmentBinding
-    private val nav: NavController by lazy { Navigation.findNavController(activity, R.id.nav_host_fragment) }
-
-    private val job: Job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = job + Dispatchers.Main
-
-    private lateinit var finishArguments: Bundle
+    private lateinit var vm: LoginViewModel
+    private val nav by lazy { activity.nav }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as LoginActivity?) ?: return null
         context ?: return null
         app = activity.application as App
-        b = LoginSyncFragmentBinding.inflate(inflater)
-        return b.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) = launch {
-
-        EventBus.getDefault().removeStickyEvent(ApiTaskAllFinishedEvent::class.java)
-        EventBus.getDefault().removeStickyEvent(ApiTaskErrorEvent::class.java)
-
-        val profiles = activity.profiles.filter { it.isSelected }.map { it.profile }
-        val loginStores = activity.loginStores.filter { store -> profiles.any { it.loginStoreId == store.id } }
-
-        withContext(Dispatchers.IO) {
-            profiles.forEach {
-                val data = AppData.get(it.loginStoreType)
-                for ((key, value) in data.configOverrides) {
-                    it.config.set(key, value)
-                }
-
-                app.db.eventTypeDao().addDefaultTypes(it)
+        vm = ViewModelProvider(requireActivity(), LoginViewModel.Factory(app))[LoginViewModel::class.java]
+        return ComposeView(inflater.context).apply {
+            setAppThemeContent(forceLight = true) {
+                val state by vm.syncState.collectAsStateWithLifecycle()
+                LoginSyncScreen(state)
             }
-
-            app.db.profileDao().addAll(profiles)
-            app.db.loginStoreDao().addAll(loginStores)
         }
-
-        finishArguments = Bundle(
-                "firstProfileId" to profiles.firstOrNull()?.id
-        )
-
-        val profileIds = profiles.map { it.id }.toSet()
-        EdziennikTask.syncProfileList(profileIds).enqueue(activity)
-    }.ignore()
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onSyncStartedEvent(event: ApiTaskStartedEvent) {
-        b.loginSyncSubtitle1.text = listOf(
-                getString(R.string.login_sync_subtitle_1_format),
-                event.profile?.name?.asBoldSpannable()
-        ).concat(" ")
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
-    fun onSyncFinishedEvent(event: ApiTaskAllFinishedEvent) {
-        EventBus.getDefault().removeStickyEvent(event)
-        nav.navigate(R.id.loginFinishFragment, finishArguments, activity.navOptions)
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onSyncProgressEvent(event: ApiTaskProgressEvent) {
-        b.loginSyncProgressBar.progress = event.progress.roundToInt()
-        b.loginSyncProgressBar.isIndeterminate = event.progress <= 0f
-        b.loginSyncSubtitle2.text = event.progressText
-    }
-
-    @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
-    fun onSyncErrorEvent(event: ApiTaskErrorEvent) {
-        EventBus.getDefault().removeStickyEvent(event)
-        activity.error(event.error)
-        nav.navigate(R.id.loginSyncErrorFragment, finishArguments, activity.navOptions)
-    }
-
-    override fun onStart() {
-        EventBus.getDefault().register(this)
-        super.onStart()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        EventBus.getDefault().unregister(this)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        if (!isAdded) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                vm.syncResult.collect { result ->
+                    when (result) {
+                        LoginViewModel.SyncResult.ToFinish -> nav.navigate(R.id.loginFinishFragment, null, activity.navOptions)
+                        LoginViewModel.SyncResult.ToSyncError -> nav.navigate(R.id.loginSyncErrorFragment, null, activity.navOptions)
+                    }
+                }
+            }
+        }
+        if (savedInstanceState == null) vm.persistAndSync(activity)
     }
 }
