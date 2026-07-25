@@ -77,6 +77,14 @@ class LoginViewModel(
     var firstProfileId: Int = 0
         private set
 
+    /** The current login attempt's args (loginType/loginMode + credentials), carried across the
+     *  Compose nav graph in place of the old Fragment `arguments` Bundle. Read by Progress's
+     *  startFirstLogin. Consistent with startFirstLogin(context, args: Bundle). */
+    var loginArgs: Bundle = Bundle()
+        private set
+
+    fun stageLoginArgs(args: Bundle) { loginArgs = args }
+
     private var phase: Phase = Phase.Progress
 
     private val _loginResult = Channel<LoginResult>(Channel.BUFFERED)

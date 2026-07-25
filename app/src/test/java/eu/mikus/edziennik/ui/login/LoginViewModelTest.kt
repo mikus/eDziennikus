@@ -110,4 +110,11 @@ class LoginViewModelTest {
         assertEquals(err, vm.lastError)
         assertEquals(err, vm.errorEvents.first())
     }
+
+    @Test fun `stageLoginArgs stores the args for the progress destination to read`() {
+        val vm = vm()
+        val bundle = mockk<android.os.Bundle>(relaxed = true)
+        vm.stageLoginArgs(bundle)
+        assertEquals(bundle, vm.loginArgs)
+    }
 }
