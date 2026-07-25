@@ -15,7 +15,7 @@ import eu.mikus.edziennik.ui.compose.theme.AppTheme
  * composition follows the fragment's viewLifecycleOwner across nav transitions,
  * and the AppTheme wrap — then nothing else.
  */
-fun ComposeView.setAppThemeContent(content: @Composable () -> Unit) {
+fun ComposeView.setAppThemeContent(forceLight: Boolean = false, content: @Composable () -> Unit) {
     setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-    setContent { AppTheme(content) }
+    setContent { AppTheme(forceLight = forceLight, content = content) }
 }

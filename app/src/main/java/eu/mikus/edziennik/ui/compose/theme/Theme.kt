@@ -35,28 +35,23 @@ fun resolveColorScheme(isDark: Boolean, isBlack: Boolean): ColorScheme = when {
  * (e.g. to tint a dialog window's background to match the hosted Compose content). Reads [Themes]
  * statically; a theme change still flows through the existing Activity-recreate path.
  */
-fun appColorScheme(context: Context): ColorScheme = when {
+fun appColorScheme(context: Context, forceLight: Boolean = false): ColorScheme = when {
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val dynamic = if (Themes.isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        if (Themes.isBlack) dynamic.forceBlack() else dynamic  // same override as the static path
+        val dark = Themes.isDark && !forceLight
+        val dynamic = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        if (Themes.isBlack && !forceLight) dynamic.forceBlack() else dynamic
     }
-    else -> resolveColorScheme(Themes.isDark, Themes.isBlack)
+    else -> resolveColorScheme(isDark = Themes.isDark && !forceLight, isBlack = Themes.isBlack && !forceLight)
 }
 
-/**
- * The single Compose theme entry point.
- * Structured Expressive-ready: swap MaterialTheme -> MaterialExpressiveTheme when material3 1.5.0 is stable.
- */
 @Composable
-fun AppTheme(content: @Composable () -> Unit) {
-    val colorScheme = appColorScheme(LocalContext.current)
+fun AppTheme(forceLight: Boolean = false, content: @Composable () -> Unit) {
+    val colorScheme = appColorScheme(LocalContext.current, forceLight)
     MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
         shapes = AppShapes,
     ) {
-        // Provide a themed Surface so the hosted content gets colorScheme.background +
-        // onBackground as LocalContentColor (bare Text() would otherwise default to black).
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
