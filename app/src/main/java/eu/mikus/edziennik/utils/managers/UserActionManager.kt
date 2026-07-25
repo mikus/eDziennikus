@@ -20,8 +20,6 @@ import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.UserActionRequiredEvent
 import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.ui.captcha.RecaptchaPromptDialog
-import eu.mikus.edziennik.ui.login.oauth.OAuthLoginActivity
-import eu.mikus.edziennik.ui.login.oauth.OAuthLoginResult
 import eu.mikus.edziennik.ui.login.recaptcha.RecaptchaActivity
 import eu.mikus.edziennik.ui.login.recaptcha.RecaptchaResult
 import eu.mikus.edziennik.utils.Utils.d
@@ -85,7 +83,6 @@ class UserActionManager(val app: App) {
         d(TAG, "Running user action (${event.type}) with params: ${event.params}")
         val isSuccessful = when (event.type) {
             UserActionRequiredEvent.Type.RECAPTCHA -> executeRecaptcha(activity, event, callback)
-            UserActionRequiredEvent.Type.OAUTH -> executeOauth(activity, event, callback)
         }
         if (!isSuccessful)
             callback.onFailure?.invoke()
@@ -144,38 +141,6 @@ class UserActionManager(val app: App) {
         EventBus.getDefault().register(listener)
 
         val intent = Intent(activity, RecaptchaActivity::class.java).putExtras(event.params)
-        activity.startActivity(intent)
-        return true
-    }
-
-    private fun executeOauth(
-        activity: AppCompatActivity,
-        event: UserActionRequiredEvent,
-        callback: UserActionCallback,
-    ): Boolean {
-        val storeKey = event.params.getString("responseStoreKey") ?: return false
-        event.params.getString("authorizeUrl") ?: return false
-        event.params.getString("redirectUrl") ?: return false
-
-        var listener: Any? = null
-        listener = object {
-            @Subscribe(threadMode = ThreadMode.MAIN)
-            fun onOAuthLoginResult(result: OAuthLoginResult) {
-                EventBus.getDefault().unregister(listener)
-                when {
-                    result.isError -> callback.onFailure?.invoke()
-                    result.responseUrl != null -> {
-                        finishAction(activity, event, callback, Bundle(
-                            storeKey to result.responseUrl,
-                        ))
-                    }
-                    else -> callback.onCancel?.invoke()
-                }
-            }
-        }
-        EventBus.getDefault().register(listener)
-
-        val intent = Intent(activity, OAuthLoginActivity::class.java).putExtras(event.params)
         activity.startActivity(intent)
         return true
     }
