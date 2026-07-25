@@ -4,6 +4,8 @@
 
 package eu.mikus.edziennik.ui.login
 
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,12 +31,16 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
@@ -119,14 +125,25 @@ fun LoginChooserScreen(
 }
 
 @Composable
+private fun DrawableImage(resId: Int, contentDescription: String?, modifier: Modifier = Modifier) {
+    // painterResource() only supports plain VectorDrawables + rasters; the register/mode logos
+    // include an adaptive-icon mipmap (DEMO), so rasterize any drawable via toBitmap (as IconicsIcon does).
+    val context = LocalContext.current
+    val painter = remember(resId) {
+        BitmapPainter(AppCompatResources.getDrawable(context, resId)!!.toBitmap().asImageBitmap())
+    }
+    Image(painter = painter, contentDescription = contentDescription, modifier = modifier, contentScale = ContentScale.Fit)
+}
+
+@Composable
 private fun RegisterRow(register: LoginInfo.Register, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(register.registerLogo),
+        DrawableImage(
+            resId = register.registerLogo,
             contentDescription = null,
             modifier = Modifier.width(100.dp).height(60.dp),
         )
@@ -142,8 +159,8 @@ private fun ModeRow(mode: LoginInfo.Mode, onClick: () -> Unit) {
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(mode.icon),
+        DrawableImage(
+            resId = mode.icon,
             contentDescription = null,
             modifier = Modifier.size(36.dp),
         )
