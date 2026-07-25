@@ -186,6 +186,4 @@ object LoginInfo {
         val checked: Boolean = false,
         override val errorCodes: Map<Int, Int> = mapOf()
     ) : BaseCredential(keyName, name, errorCodes)
-
-    var chooserList: MutableList<Any>? = null
 }
