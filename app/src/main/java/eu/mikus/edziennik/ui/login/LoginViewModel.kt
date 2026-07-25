@@ -123,6 +123,9 @@ class LoginViewModel(
 
     fun persistAndSync(context: Context) {
         phase = Phase.Sync
+        // Drop any progress/started state accumulated during the firstLogin (Progress) phase so
+        // the Sync screen starts indeterminate and shows only the real syncProfileList progress.
+        _syncState.value = LoginSyncUiState()
         EventBus.getDefault().removeStickyEvent(ApiTaskAllFinishedEvent::class.java)
         EventBus.getDefault().removeStickyEvent(ApiTaskErrorEvent::class.java)
         viewModelScope.launch(dispatcher) {
@@ -191,7 +194,9 @@ class LoginViewModel(
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
     fun onApiTaskAllFinished(event: ApiTaskAllFinishedEvent) {
         EventBus.getDefault().removeStickyEvent(event)
-        _syncResult.trySend(SyncResult.ToFinish)
+        // The firstLogin task also raises this event (during Progress); only the post-selection
+        // sync completion (Sync phase) should navigate to Finish. Mirrors onApiTaskError's guard.
+        if (phase == Phase.Sync) _syncResult.trySend(SyncResult.ToFinish)
     }
 
     class Factory(private val app: App) : ViewModelProvider.Factory {

@@ -53,8 +53,6 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = job + Dispatchers.Main
 
-    var lastError: ApiError? = null
-
     fun getRootView() = b.root
 
     /** Public error entry point for external callers (e.g. LabProfileFragment); routes through the VM. */
@@ -115,7 +113,6 @@ class LoginActivity : AppCompatActivity(), CoroutineScope {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 vm.errorEvents.collect { error ->
                     errorSnackbar.addError(error).show()
-                    lastError = error
                 }
             }
         }

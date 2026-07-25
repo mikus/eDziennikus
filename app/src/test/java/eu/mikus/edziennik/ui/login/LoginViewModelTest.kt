@@ -15,13 +15,23 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class LoginViewModelTest {
+
+    // startFirstLogin/persistAndSync launch on viewModelScope (Dispatchers.Main.immediate);
+    // provide a Main dispatcher so those phase transitions are exercisable off-device.
+    @BeforeEach fun setUp() = Dispatchers.setMain(Dispatchers.Unconfined)
+    @AfterEach fun tearDown() = Dispatchers.resetMain()
 
     private fun vm() = LoginViewModel(
         dbLastProfileId = { 0 },
@@ -74,10 +84,23 @@ class LoginViewModelTest {
         assertNull(vm.syncState.value.progress)
     }
 
-    @Test fun `all finished routes sync to finish`() = runTest {
+    @Test fun `all finished during sync phase routes to finish`() = runTest {
         val vm = vm()
+        vm.persistAndSync(mockk(relaxed = true)) // enter Sync phase
         vm.onApiTaskAllFinished(ApiTaskAllFinishedEvent())
         assertEquals(LoginViewModel.SyncResult.ToFinish, vm.syncResult.first())
+    }
+
+    @Test fun `all finished during progress phase does not leak a stale finish`() = runTest {
+        val vm = vm()
+        // The firstLogin task itself ends with an ApiTaskAllFinishedEvent while still in the
+        // Progress phase; it must NOT buffer a ToFinish that would later skip the Sync screen.
+        vm.onApiTaskAllFinished(ApiTaskAllFinishedEvent())
+        vm.persistAndSync(mockk(relaxed = true)) // enter Sync phase
+        vm.onApiTaskAllFinished(ApiTaskAllFinishedEvent())
+        // Exactly one ToFinish is delivered (the Sync-phase one); the Progress-phase one was dropped.
+        assertEquals(LoginViewModel.SyncResult.ToFinish, vm.syncResult.first())
+        assertNull(withTimeoutOrNull(50) { vm.syncResult.first() })
     }
 
     @Test fun `error sets lastError and emits error event`() = runTest {
