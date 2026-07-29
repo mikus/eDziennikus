@@ -36,7 +36,7 @@ import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.span.BoldSpan
 import eu.mikus.edziennik.utils.span.ItalicSpan
-import pl.szczodrzynski.navlib.colorAttr
+import eu.mikus.edziennik.compat.colorAttr
 
 class MessageManager(private val app: App) {
 

@@ -19,7 +19,7 @@ import eu.mikus.edziennik.ext.resolveAttr
 import eu.mikus.edziennik.ext.setText
 import eu.mikus.edziennik.ext.setTintColor
 import eu.mikus.edziennik.ext.startCoroutineTimer
-import pl.szczodrzynski.navlib.getColorFromAttr
+import eu.mikus.edziennik.compat.getColorFromAttr
 import kotlin.coroutines.CoroutineContext
 
 class TimetableManager(val app: App) : CoroutineScope {

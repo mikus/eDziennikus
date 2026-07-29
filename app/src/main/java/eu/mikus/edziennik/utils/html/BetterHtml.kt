@@ -20,7 +20,7 @@ import eu.mikus.edziennik.ext.dp
 import eu.mikus.edziennik.ext.getWordBounds
 import eu.mikus.edziennik.ext.resolveAttr
 import eu.mikus.edziennik.utils.span.*
-import pl.szczodrzynski.navlib.blendColors
+import eu.mikus.edziennik.compat.blendColors
 
 object BetterHtml {
 

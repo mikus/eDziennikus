@@ -21,7 +21,7 @@ import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.ui.messages.MessagesUtils
 import eu.mikus.edziennik.utils.Colors
 import eu.mikus.edziennik.utils.Themes
-import pl.szczodrzynski.navlib.elevateSurface
+import eu.mikus.edziennik.compat.elevateSurface
 
 class MessagesComposeChipCreator(
     private val context: Context,

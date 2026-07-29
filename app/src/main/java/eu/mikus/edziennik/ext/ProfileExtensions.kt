@@ -14,6 +14,7 @@ import com.google.gson.JsonElement
 import pl.droidsonroids.gif.GifDrawable
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.compat.getDrawableFromRes
 import eu.mikus.edziennik.config.AppData
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.data.db.enums.FeatureType
@@ -21,7 +22,6 @@ import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.utils.ProfileImageHolder
 import eu.mikus.edziennik.utils.models.Date
 import pl.szczodrzynski.navlib.ImageHolder
-import pl.szczodrzynski.navlib.getDrawableFromRes
 
 // TODO refactor Data* fields and make the receiver non-nullable
 operator fun Profile?.set(key: String, value: JsonElement) = this?.studentData?.add(key, value)

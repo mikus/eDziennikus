@@ -10,7 +10,7 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.graphics.ColorUtils
 import com.google.android.material.snackbar.Snackbar
 import eu.mikus.edziennik.R
-import pl.szczodrzynski.navlib.getColorFromAttr
+import eu.mikus.edziennik.compat.getColorFromAttr
 
 class MainSnackbar(val activity: AppCompatActivity) {
     companion object {

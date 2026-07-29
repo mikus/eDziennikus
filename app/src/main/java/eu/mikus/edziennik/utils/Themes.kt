@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.annotation.StyleRes
 import eu.mikus.edziennik.R
-import pl.szczodrzynski.navlib.getColorFromAttr
+import eu.mikus.edziennik.compat.getColorFromAttr
 
 object Themes {
     data class Theme(

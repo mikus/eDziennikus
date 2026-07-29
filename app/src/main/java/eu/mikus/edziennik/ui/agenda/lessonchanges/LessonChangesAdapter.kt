@@ -17,7 +17,7 @@ import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.databinding.TimetableLessonBinding
 import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.utils.managers.NoteManager
-import pl.szczodrzynski.navlib.getColorFromAttr
+import eu.mikus.edziennik.compat.getColorFromAttr
 
 class LessonChangesAdapter(
         val context: Context,

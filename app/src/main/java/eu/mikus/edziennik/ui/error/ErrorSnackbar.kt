@@ -14,7 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.models.ApiError
-import pl.szczodrzynski.navlib.getColorFromAttr
+import eu.mikus.edziennik.compat.getColorFromAttr
 import kotlin.coroutines.CoroutineContext
 
 class ErrorSnackbar(val activity: AppCompatActivity) : CoroutineScope {

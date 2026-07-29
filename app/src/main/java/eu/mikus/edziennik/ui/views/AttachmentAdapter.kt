@@ -25,7 +25,7 @@ import eu.mikus.edziennik.databinding.AttachmentListItemBinding
 import eu.mikus.edziennik.ext.onClick
 import eu.mikus.edziennik.ext.onLongClick
 import eu.mikus.edziennik.utils.Utils
-import pl.szczodrzynski.navlib.colorAttr
+import eu.mikus.edziennik.compat.colorAttr
 import kotlin.coroutines.CoroutineContext
 
 class AttachmentAdapter(
