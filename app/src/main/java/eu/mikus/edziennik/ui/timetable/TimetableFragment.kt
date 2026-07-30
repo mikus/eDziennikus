@@ -13,6 +13,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -36,6 +38,7 @@ import eu.mikus.edziennik.databinding.TimetableFragmentBinding
 import eu.mikus.edziennik.ext.JsonObject
 import eu.mikus.edziennik.ext.getSchoolYearConstrains
 import eu.mikus.edziennik.ext.getStudentData
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.TimetableConfigDialog
 import eu.mikus.edziennik.ui.event.EventManualDialog
@@ -79,10 +82,10 @@ class TimetableFragment : Fragment() {
         app = activity.application as App
         val binding = TimetableFragmentBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = b ?: return
         if (!isAdded) return
@@ -192,27 +195,33 @@ class TimetableFragment : Fragment() {
 
             b.composeView.setAppThemeContent {
                 val requested by vm.requestedDate.collectAsStateWithLifecycle()
-                TimetableScreen(
-                    notPublic = notPublic,
-                    days = days,
-                    initialIndex = initialIndex,
-                    lessonHeight = lessonHeight,
-                    colorSubjectName = colorSubjectName,
-                    requestedDate = requested,
-                    onRequestConsumed = vm::clearRequestedDate,
-                    onPageChanged = { date ->
-                        vm.onPageChanged(date)
-                        pageSelection = date
-                        activity.navView.bottomBar.fabEnable = date.value != Date.getToday().value
-                    },
-                    dayFlow = vm::dayFlow,
-                    onLessonClick = { pl ->
-                        vm.markSeen(pl.lesson)
-                        LessonDetailsDialog(activity, pl.lesson, pl.attendance).show()
-                    },
-                    onSyncClick = { weekStart -> syncWeek(weekStart) },
-                    attendanceIconFactory = attendanceIconFactory,
-                )
+                val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+                PullToRefreshBox(
+                    isRefreshing = refreshing,
+                    onRefresh = { syncFeature(activity, FeatureType.TIMETABLE, JsonObject("weekStart" to currentWeekStart())) },
+                ) {
+                    TimetableScreen(
+                        notPublic = notPublic,
+                        days = days,
+                        initialIndex = initialIndex,
+                        lessonHeight = lessonHeight,
+                        colorSubjectName = colorSubjectName,
+                        requestedDate = requested,
+                        onRequestConsumed = vm::clearRequestedDate,
+                        onPageChanged = { date ->
+                            vm.onPageChanged(date)
+                            pageSelection = date
+                            activity.navView.bottomBar.fabEnable = date.value != Date.getToday().value
+                        },
+                        dayFlow = vm::dayFlow,
+                        onLessonClick = { pl ->
+                            vm.markSeen(pl.lesson)
+                            LessonDetailsDialog(activity, pl.lesson, pl.attendance).show()
+                        },
+                        onSyncClick = { weekStart -> syncWeek(weekStart) },
+                        attendanceIconFactory = attendanceIconFactory,
+                    )
+                }
             }
         }
     }
