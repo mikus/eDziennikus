@@ -10,6 +10,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
@@ -32,6 +34,7 @@ import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.HomeFragmentBinding
 import eu.mikus.edziennik.ext.JsonObject
 import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.BellSyncTimeChooseDialog
 import eu.mikus.edziennik.ui.dialogs.settings.HomeConfigDialog
@@ -60,10 +63,10 @@ class HomeFragment : Fragment() {
         app = activity.application as App
         val binding = HomeFragmentBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = b ?: return
         if (!isAdded) return
@@ -119,39 +122,41 @@ class HomeFragment : Fragment() {
         }, 100)
 
         b.composeView.setAppThemeContent {
+            val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            HomeScreen(
-                state = state,
-                onReorder = viewModel::reorder,
-                onRemove = viewModel::removeCard,
-                onConfigureCards = { HomeCardsDialog(activity, reloadOnDismiss = true).show() },
-                gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
-                onLuckyClick = { StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show() },
-                onEventClick = { EventDetailsDialog(activity, it).show() },
-                onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
-                onOpenAgenda = { activity.navigate(navTarget = NavTarget.AGENDA) },
-                onOpenGrades = { activity.navigate(navTarget = NavTarget.GRADES) },
-                onNoteClick = { note ->
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        val owner = withContext(Dispatchers.IO) { app.noteManager.getOwner(note) } as? Noteable
-                        NoteDetailsDialog(activity, owner, note).show()
-                    }
-                },
-                onAddNote = { NoteEditorDialog(activity, owner = null, editingNote = null, profileId = App.profileId).show() },
-                onOpenNotes = { activity.navigate(navTarget = NavTarget.NOTES) },
-                onOpenTimetable = { activity.navigate(navTarget = NavTarget.TIMETABLE) },
-                onTimetableBellSync = { BellSyncTimeChooseDialog(activity).show() },
-                onTimetableFullscreen = { activity.startActivity(Intent(activity, CounterActivity::class.java)) },
-                onTimetableSync = { weekStart ->
-                    EdziennikTask.syncProfile(
-                        profileId = App.profileId,
-                        featureTypes = setOf(FeatureType.TIMETABLE),
-                        arguments = JsonObject("weekStart" to weekStart),
-                    ).enqueue(activity)
-                },
-                wrappedCardContent = { cardId -> WrappedCard(cardId) },
-                setRefreshEnabled = { b.refreshLayout.isEnabled = it },
-            )
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, null) }) {
+                HomeScreen(
+                    state = state,
+                    onReorder = viewModel::reorder,
+                    onRemove = viewModel::removeCard,
+                    onConfigureCards = { HomeCardsDialog(activity, reloadOnDismiss = true).show() },
+                    gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
+                    onLuckyClick = { StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show() },
+                    onEventClick = { EventDetailsDialog(activity, it).show() },
+                    onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
+                    onOpenAgenda = { activity.navigate(navTarget = NavTarget.AGENDA) },
+                    onOpenGrades = { activity.navigate(navTarget = NavTarget.GRADES) },
+                    onNoteClick = { note ->
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val owner = withContext(Dispatchers.IO) { app.noteManager.getOwner(note) } as? Noteable
+                            NoteDetailsDialog(activity, owner, note).show()
+                        }
+                    },
+                    onAddNote = { NoteEditorDialog(activity, owner = null, editingNote = null, profileId = App.profileId).show() },
+                    onOpenNotes = { activity.navigate(navTarget = NavTarget.NOTES) },
+                    onOpenTimetable = { activity.navigate(navTarget = NavTarget.TIMETABLE) },
+                    onTimetableBellSync = { BellSyncTimeChooseDialog(activity).show() },
+                    onTimetableFullscreen = { activity.startActivity(Intent(activity, CounterActivity::class.java)) },
+                    onTimetableSync = { weekStart ->
+                        EdziennikTask.syncProfile(
+                            profileId = App.profileId,
+                            featureTypes = setOf(FeatureType.TIMETABLE),
+                            arguments = JsonObject("weekStart" to weekStart),
+                        ).enqueue(activity)
+                    },
+                    wrappedCardContent = { cardId -> WrappedCard(cardId) },
+                )
+            }
         }
     }
 

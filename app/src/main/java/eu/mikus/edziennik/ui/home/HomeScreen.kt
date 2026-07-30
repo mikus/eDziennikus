@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +41,6 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Grade
 import eu.mikus.edziennik.data.db.entity.Note
 import eu.mikus.edziennik.data.db.full.EventFull
-import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
 import eu.mikus.edziennik.ui.event.EventRow
 import eu.mikus.edziennik.ui.grades.GradePill
 import eu.mikus.edziennik.ui.notes.NoteCard
@@ -66,18 +67,17 @@ fun HomeScreen(
     onTimetableFullscreen: () -> Unit,
     onTimetableSync: (String) -> Unit,
     wrappedCardContent: @Composable (cardId: Int) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val content = state as? HomeUiState.Content
-    if (content == null) {        // Loading: keep blank but allow pull-to-refresh
-        LaunchedEffect(Unit) { setRefreshEnabled(true) }
+    if (content == null) {        // Loading: blank but pull-to-refreshable
+        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()))
         return
     }
 
     if (content.cards.isEmpty()) {
         Column(
-            modifier.fillMaxSize().padding(24.dp),
+            modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -88,12 +88,10 @@ fun HomeScreen(
             Spacer(Modifier.size(12.dp))
             Button(onClick = onConfigureCards) { Text(stringResource(R.string.home_configure_cards)) }
         }
-        LaunchedEffect(Unit) { setRefreshEnabled(true) }
         return
     }
 
     val listState = rememberLazyListState()
-    SwipeRefreshScrollBridge(listState, setRefreshEnabled)
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         onReorder(from.key as Int, to.key as Int)
     }
