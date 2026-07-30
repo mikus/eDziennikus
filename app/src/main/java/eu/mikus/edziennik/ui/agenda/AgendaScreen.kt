@@ -18,13 +18,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,7 +43,6 @@ import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.full.EventFull
-import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
 import eu.mikus.edziennik.ui.event.EventRow
 import eu.mikus.edziennik.utils.models.Date
 import java.time.YearMonth
@@ -60,13 +60,17 @@ fun AgendaScreen(
     onItemSeen: (EventFull) -> Unit,
     onLessonChangesClick: (Date) -> Unit,
     onTeacherAbsenceClick: (Date) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LaunchedEffect(state) { if (state !is AgendaUiState.Content) setRefreshEnabled(true) }
     when (state) {
-        AgendaUiState.Loading -> Box(modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
-        AgendaUiState.Empty -> Box(modifier.fillMaxSize(), Alignment.Center) {
+        AgendaUiState.Loading -> Box(
+            modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+            Alignment.Center,
+        ) { CircularProgressIndicator() }
+        AgendaUiState.Empty -> Box(
+            modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+            Alignment.Center,
+        ) {
             Text(stringResource(R.string.agenda_no_events_day))
         }
         is AgendaUiState.Content -> AgendaContent(
@@ -79,7 +83,6 @@ fun AgendaScreen(
             onItemSeen = onItemSeen,
             onLessonChangesClick = onLessonChangesClick,
             onTeacherAbsenceClick = onTeacherAbsenceClick,
-            setRefreshEnabled = setRefreshEnabled,
             modifier = modifier,
         )
     }
@@ -96,7 +99,6 @@ private fun AgendaContent(
     onItemSeen: (EventFull) -> Unit,
     onLessonChangesClick: (Date) -> Unit,
     onTeacherAbsenceClick: (Date) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val calendarState = rememberCalendarState(
@@ -106,7 +108,6 @@ private fun AgendaContent(
         firstDayOfWeek = firstDayOfWeekFromLocale(),
     )
     val listState = rememberLazyListState()
-    SwipeRefreshScrollBridge(listState, setRefreshEnabled)
 
     Column(modifier.fillMaxSize()) {
         HorizontalCalendar(

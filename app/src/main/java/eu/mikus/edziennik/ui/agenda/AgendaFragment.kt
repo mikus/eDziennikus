@@ -9,6 +9,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -17,9 +19,11 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.AgendaFragmentBinding
 import eu.mikus.edziennik.ui.agenda.lessonchanges.LessonChangesDialog
 import eu.mikus.edziennik.ui.agenda.teacherabsence.TeacherAbsenceDialog
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.AgendaConfigDialog
 import eu.mikus.edziennik.ui.event.EventDetailsDialog
@@ -44,10 +48,10 @@ class AgendaFragment : Fragment() {
         app = activity.application as App
         val binding = AgendaFragmentBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = b ?: return
         if (!isAdded) return
@@ -101,18 +105,20 @@ class AgendaFragment : Fragment() {
 
         b.composeView.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            AgendaScreen(
-                state = state,
-                startMonth = startMonth,
-                endMonth = endMonth,
-                onDaySelected = viewModel::setSelectedDate,
-                onEventClick = { EventDetailsDialog(activity, it).show() },
-                onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
-                onItemSeen = viewModel::markSeen,
-                onLessonChangesClick = { LessonChangesDialog(activity, App.profileId, defaultDate = it).show() },
-                onTeacherAbsenceClick = { TeacherAbsenceDialog(activity, App.profileId, date = it).show() },
-                setRefreshEnabled = { b.refreshLayout.isEnabled = it },
-            )
+            val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.AGENDA) }) {
+                AgendaScreen(
+                    state = state,
+                    startMonth = startMonth,
+                    endMonth = endMonth,
+                    onDaySelected = viewModel::setSelectedDate,
+                    onEventClick = { EventDetailsDialog(activity, it).show() },
+                    onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
+                    onItemSeen = viewModel::markSeen,
+                    onLessonChangesClick = { LessonChangesDialog(activity, App.profileId, defaultDate = it).show() },
+                    onTeacherAbsenceClick = { TeacherAbsenceDialog(activity, App.profileId, date = it).show() },
+                )
+            }
         }
     }
 
