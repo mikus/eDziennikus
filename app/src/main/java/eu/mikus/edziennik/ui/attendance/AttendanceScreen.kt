@@ -49,7 +49,6 @@ import eu.mikus.edziennik.data.db.entity.Attendance
 import eu.mikus.edziennik.data.db.entity.AttendanceType
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
-import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
 import eu.mikus.edziennik.utils.models.Week
 import kotlinx.coroutines.launch
 
@@ -65,7 +64,6 @@ fun AttendanceScreen(
     onNodeToggle: (NodeKey) -> Unit,
     onLeafClick: (AttendanceFull) -> Unit,
     onItemSeen: (AttendanceFull) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     initialPage: Int,
     onPageChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -88,7 +86,6 @@ fun AttendanceScreen(
             onNodeToggle = onNodeToggle,
             onLeafClick = onLeafClick,
             onItemSeen = onItemSeen,
-            setRefreshEnabled = setRefreshEnabled,
             initialPage = initialPage,
             onPageChange = onPageChange,
             modifier = modifier,
@@ -116,7 +113,6 @@ private fun ContentTabs(
     onNodeToggle: (NodeKey) -> Unit,
     onLeafClick: (AttendanceFull) -> Unit,
     onItemSeen: (AttendanceFull) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     initialPage: Int,
     onPageChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -140,7 +136,6 @@ private fun ContentTabs(
         }
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
             val listState = rememberLazyListState()
-            SwipeRefreshScrollBridge(listState, setRefreshEnabled)
             when (val tab = tabs[page]) {
                 is AttendanceTab.SummaryTab -> SummaryTabContent(
                     tab, period, listState, useSymbols, colorForAttendance, colorForType, icon,

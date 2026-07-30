@@ -9,6 +9,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.fragment.app.Fragment
@@ -18,7 +20,9 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.AttendanceFragmentBinding
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.AttendanceConfigDialog
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
@@ -45,10 +49,10 @@ class AttendanceFragment : Fragment() {
         app = activity.application as App
         val binding = AttendanceFragmentBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = b ?: return
         if (!isAdded) return
@@ -90,24 +94,26 @@ class AttendanceFragment : Fragment() {
         b.composeView.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val period by viewModel.period.collectAsStateWithLifecycle()
-            AttendanceScreen(
-                state = state,
-                period = period,
-                useSymbols = manager.useSymbols,
-                colorForAttendance = { Color(manager.getAttendanceColor(it)) },
-                colorForType = { Color(manager.getAttendanceColor(it)) },
-                icon = { manager.getAttendanceIcon(it) },
-                onPeriodChange = viewModel::setPeriod,
-                onNodeToggle = viewModel::toggleNode,
-                onLeafClick = { AttendanceDetailsDialog(activity, it).show() },
-                onItemSeen = viewModel::markSeen,
-                setRefreshEnabled = { b.refreshLayout.isEnabled = it },
-                initialPage = pageSelection,
-                onPageChange = {
-                    pageSelection = it
-                    app.profile.config.attendance.attendancePageSelection = it
-                },
-            )
+            val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.ATTENDANCE) }) {
+                AttendanceScreen(
+                    state = state,
+                    period = period,
+                    useSymbols = manager.useSymbols,
+                    colorForAttendance = { Color(manager.getAttendanceColor(it)) },
+                    colorForType = { Color(manager.getAttendanceColor(it)) },
+                    icon = { manager.getAttendanceIcon(it) },
+                    onPeriodChange = viewModel::setPeriod,
+                    onNodeToggle = viewModel::toggleNode,
+                    onLeafClick = { AttendanceDetailsDialog(activity, it).show() },
+                    onItemSeen = viewModel::markSeen,
+                    initialPage = pageSelection,
+                    onPageChange = {
+                        pageSelection = it
+                        app.profile.config.attendance.attendancePageSelection = it
+                    },
+                )
+            }
         }
     }
 

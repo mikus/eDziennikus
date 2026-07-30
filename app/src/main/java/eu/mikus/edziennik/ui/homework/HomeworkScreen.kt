@@ -33,7 +33,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.full.EventFull
-import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
 import eu.mikus.edziennik.ui.event.EventRow
 import kotlinx.coroutines.launch
 
@@ -46,7 +45,6 @@ fun HomeworkScreen(
     onItemSeen: (EventFull) -> Unit,
     initialPage: Int,
     onPageChange: (Int) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -59,9 +57,7 @@ fun HomeworkScreen(
             val scope = rememberCoroutineScope()
             val currentListState = rememberLazyListState()
             val pastListState = rememberLazyListState()
-            val activeListState = if (pagerState.currentPage == 0) currentListState else pastListState
 
-            SwipeRefreshScrollBridge(activeListState, setRefreshEnabled)
             LaunchedEffect(pagerState) {
                 snapshotFlow { pagerState.currentPage }.collect { onPageChange(it) }
             }

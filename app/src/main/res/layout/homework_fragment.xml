@@ -1,15 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator
-        android:id="@+id/refreshLayout"
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/homeworkCompose"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <androidx.compose.ui.platform.ComposeView
-            android:id="@+id/homeworkCompose"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
-    </eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator>
+        android:layout_height="match_parent" />
 </layout>
