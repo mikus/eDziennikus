@@ -10,9 +10,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -24,14 +24,15 @@ import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.AnnouncementGetEvent
+import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.data.db.full.AnnouncementFull
 import eu.mikus.edziennik.databinding.DialogAnnouncementBinding
 import eu.mikus.edziennik.databinding.FragmentAnnouncementsBinding
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.greenrobot.eventbus.EventBus
@@ -56,10 +57,10 @@ class AnnouncementsFragment : Fragment() {
         app = activity.application as App
         val binding = FragmentAnnouncementsBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = b ?: return
         if (!isAdded) return
@@ -89,18 +90,14 @@ class AnnouncementsFragment : Fragment() {
         b.announcementsCompose.setAppThemeContent {
             val listState = rememberLazyListState()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            // Swipe-refresh bridge: drive the fragment's own refreshLayout from scroll
-            // position, reactively, in the HOST (not inside AnnouncementsScreen).
-            LaunchedEffect(listState) {
-                snapshotFlow { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 }
-                    .distinctUntilChanged()
-                    .collect { atTop -> b.refreshLayout.isEnabled = atTop }
+            val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.ANNOUNCEMENTS) }) {
+                AnnouncementsScreen(
+                    state = state,
+                    onAnnouncementClick = ::onAnnouncementClick,
+                    listState = listState,
+                )
             }
-            AnnouncementsScreen(
-                state = state,
-                onAnnouncementClick = ::onAnnouncementClick,
-                listState = listState,
-            )
         }
     }
 
