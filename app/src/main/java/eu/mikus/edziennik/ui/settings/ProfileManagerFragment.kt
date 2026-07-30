@@ -27,7 +27,6 @@ class ProfileManagerFragment : Fragment() {
         requireContext().theme.applyStyle(Themes.appTheme, true)
         // activity, context and profile is valid
         b = FragmentProfileManagerBinding.inflate(inflater)
-        b.refreshLayout.setParent(activity.swipeRefreshLayout)
         return b.root
     }
 

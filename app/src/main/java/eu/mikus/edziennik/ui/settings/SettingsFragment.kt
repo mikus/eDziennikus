@@ -65,8 +65,6 @@ class SettingsFragment : Fragment() {
         app = activity.application as App
         val binding = SettingsFragmentBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
-        binding.refreshLayout.isEnabled = false      // Settings never pull-to-refreshes
         return binding.root
     }
 
