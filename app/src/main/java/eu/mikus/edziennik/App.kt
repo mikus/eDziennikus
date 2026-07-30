@@ -34,6 +34,7 @@ import okhttp3.OkHttpClient
 import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.config.AppData
 import eu.mikus.edziennik.config.Config
+import eu.mikus.edziennik.data.SyncStatus
 import eu.mikus.edziennik.data.api.events.ProfileListEmptyEvent
 import eu.mikus.edziennik.utils.AppCertificateReader
 import eu.mikus.edziennik.data.db.AppDb
@@ -101,6 +102,7 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
     val timetableManager by lazy { TimetableManager(this) }
     val updateManager by lazy { UpdateManager(this) }
     val userActionManager by lazy { UserActionManager(this) }
+    val syncStatus by lazy { SyncStatus() }
 
     val db
         get() = App.db
