@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android">
-    <eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator
-        android:id="@+id/refreshLayout"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-        <ScrollView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
-            <LinearLayout
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_height="match_parent"
+                android:text="@string/hello_blank_fragment" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:text="@string/hello_blank_fragment" />
-
-            </LinearLayout>
-        </ScrollView>
-    </eu.mikus.edziennik.utils.SwipeRefreshLayoutNoIndicator>
+        </LinearLayout>
+    </ScrollView>
 </layout>

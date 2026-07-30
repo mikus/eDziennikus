@@ -23,7 +23,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -69,10 +71,10 @@ fun AttendanceScreen(
     modifier: Modifier = Modifier,
 ) {
     when (state) {
-        AttendanceUiState.Loading -> Box(modifier.fillMaxSize(), Alignment.Center) {
+        AttendanceUiState.Loading -> Box(modifier.fillMaxSize().verticalScroll(rememberScrollState()), Alignment.Center) {
             CircularProgressIndicator()
         }
-        AttendanceUiState.Empty -> Box(modifier.fillMaxSize(), Alignment.Center) {
+        AttendanceUiState.Empty -> Box(modifier.fillMaxSize().verticalScroll(rememberScrollState()), Alignment.Center) {
             Text(stringResource(R.string.attendances_no_data))
         }
         is AttendanceUiState.Content -> ContentTabs(

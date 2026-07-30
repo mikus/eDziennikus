@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -121,7 +123,7 @@ private fun TimetableDayPage(
     attendanceIconFactory: (android.content.Context, AttendanceFull) -> Drawable?,
 ) {
     when (state) {
-        is TimetableDayUiState.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+        is TimetableDayUiState.Loading -> Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), Alignment.Center) { CircularProgressIndicator() }
         is TimetableDayUiState.NoTimetable -> CenteredState(
             title = stringResource(R.string.timetable_no_timetable_title),
             body = stringResource(R.string.timetable_no_timetable_text),

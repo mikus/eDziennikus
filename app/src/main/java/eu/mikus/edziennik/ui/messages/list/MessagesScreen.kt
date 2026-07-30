@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -115,7 +117,7 @@ private fun MessageList(
 ) {
     if (items.isEmpty()) {
         val msg = if (query.isBlank()) R.string.messages_no_data else R.string.messages_search_no_results
-        Box(Modifier.fillMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp), contentAlignment = Alignment.Center) {
             Text(stringResource(msg), style = MaterialTheme.typography.bodyLarge, fontStyle = FontStyle.Italic)
         }
         return
