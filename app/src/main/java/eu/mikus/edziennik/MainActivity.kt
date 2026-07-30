@@ -117,6 +117,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         private set
     private var navArguments: Bundle? = null
 
+    // SP2: the 9 feature screens that now own a PullToRefreshBox. The host swipeRefreshLayout wraps the
+    // shared @id/fragment container, so its indicator must NOT draw over these (double spinner). All OTHER
+    // screens (Notes/Teachers/Notifications/MessageRead/MessageCompose/debug) keep the host spinner.
+    private val boxedNavTargets = setOf(
+        NavTarget.HOME, NavTarget.TIMETABLE, NavTarget.AGENDA, NavTarget.GRADES, NavTarget.MESSAGES,
+        NavTarget.HOMEWORK, NavTarget.BEHAVIOUR, NavTarget.ATTENDANCE, NavTarget.ANNOUNCEMENTS,
+    )
+
     private val navBackStack = mutableListOf<Pair<NavTarget, Bundle?>>()
     private var navLoading = true
 
@@ -550,7 +558,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskStartedEvent(event: ApiTaskStartedEvent) {
-        swipeRefreshLayout.isRefreshing = true
+        if (!::navTarget.isInitialized || navTarget !in boxedNavTargets)
+            swipeRefreshLayout.isRefreshing = true
         if (event.profileId == App.profileId) {
             navView.toolbar.apply {
                 subtitleFormat = null
