@@ -10,6 +10,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -19,9 +21,10 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.databinding.FragmentBehaviourBinding
-import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,10 +46,10 @@ class BehaviourFragment : Fragment() {
         if (context == null) return null
         val binding = FragmentBehaviourBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = b ?: return
         if (!isAdded) return
@@ -76,13 +79,15 @@ class BehaviourFragment : Fragment() {
         b.behaviourCompose.setAppThemeContent {
             val listState = rememberLazyListState()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            SwipeRefreshScrollBridge(listState) { enabled -> b.refreshLayout.isEnabled = enabled }
-            BehaviourScreen(
-                state = state,
-                onFilterChange = viewModel::setFilter,
-                onMarkSeen = viewModel::markSeen,
-                listState = listState,
-            )
+            val refreshing by activity.app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.BEHAVIOUR) }) {
+                BehaviourScreen(
+                    state = state,
+                    onFilterChange = viewModel::setFilter,
+                    onMarkSeen = viewModel::markSeen,
+                    listState = listState,
+                )
+            }
         }
     }
 

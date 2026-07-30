@@ -9,6 +9,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.fragment.app.Fragment
@@ -19,10 +21,12 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Grade
+import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.databinding.GradesListFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
 import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.GradesConfigDialog
 import eu.mikus.edziennik.utils.models.Date
@@ -46,10 +50,10 @@ class GradesListFragment : Fragment() {
         app = activity.application as App
         val binding = GradesListFragmentBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val b = b ?: return
         if (!isAdded) return
@@ -86,28 +90,30 @@ class GradesListFragment : Fragment() {
         val ctx = activity
         b.gradesCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
-            GradesScreen(
-                state = state,
-                formatters = GradesFormatters(
-                    gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
-                    averageText = { snap -> app.gradesManager.getAverageString(ctx, snap.toGradesAverages())?.toString() },
-                    semesterAverageText = { snap, n ->
-                        app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true, showSemester = n)?.toString()
-                    },
-                    yearAverageText = { snap ->
-                        app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true)?.toString()
-                    },
-                    yearSummaryText = { count, snap -> app.gradesManager.getYearSummaryString(ctx, count, snap.toGradesAverages()) },
-                    weightText = { app.gradesManager.getWeightString(ctx, it, showClassAverage = true)?.toString() },
-                    gradeDateText = ::gradeDateText,
-                ),
-                onSubjectToggle = viewModel::toggleSubject,
-                onSemesterToggle = viewModel::toggleSemester,
-                onGradeClick = ::onGradeClick,
-                onEditorClick = ::onEditorClick,
-                onItemSeen = viewModel::markSeen,
-                setRefreshEnabled = { b.refreshLayout.isEnabled = it },
-            )
+            val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.GRADES) }) {
+                GradesScreen(
+                    state = state,
+                    formatters = GradesFormatters(
+                        gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
+                        averageText = { snap -> app.gradesManager.getAverageString(ctx, snap.toGradesAverages())?.toString() },
+                        semesterAverageText = { snap, n ->
+                            app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true, showSemester = n)?.toString()
+                        },
+                        yearAverageText = { snap ->
+                            app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true)?.toString()
+                        },
+                        yearSummaryText = { count, snap -> app.gradesManager.getYearSummaryString(ctx, count, snap.toGradesAverages()) },
+                        weightText = { app.gradesManager.getWeightString(ctx, it, showClassAverage = true)?.toString() },
+                        gradeDateText = ::gradeDateText,
+                    ),
+                    onSubjectToggle = viewModel::toggleSubject,
+                    onSemesterToggle = viewModel::toggleSemester,
+                    onGradeClick = ::onGradeClick,
+                    onEditorClick = ::onEditorClick,
+                    onItemSeen = viewModel::markSeen,
+                )
+            }
         }
     }
 

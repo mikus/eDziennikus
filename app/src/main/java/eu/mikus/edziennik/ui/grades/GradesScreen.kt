@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +42,6 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Grade
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
-import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
 
 @Composable
 fun GradesScreen(
@@ -52,24 +52,21 @@ fun GradesScreen(
     onGradeClick: (GradeFull) -> Unit,
     onEditorClick: (Long, Int) -> Unit,
     onItemSeen: (GradeFull) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Non-Content states establish a defined refresh baseline (Content's SwipeRefreshScrollBridge then owns it).
-    LaunchedEffect(state) { if (state !is GradesUiState.Content) setRefreshEnabled(true) }
     when (state) {
         GradesUiState.Loading ->
-            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         GradesUiState.Empty -> CenteredMessage(modifier, R.string.grades_no_data)
         GradesUiState.Unsupported -> CenteredMessage(modifier, R.string.grades_university_unsupported)
         is GradesUiState.Content -> GradesList(state, formatters,
-            onSubjectToggle, onSemesterToggle, onGradeClick, onEditorClick, onItemSeen, setRefreshEnabled, modifier)
+            onSubjectToggle, onSemesterToggle, onGradeClick, onEditorClick, onItemSeen, modifier)
     }
 }
 
 @Composable
 private fun CenteredMessage(modifier: Modifier, res: Int) {
-    Box(modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+    Box(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), contentAlignment = Alignment.Center) {
         Text(stringResource(res), style = MaterialTheme.typography.headlineSmall, fontStyle = FontStyle.Italic)
     }
 }
@@ -83,11 +80,9 @@ private fun GradesList(
     onGradeClick: (GradeFull) -> Unit,
     onEditorClick: (Long, Int) -> Unit,
     onItemSeen: (GradeFull) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
     modifier: Modifier,
 ) {
     val listState: LazyListState = rememberLazyListState()
-    SwipeRefreshScrollBridge(listState, setRefreshEnabled)
     LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(vertical = 8.dp)) {
         state.subjects.forEach { subject ->
             item(key = "s${subject.subjectId}") {
