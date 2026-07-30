@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -35,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Message
 import eu.mikus.edziennik.data.db.full.MessageFull
-import eu.mikus.edziennik.ui.compose.SwipeRefreshScrollBridge
 import kotlinx.coroutines.launch
 
 private fun tabTitleRes(type: Int): Int = when (type) {
@@ -45,6 +46,7 @@ private fun tabTitleRes(type: Int): Int = when (type) {
     else -> R.string.messages_tab_draft
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagesScreen(
     state: MessagesUiState,
@@ -53,7 +55,8 @@ fun MessagesScreen(
     onStarClick: (MessageFull) -> Unit,
     initialPage: Int,
     onPageChange: (Int) -> Unit,
-    setRefreshEnabled: (Boolean) -> Unit,
+    isRefreshing: Boolean,
+    onRefresh: (tabType: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -65,11 +68,7 @@ fun MessagesScreen(
             val scope = rememberCoroutineScope()
             // key() per tab so the remember-in-a-loop stays slot-stable even if the tab set ever varies
             val listStates = state.tabs.map { tab -> key(tab.type) { rememberLazyListState() } }
-            val activeType = state.tabs[pagerState.currentPage].type
 
-            SwipeRefreshScrollBridge(listStates[pagerState.currentPage]) { atTop ->
-                setRefreshEnabled(atTop && activeType in Message.TYPE_RECEIVED..Message.TYPE_SENT)
-            }
             LaunchedEffect(pagerState) {
                 snapshotFlow { pagerState.currentPage }.collect { onPageChange(it) }
             }
@@ -92,7 +91,14 @@ fun MessagesScreen(
                     }
                 }
                 HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
-                    MessageList(state.tabs[page].items, state.query, listStates[page], onMessageClick, onStarClick)
+                    val tab = state.tabs[page]
+                    if (tab.type in Message.TYPE_RECEIVED..Message.TYPE_SENT) {
+                        PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = { onRefresh(tab.type) }) {
+                            MessageList(tab.items, state.query, listStates[page], onMessageClick, onStarClick)
+                        }
+                    } else {
+                        MessageList(tab.items, state.query, listStates[page], onMessageClick, onStarClick)
+                    }
                 }
             }
         }

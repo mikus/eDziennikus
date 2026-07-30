@@ -16,10 +16,13 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.db.entity.Message
+import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.databinding.MessagesFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
 import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.MessagesConfigDialog
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
@@ -42,7 +45,6 @@ class MessagesFragment : Fragment() {
         app = activity.application as App
         val binding = MessagesFragmentBinding.inflate(inflater, container, false)
         b = binding
-        binding.refreshLayout.setParent(activity.swipeRefreshLayout)
         return binding.root
     }
 
@@ -84,6 +86,7 @@ class MessagesFragment : Fragment() {
 
         b.messagesCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
             MessagesScreen(
                 state = state,
                 onQueryChange = viewModel::setQuery,
@@ -91,7 +94,13 @@ class MessagesFragment : Fragment() {
                 onStarClick = { viewModel.setStarred(it, !it.isStarred) },
                 initialPage = pageSelection,
                 onPageChange = { pageSelection = it },
-                setRefreshEnabled = { b.refreshLayout.isEnabled = it },
+                isRefreshing = refreshing,
+                onRefresh = { type ->
+                    when (type) {
+                        Message.TYPE_RECEIVED -> syncFeature(activity, FeatureType.MESSAGES_INBOX)
+                        Message.TYPE_SENT -> syncFeature(activity, FeatureType.MESSAGES_SENT)
+                    }
+                },
             )
         }
     }
