@@ -28,6 +28,9 @@ import eu.mikus.edziennik.ext.appendText
 import eu.mikus.edziennik.ext.fixName
 import eu.mikus.edziennik.ext.setText
 import eu.mikus.edziennik.ui.messages.MessagesUtils
+import eu.mikus.edziennik.ui.messages.compose.SubjectMode
+import eu.mikus.edziennik.ui.messages.compose.greetingFor
+import eu.mikus.edziennik.ui.messages.compose.subjectMode
 import eu.mikus.edziennik.utils.TextInputKeyboardEdit
 import eu.mikus.edziennik.utils.html.BetterHtml
 import eu.mikus.edziennik.utils.managers.TextStylingManager.HtmlMode.ORIGINAL
@@ -50,6 +53,22 @@ class MessageManager(private val app: App) {
         val greetingOnReply: Boolean,
         val greetingOnForward: Boolean,
         val greetingText: String,
+    )
+
+    /** Everything the Compose editor needs to seed itself from a nav-args bundle. */
+    data class InitialCompose(
+        val recipients: List<Teacher>,
+        val subject: String?,
+        val body: CharSequence?,
+        val draftMessageId: Long?,
+        val isDraft: Boolean,
+    )
+
+    data class GreetingConfig(
+        val onCompose: Boolean,
+        val onReply: Boolean,
+        val onForward: Boolean,
+        val text: String,
     )
 
     private val textStylingManager
@@ -183,6 +202,157 @@ class MessageManager(private val app: App) {
             app.db.messageRecipientDao().addAll(recipients)
             app.db.metadataDao().add(metadata)
         }
+    }
+
+    /**
+     * Data-based counterpart of the legacy [saveAsDraft] - takes the editor state as plain values
+     * instead of reading it out of Views. Same DB writes.
+     */
+    suspend fun saveAsDraft(
+        profileId: Int,
+        messageId: Long?,
+        recipients: List<Teacher>,
+        subject: String,
+        bodyHtml: String,
+    ) {
+        withContext(Dispatchers.Default) {
+            if (messageId != null) {
+                app.db.messageRecipientDao().clearFor(profileId, messageId)
+            }
+
+            val message = Message(
+                profileId = profileId,
+                id = messageId ?: System.currentTimeMillis(),
+                type = Message.TYPE_DRAFT,
+                subject = subject,
+                body = bodyHtml,
+                senderId = -1L,
+                addedDate = System.currentTimeMillis(),
+            )
+            val metadata = Metadata(profileId, MetadataType.MESSAGE, message.id, true, true)
+
+            app.db.messageDao().replace(message)
+            app.db.messageRecipientDao().addAll(recipients.map {
+                MessageRecipient(profileId, it.id, message.id)
+            })
+            app.db.metadataDao().add(metadata)
+        }
+    }
+
+    /**
+     * Data-based counterpart of [fillWithBundle] (+ the fillWith* helpers) - returns what the
+     * Compose editor should start with, instead of writing into Views.
+     *
+     * A null [args] is treated as an empty bundle (MainActivity always hands the fragment
+     * `args ?: Bundle()`, so this is the "new message" case).
+     */
+    fun fillFromBundle(
+        context: Context,
+        args: Bundle?,
+        teachers: List<Teacher>,
+        greeting: GreetingConfig,
+    ): InitialCompose {
+        val messageJson = args?.getString("message")
+        val teacherId = args?.getLong("messageRecipientId") ?: 0L
+        val argsSubject = args?.getString("messageSubject")
+        val payloadType = args?.getString("type")
+
+        val message = messageJson?.let { app.gson.fromJson(it, MessageFull::class.java) }
+
+        return when {
+            message != null && message.isDraft -> InitialCompose(
+                recipients = resolveRecipients(teachers, message.recipients?.map { it.id } ?: emptyList()),
+                subject = message.subject,
+                body = BetterHtml.fromHtml(
+                    context,
+                    message.body ?: context.getString(R.string.messages_compose_body_load_failed),
+                ),
+                draftMessageId = message.id,
+                isDraft = true,
+            )
+            message != null -> InitialCompose(
+                recipients = resolveRecipients(teachers, listOfNotNull(message.senderId)),
+                subject = when (subjectMode(payloadType)) {
+                    SubjectMode.REPLY ->
+                        context.getString(R.string.messages_compose_subject_reply_format, message.subject)
+                    SubjectMode.FORWARD ->
+                        context.getString(R.string.messages_compose_subject_forward_format, message.subject)
+                    SubjectMode.NONE -> argsSubject
+                },
+                body = buildReplyForwardBody(context, message, payloadType, greeting),
+                draftMessageId = null,
+                isDraft = false,
+            )
+            // message-a-teacher (a recipient ID was passed) and a plain new message differ
+            // only in the pre-filled recipient
+            else -> InitialCompose(
+                recipients = if (teacherId != 0L) resolveRecipients(teachers, listOf(teacherId)) else emptyList(),
+                subject = argsSubject,
+                body = if (greeting.onCompose) greeting.text else null,
+                draftMessageId = null,
+                isDraft = false,
+            )
+        }
+    }
+
+    /**
+     * Looks the IDs up in [teachers], attaching the avatar the legacy chips had
+     * (see [createRecipientChips]). Unknown IDs are dropped.
+     */
+    private fun resolveRecipients(teachers: List<Teacher>, teacherIds: List<Long>): List<Teacher> {
+        return teacherIds.mapNotNull { teacherId ->
+            teachers.firstOrNull { it.id == teacherId }?.also { teacher ->
+                teacher.image = MessagesUtils.getProfileImage(
+                    diameterDp = 48,
+                    textSizeBigDp = 24,
+                    textSizeMediumDp = 16,
+                    textSizeSmallDp = 12,
+                    count = 1,
+                    teacher.fullName
+                )
+            }
+        }
+    }
+
+    /** The quoted-original body of a reply/forward, incl. the greeting - as in [fillWithMessage]. */
+    private fun buildReplyForwardBody(
+        context: Context,
+        message: MessageFull,
+        payloadType: String?,
+        greetingConfig: GreetingConfig,
+    ): CharSequence {
+        val spanned = SpannableStringBuilder()
+
+        val dateString = context.getString(
+            R.string.messages_reply_date_time_format,
+            Date.fromMillis(message.addedDate).formattedStringShort,
+            Time.fromMillis(message.addedDate).stringHM,
+        )
+        // add original message info
+        spanned.appendText("W dniu ")
+        spanned.appendSpan(dateString, ItalicSpan(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spanned.appendText(", ")
+        spanned.appendSpan(message.senderName.fixName(), ItalicSpan(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spanned.appendText(" napisał(a):")
+        spanned.setSpan(BoldSpan(), 0, spanned.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spanned.appendText("\n\n")
+
+        val greeting = greetingFor(
+            payloadType = payloadType,
+            greetingText = greetingConfig.text,
+            onReply = greetingConfig.onReply,
+            onForward = greetingConfig.onForward,
+        )
+
+        if (greeting == null) {
+            spanned.replace(0, 0, "\n\n")
+        } else {
+            spanned.replace(0, 0, "$greeting\n\n\n")
+        }
+
+        val body = message.body ?: context.getString(R.string.messages_compose_body_load_failed)
+        spanned.appendText(BetterHtml.fromHtml(context, body))
+        return spanned
     }
 
     fun fillWithBundle(config: UIConfig, args: Bundle?): Message? {
