@@ -12,6 +12,8 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -570,7 +572,12 @@ private fun ConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(stringResource(title)) },
-        text = { Text(stringResource(message)) },
+        // M3 measures the `text` slot with weight(1f, fill = false) and does NOT scroll it, but the
+        // AppCompat dialogs these replace wrapped their message in AlertController's NestedScrollView.
+        // Without this, the two-paragraph save-draft body clips unreachably at a large font scale or
+        // in landscape - an undeclared behaviour change. The buttons sit outside the weighted slot, so
+        // they stay reachable either way.
+        text = { Text(stringResource(message), modifier = Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text(stringResource(confirmLabel)) }
         },
