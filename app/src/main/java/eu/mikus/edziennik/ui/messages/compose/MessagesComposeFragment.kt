@@ -9,19 +9,24 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
@@ -35,6 +40,7 @@ import eu.mikus.edziennik.data.api.events.MessageSentEvent
 import eu.mikus.edziennik.data.api.events.RecipientListGetEvent
 import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.db.entity.Message
+import eu.mikus.edziennik.data.db.entity.Teacher
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.databinding.MessagesComposeFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
@@ -96,6 +102,25 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
     private var subjectError by mutableStateOf<String?>(null)
     private var bodyError by mutableStateOf<String?>(null)
 
+    /**
+     * Which confirm dialog is showing, if any. ONE nullable field rather than three booleans, so two
+     * dialogs cannot be open at once: ViewGroup split-touch is on by default, and two TextButtons
+     * receiving pointer streams in the same frame could otherwise run saveDraft() + navigate() AND
+     * resumePausedNavigation(), or enqueue messageSend twice.
+     */
+    private sealed interface Prompt {
+        data object SaveDraft : Prompt
+        data object DiscardDraft : Prompt
+
+        /** Carries the values validated in [sendMessage], so a confirmed send cannot use others. */
+        data class Send(val recipients: List<Teacher>, val subject: String) : Prompt
+    }
+
+    private var prompt by mutableStateOf<Prompt?>(null)
+
+    /** Reads and clears in one step, so a second press in the same frame is a no-op. */
+    private fun consumePrompt(): Prompt? = prompt.also { prompt = null }
+
     private val isLibrus
         get() = app.profile.loginStoreType == LoginType.LIBRUS
 
@@ -111,7 +136,7 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
 
     override fun onDestroy() {
         EventBus.getDefault().unregister(this)
-        // NOTE: the job is deliberately NOT cancelled here - saveDraftDialog() saves and navigates
+        // NOTE: the job is deliberately NOT cancelled here - saveDraftAndLeave() saves and navigates
         // away in the same handler, so cancelling on destroy would abort the draft write.
         super.onDestroy()
     }
@@ -210,6 +235,52 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
                     },
                 )
             }
+
+            // Sibling of the initialReady branch, not inside its else: a prompt nested there could
+            // not render while the loading indicator is up. Defence in depth - that state is
+            // currently unreachable (the FAB path returns early on empty recipients, the dirty check
+            // cannot be true before the screen composes, and the discard item only exists after
+            // applyInitialState has set initialReady) - but it is free.
+            when (prompt) {
+                null -> Unit
+                Prompt.SaveDraft -> ConfirmDialog(
+                    title = R.string.messages_compose_save_draft_title,
+                    message = R.string.messages_compose_save_draft_text,
+                    confirmLabel = R.string.save,
+                    dismissLabel = R.string.discard,
+                    // Gate on the READ, not just call it: two lambdas that call consumePrompt() and
+                    // discard the result both still run if SAVE and DISCARD are pressed in the same
+                    // input dispatch, which would save + navigate(MESSAGES) AND then replay the
+                    // originally-blocked target via resumePausedNavigation().
+                    onConfirm = { if (consumePrompt() == Prompt.SaveDraft) saveDraftAndLeave() },
+                    // DISCARD: don't save, but DO let the blocked navigation through
+                    onDismissButton = {
+                        if (consumePrompt() == Prompt.SaveDraft) activity.resumePausedNavigation()
+                    },
+                    // dismissed without choosing: stay in the editor, navigation stays paused
+                    onDismissRequest = { prompt = null },
+                )
+                Prompt.DiscardDraft -> ConfirmDialog(
+                    title = R.string.messages_compose_discard_draft_title,
+                    message = R.string.messages_compose_discard_draft_text,
+                    confirmLabel = R.string.remove,
+                    dismissLabel = R.string.cancel,
+                    onConfirm = { if (consumePrompt() == Prompt.DiscardDraft) discardDraft() },
+                    onDismissButton = { prompt = null },
+                    onDismissRequest = { prompt = null },
+                )
+                is Prompt.Send -> ConfirmDialog(
+                    title = R.string.messages_compose_confirm_title,
+                    message = R.string.messages_compose_confirm_text,
+                    confirmLabel = R.string.send,
+                    dismissLabel = R.string.cancel,
+                    onConfirm = {
+                        (consumePrompt() as? Prompt.Send)?.let { send(it.recipients, it.subject) }
+                    },
+                    onDismissButton = { prompt = null },
+                    onDismissRequest = { prompt = null },
+                )
+            }
         }
     }
 
@@ -219,7 +290,7 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             .withIcon(CommunityMaterial.Icon3.cmd_text_box_remove_outline)
             .withOnClickListener {
                 activity.bottomSheet.close()
-                discardDraftDialog()
+                prompt = Prompt.DiscardDraft
             }
 
         activity.bottomSheet.prependItems(
@@ -324,23 +395,14 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             && (!changedBody || bodyText.isEmpty() || bodyText == greeting)
         )
             return true
-        saveDraftDialog()
+        prompt = Prompt.SaveDraft
         return false
     }
 
-    private fun saveDraftDialog() {
-        MaterialAlertDialogBuilder(activity)
-            .setTitle(R.string.messages_compose_save_draft_title)
-            .setMessage(R.string.messages_compose_save_draft_text)
-            .setPositiveButton(R.string.save) { _, _ ->
-                saveDraft()
-                MessagesFragment.pageSelection = Message.TYPE_DRAFT
-                activity.navigate(navTarget = NavTarget.MESSAGES, skipBeforeNavigate = true)
-            }
-            .setNegativeButton(R.string.discard) { _, _ ->
-                activity.resumePausedNavigation()
-            }
-            .show()
+    private fun saveDraftAndLeave() {
+        saveDraft()
+        MessagesFragment.pageSelection = Message.TYPE_DRAFT
+        activity.navigate(navTarget = NavTarget.MESSAGES, skipBeforeNavigate = true)
     }
 
     /**
@@ -373,21 +435,14 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         addDiscardDraftItem()
     }
 
-    private fun discardDraftDialog() {
-        MaterialAlertDialogBuilder(activity)
-            .setTitle(R.string.messages_compose_discard_draft_title)
-            .setMessage(R.string.messages_compose_discard_draft_text)
-            .setPositiveButton(R.string.remove) { _, _ ->
-                launch {
-                    vm.draftMessageId.value?.let {
-                        app.messageManager.deleteDraft(App.profileId, it)
-                    }
-                    Toast.makeText(activity, R.string.messages_compose_draft_discarded, Toast.LENGTH_SHORT).show()
-                    activity.navigateUp(skipBeforeNavigate = true)
-                }
+    private fun discardDraft() {
+        launch {
+            vm.draftMessageId.value?.let {
+                app.messageManager.deleteDraft(App.profileId, it)
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+            Toast.makeText(activity, R.string.messages_compose_draft_discarded, Toast.LENGTH_SHORT).show()
+            activity.navigateUp(skipBeforeNavigate = true)
+        }
     }
 
     private fun sendMessage() {
@@ -428,19 +483,17 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         activity.bottomSheet.hideKeyboard()
         clearBodyComposingSpans()
 
-        MaterialAlertDialogBuilder(activity)
-            .setTitle(R.string.messages_compose_confirm_title)
-            .setMessage(R.string.messages_compose_confirm_text)
-            .setPositiveButton(R.string.send) { _, _ ->
-                EdziennikTask.messageSend(
-                    App.profileId,
-                    recipients.toSet(),
-                    subject.trim(),
-                    sendBody(),
-                ).enqueue(activity)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        prompt = Prompt.Send(recipients = recipients, subject = subject)
+    }
+
+    /** [sendBody] is read HERE, at confirm time, not when the prompt was raised. */
+    private fun send(recipients: List<Teacher>, subject: String) {
+        EdziennikTask.messageSend(
+            App.profileId,
+            recipients.toSet(),
+            subject.trim(),
+            sendBody(),
+        ).enqueue(activity)
     }
 
     override fun onResume() {
@@ -491,4 +544,38 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
                 "sentDate" to event.sentDate
         ), skipBeforeNavigate = true)
     }
+}
+
+/**
+ * The shared shape of the three message-compose confirms as a native M3 [AlertDialog], so they get
+ * AppTheme's M3 shapes/colours/buttons instead of the platform MD2 dialog theme.
+ *
+ * File-private on purpose: the fan-out is one file / three call sites, and every helper promoted to
+ * a shared location in earlier phases cleared at least two files.
+ *
+ * All three callbacks are REQUIRED. `onDismissRequest` fires for back press and outside tap only, so
+ * the dismiss button needs its own slot - the save-draft prompt's three outcomes (save / discard-and-
+ * navigate / stay put) are distinguishable ONLY if those two are separate.
+ */
+@Composable
+private fun ConfirmDialog(
+    @StringRes title: Int,
+    @StringRes message: Int,
+    @StringRes confirmLabel: Int,
+    @StringRes dismissLabel: Int,
+    onConfirm: () -> Unit,
+    onDismissButton: () -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(title)) },
+        text = { Text(stringResource(message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(confirmLabel)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissButton) { Text(stringResource(dismissLabel)) }
+        },
+    )
 }
