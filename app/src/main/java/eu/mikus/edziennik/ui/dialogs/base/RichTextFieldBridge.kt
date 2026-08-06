@@ -134,7 +134,11 @@ fun RichTextFieldBridge(
 
             // Seed the field ONCE from the stored HTML. factory runs a single time, so this cannot
             // clobber user edits on recompose; the spans in `initialHtml` survive into the Editable.
-            initialHtml?.let { edit.setText(it) }
+            // In PLAIN mode strip them first (legacy did `text.setText(text.toString())` when
+            // textStyling was off) so a seeded reply quote isn't persisted as <b>/<i> in a draft.
+            initialHtml?.let {
+                edit.setText(if (stylingMode == RichTextStyling.PLAIN) it.toString() else it)
+            }
 
             if (onChanged != null)
                 edit.doAfterTextChanged { onChanged() }
@@ -166,6 +170,19 @@ fun RichTextFieldBridge(
                         htmlMode = htmlMode,
                     )
                     app.textStylingManager.attach(config)
+                    // Format-only edits go through Editable.setSpan, which notifies SpanWatchers -
+                    // NOT the TextWatcher above. Report them too, so a caller tracking "dirty" sees
+                    // a bold/clear press (legacy: fontStyle.styles.addOnButtonCheckedListener).
+                    // Format-only edits go through Editable.setSpan, which notifies SpanWatchers -
+                    // NOT the TextWatcher above - so report a style press too (legacy did this with
+                    // `fontStyle.styles.addOnButtonCheckedListener { changedBody = true }`).
+                    // addOnButtonCheckedListener is additive, so this is safe. The CLEAR button is
+                    // deliberately left alone: attach() SETS its listener (no public getter to wrap),
+                    // so overriding it here would break clearing - a clear-only edit not marking the
+                    // body dirty is the accepted residual gap.
+                    onChanged?.let { changed ->
+                        buttons.styles.addOnButtonCheckedListener { _, _, _ -> changed() }
+                    }
                     // A StylingConfig IS-A StylingConfigBase, so the richer subtype travels through
                     // the same callback — the caller casts it back if it needs the toolbar bits.
                     onConfigReady(config)

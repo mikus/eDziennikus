@@ -120,12 +120,16 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         if (!isAdded)
             return
 
-        EventBus.getDefault().register(this)
-
         vm = ViewModelProvider(
             this,
-            MessagesComposeViewModel.Factory(app, activity),
+            MessagesComposeViewModel.Factory(app),
         )[MessagesComposeViewModel::class.java]
+
+        // Register AFTER the VM exists: EventBus delivers STICKY events synchronously inside
+        // register(), and both sticky handlers below dereference `vm`. A leftover sticky
+        // RecipientListGetEvent (posted by a sync the user navigated away from) would otherwise
+        // crash on `lateinit vm` the next time this editor opens.
+        EventBus.getDefault().register(this)
 
         setUpBottomSheet()
         setUpFab()
@@ -336,7 +340,21 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             .show()
     }
 
+    /**
+     * Drops the IME's live composing spans before the body is serialized. The legacy fragment did
+     * this with a `subject.requestFocus(); subject.clearFocus(); text.clearFocus(); setSelection(0)`
+     * dance ("apparently this removes an underline span") - without it a composing `UnderlineSpan`
+     * over the last-typed word survives `HtmlCompat.toHtml` as a stray `<u>` in the sent/saved body.
+     */
+    private fun clearBodyComposingSpans() {
+        bodyConfig?.editText?.let {
+            it.clearFocus()
+            it.setSelection(0)
+        }
+    }
+
     private fun saveDraft() {
+        clearBodyComposingSpans()
         launch {
             app.messageManager.saveAsDraft(
                 profileId = App.profileId,
@@ -405,6 +423,7 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         }
 
         activity.bottomSheet.hideKeyboard()
+        clearBodyComposingSpans()
 
         MaterialAlertDialogBuilder(activity)
             .setTitle(R.string.messages_compose_confirm_title)

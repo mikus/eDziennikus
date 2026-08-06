@@ -178,10 +178,16 @@ class MessagesComposeViewModel(
         private val ILLEGAL_QUERY_CHARS = Regex("[\n;:_]")
     }
 
+    /**
+     * [app] doubles as the [Context] for string lookups and for enqueueing the recipient-list sync:
+     * the ViewModel outlives Activity recreation, so capturing an Activity here would retain a dead
+     * one (with its whole view tree). `App.onCreate` applies `setLanguage`, so strings stay localized,
+     * and `IApiTask.enqueue` only needs a Context to start the service.
+     */
     class Factory(
         private val app: App,
-        private val context: Context,
     ) : ViewModelProvider.Factory {
+        private val context: Context get() = app
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val ui = app.profile.config.ui
