@@ -241,6 +241,7 @@
     <string name="dialog_widget_timetable_config_big_style">Große Schrift</string>
     <string name="dialog_widget_timetable_config_opacity">Opazität</string>
     <string name="dialog_widget_timetable_config_theme">Thema</string>
+    <string name="discard">Verwerfen</string>
     <string name="do_nothing">nichts tun</string>
     <string name="done">getan</string>
     <string name="dont_ask_again">Nicht noch einmal fragen</string>
@@ -634,9 +635,13 @@
     <string name="messages_compose_add_recipients_format">Empfänger hinzufügen - %s</string>
     <string name="messages_compose_confirm_text">Sind Sie sicher, dass Sie die Nachricht an ausgewählte Empfänger senden möchten?</string>
     <string name="messages_compose_confirm_title">Bestätigen Sie das Senden der Nachricht</string>
+    <string name="messages_compose_discard_draft_text">Möchten Sie die gespeicherte Version der Nachricht verwerfen?\n\nDadurch werden auch Ihre Änderungen verworfen und die Nachricht gelöscht.</string>
+    <string name="messages_compose_discard_draft_title">Entwurf verwerfen</string>
     <string name="messages_compose_menu_attachment">Fügen Sie einen Anhang hinzu</string>
     <string name="messages_compose_menu_discard">Nachricht abbrechen</string>
     <string name="messages_compose_save_draft">Entwurf speichern</string>
+    <string name="messages_compose_save_draft_text">Möchten Sie Ihre Änderungen als Entwurf speichern?\n\nSie können die Nachricht später bearbeiten und senden.</string>
+    <string name="messages_compose_save_draft_title">Änderungen speichern</string>
     <string name="messages_compose_menu_send">Senden</string>
     <string name="messages_compose_recipient_exists">Dieser Empfänger wurde bereits ausgewählt</string>
     <string name="messages_compose_recipients_downloading">Empfängerliste wird geladen…</string>
