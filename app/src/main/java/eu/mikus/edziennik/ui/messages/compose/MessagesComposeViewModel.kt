@@ -138,6 +138,31 @@ class MessagesComposeViewModel(
     }
 
     /**
+     * Commits one category-picker session. [shownIds] are the members the picker displayed,
+     * [checkedIds] the subset left ticked when the user pressed OK. Recipients outside [shownIds]
+     * are untouched, so committing the Teacher category cannot disturb a parent picked earlier.
+     *
+     * A diff, deliberately NOT a replay of [addRecipient]: that clears [recipientQuery] and emits
+     * [duplicateRecipientEvents], neither of which may happen here. Additions are resolved from
+     * [teachers] at commit time, so an id that vanished in a mid-picker recipient-list sync is
+     * dropped rather than resurrected, and the synthetic type-group guard is re-applied.
+     */
+    fun commitCategorySelection(shownIds: Set<Long>, checkedIds: Set<Long>) {
+        val currentIds = _selectedRecipients.value.map { it.id }.toSet()
+        val toAdd = checkedIds - currentIds
+        // Intersecting with the current selection is what makes an untouched OK a true no-op:
+        // `shownIds - checkedIds` alone is every displayed-but-unticked member, i.e. almost always
+        // non-empty, which would dirty the form and provoke a spurious save-draft prompt on exit.
+        val toRemove = (shownIds - checkedIds) intersect currentIds
+        if (toAdd.isEmpty() && toRemove.isEmpty())
+            return
+        val byId = _teachers.value.associateBy { it.id }
+        _selectedRecipients.value = _selectedRecipients.value.filter { it.id !in toRemove } +
+            toAdd.mapNotNull(byId::get).filter { it.id !in CATEGORY_IDS }
+        changedRecipients = true
+    }
+
+    /**
      * The legacy Nacho field rejected `[\n;:_ ]`. A native query field must allow typing
      * "Anna Kowalska", so SPACE is deliberately kept - only newline, semicolon, colon and
      * underscore are stripped. As in the legacy, any recipient-field edit marks the form dirty.

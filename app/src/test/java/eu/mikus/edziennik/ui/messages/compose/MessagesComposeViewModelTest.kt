@@ -192,6 +192,124 @@ class MessagesComposeViewModelTest {
         assertTrue(model.changedRecipients)
     }
 
+    /**
+     * Seeds a VM with the three TYPE_TEACHER fixtures visible and [selected] already chosen, with
+     * both dirty flags reset - i.e. the reply/forward/draft entry state, which is where an untouched
+     * OK must stay non-dirty.
+     */
+    private fun vmWithSelection(
+        visible: List<Teacher> = listOf(kowalska, nowak, kowal),
+        selected: List<Teacher> = listOf(kowalska),
+    ) = vm().also { model ->
+        model.setTeachers(visible)
+        model.applyInitial(
+            MessageManager.InitialCompose(
+                recipients = selected,
+                subject = null,
+                body = null,
+                draftMessageId = null,
+                isDraft = false,
+            )
+        )
+    }
+
+    @Test
+    fun `commitCategorySelection adds the newly-checked members`() = runTest(dispatcher) {
+        val model = vmWithSelection(selected = emptyList())
+
+        model.commitCategorySelection(shownIds = setOf(100L, 101L, 102L), checkedIds = setOf(100L, 102L))
+
+        assertEquals(listOf(100L, 102L), model.selectedRecipients.value.map { it.id })
+        assertTrue(model.changedRecipients)
+    }
+
+    @Test
+    fun `commitCategorySelection removes members that were shown but left unchecked`() = runTest(dispatcher) {
+        val model = vmWithSelection(selected = listOf(kowalska, nowak))
+
+        model.commitCategorySelection(shownIds = setOf(100L, 101L, 102L), checkedIds = setOf(101L))
+
+        assertEquals(listOf(101L), model.selectedRecipients.value.map { it.id })
+        assertTrue(model.changedRecipients)
+    }
+
+    @Test
+    fun `commitCategorySelection leaves recipients outside shownIds untouched`() = runTest(dispatcher) {
+        val pedagogue = teacher(200L, "Ewa", "Pedagog", Teacher.TYPE_PEDAGOGUE)
+        val model = vmWithSelection(
+            visible = listOf(kowalska, nowak, pedagogue),
+            selected = listOf(pedagogue, kowalska),
+        )
+
+        // the Teacher category was shown; the pedagogue was never on screen
+        model.commitCategorySelection(shownIds = setOf(100L, 101L), checkedIds = emptySet())
+
+        assertEquals(listOf(200L), model.selectedRecipients.value.map { it.id })
+    }
+
+    @Test
+    fun `commitCategorySelection does not duplicate an already-selected member`() = runTest(dispatcher) {
+        val model = vmWithSelection(selected = listOf(kowalska))
+
+        model.commitCategorySelection(shownIds = setOf(100L, 101L), checkedIds = setOf(100L, 101L))
+
+        assertEquals(listOf(100L, 101L), model.selectedRecipients.value.map { it.id })
+    }
+
+    @Test
+    fun `commitCategorySelection with no checked ids removes every shown member`() = runTest(dispatcher) {
+        val model = vmWithSelection(selected = listOf(kowalska, nowak, kowal))
+
+        model.commitCategorySelection(shownIds = setOf(100L, 101L, 102L), checkedIds = emptySet())
+
+        assertEquals(emptyList(), model.selectedRecipients.value)
+        assertTrue(model.changedRecipients)
+    }
+
+    @Test
+    fun `commitCategorySelection with no change keeps the form clean`() = runTest(dispatcher) {
+        // NON-DEGENERATE fixture: the roster contains UNSELECTED members (nowak, kowal), so
+        // `shownIds - checkedIds` is non-empty and only the intersection with the current selection
+        // makes this a no-op. An all-shown-are-selected fixture would pass even with that bug.
+        val model = vmWithSelection(selected = listOf(kowalska))
+
+        model.commitCategorySelection(shownIds = setOf(100L, 101L, 102L), checkedIds = setOf(100L))
+
+        assertEquals(listOf(100L), model.selectedRecipients.value.map { it.id })
+        assertFalse(model.changedRecipients)
+    }
+
+    @Test
+    fun `commitCategorySelection does not clear the query and reports no duplicate`() = runTest(dispatcher) {
+        val model = vmWithSelection(selected = listOf(kowalska))
+        model.onQueryChange("Kowal")
+        val events = mutableListOf<Unit>()
+        val collector = launch { model.duplicateRecipientEvents.collect { events += it } }
+        advanceUntilIdle()
+
+        // kowalska is checked AND already selected - addRecipient would have fired the toast here
+        model.commitCategorySelection(shownIds = setOf(100L, 101L), checkedIds = setOf(100L, 101L))
+        advanceUntilIdle()
+
+        assertEquals("Kowal", model.recipientQuery.value)
+        assertEquals(emptyList(), events)
+
+        collector.cancel()
+    }
+
+    @Test
+    fun `commitCategorySelection ignores unknown and synthetic ids`() = runTest(dispatcher) {
+        val model = vmWithSelection(selected = emptyList())
+
+        model.commitCategorySelection(
+            shownIds = setOf(100L),
+            // 999 is not in the teacher list; 0 and -12 are synthetic type-group ids
+            checkedIds = setOf(100L, 999L, 0L, -12L),
+        )
+
+        assertEquals(listOf(100L), model.selectedRecipients.value.map { it.id })
+    }
+
     @Test
     fun `suggestions ranks via rankRecipients`() = runTest(dispatcher) {
         val model = vm()
