@@ -636,6 +636,7 @@
     <string name="messages_attachment_cannot_download">Cannot download attachment</string>
     <string name="messages_attachment_cannot_download_text">An internal error occurred while downloading the attachment. A weak internet connection may be the case.</string>
     <string name="messages_attachment_download_again">Download again</string>
+    <string name="messages_compose_add_recipients_format">Add recipients - %s</string>
     <string name="messages_compose_confirm_text">Are you sure you want to send the message to selected recipients?</string>
     <string name="messages_compose_confirm_title">Confirm sending the message</string>
     <string name="messages_compose_menu_attachment">Add an attachment</string>
@@ -643,6 +644,7 @@
     <string name="messages_compose_save_draft">Save draft</string>
     <string name="messages_compose_menu_send">Send</string>
     <string name="messages_compose_recipient_exists">This recipient has already been selected</string>
+    <string name="messages_compose_recipients_downloading">Downloading the recipient list…</string>
     <string name="messages_compose_recipients_empty">Select recipients</string>
     <string name="messages_compose_recipients_error">Check if the selected recipients are correct</string>
     <string name="messages_compose_recipients_text_format">Select recipients from the category %s you want to add to the message.</string>

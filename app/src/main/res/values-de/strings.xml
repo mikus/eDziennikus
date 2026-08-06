@@ -631,6 +631,7 @@
     <string name="messages_attachment_cannot_download">Anhang kann nicht heruntergeladen werden</string>
     <string name="messages_attachment_cannot_download_text">Beim Herunterladen des Anhangs ist ein interner Fehler aufgetreten. Möglicherweise handelt es sich um eine schwache Internetverbindung</string>
     <string name="messages_attachment_download_again">Erneut herunterladen</string>
+    <string name="messages_compose_add_recipients_format">Empfänger hinzufügen - %s</string>
     <string name="messages_compose_confirm_text">Sind Sie sicher, dass Sie die Nachricht an ausgewählte Empfänger senden möchten?</string>
     <string name="messages_compose_confirm_title">Bestätigen Sie das Senden der Nachricht</string>
     <string name="messages_compose_menu_attachment">Fügen Sie einen Anhang hinzu</string>
@@ -638,6 +639,7 @@
     <string name="messages_compose_save_draft">Entwurf speichern</string>
     <string name="messages_compose_menu_send">Senden</string>
     <string name="messages_compose_recipient_exists">Dieser Empfänger wurde bereits ausgewählt</string>
+    <string name="messages_compose_recipients_downloading">Empfängerliste wird geladen…</string>
     <string name="messages_compose_recipients_empty">Wählen Sie die Empfänger aus</string>
     <string name="messages_compose_recipients_error">Prüfen Sie, ob die ausgewählten Empfänger korrekt sind</string>
     <string name="messages_compose_recipients_text_format">Wählen Sie Empfänger aus der Kategorie %s aus, die Sie der Nachricht hinzufügen möchten</string>

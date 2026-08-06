@@ -706,13 +706,16 @@
     <string name="messages_attachment_downloading_format" translatable="false">%s (%.2fMB)</string>
     <string name="messages_attachment_format" translatable="false">%s (%s)</string>
     <string name="messages_attachment_no_size_format" translatable="false">%s</string>
+    <string name="messages_compose_add_recipients_format">Dodaj odbiorców - %s</string>
     <string name="messages_compose_confirm_text">Czy na pewno chcesz wysłać wiadomość do wybranych odbiorców?</string>
     <string name="messages_compose_confirm_title">Potwierdź wysłanie wiadomości</string>
+    <string name="messages_compose_counter_format" translatable="false">%1$d/%2$d</string>
     <string name="messages_compose_menu_attachment">Dodaj załącznik</string>
     <string name="messages_compose_menu_discard">Odrzuć wiadomość</string>
     <string name="messages_compose_save_draft">Zapisz wersję roboczą</string>
     <string name="messages_compose_menu_send">Wyślij</string>
     <string name="messages_compose_recipient_exists">Ten odbiorca został już wybrany</string>
+    <string name="messages_compose_recipients_downloading">Pobieranie listy odbiorców…</string>
     <string name="messages_compose_recipients_empty">Wybierz odbiorców</string>
     <string name="messages_compose_recipients_error">Sprawdź poprawność wybranych odbiorców</string>
     <string name="messages_compose_recipients_text_format">Wybierz odbiorców z kategorii %s, których chcesz dodać do wiadomości.</string>
