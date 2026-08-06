@@ -83,9 +83,12 @@ import eu.mikus.edziennik.utils.managers.TextStylingManager.StylingConfigBase
  */
 private val CATEGORY_IDS = -24L..0L
 
-/** The Librus counter limits the legacy fragment set on the subject / body layouts. */
-private const val SUBJECT_MAX_LENGTH = 150
-private const val BODY_MAX_LENGTH = 20000
+/**
+ * The Librus counter limits the legacy fragment set on the subject / body layouts. Shared with
+ * MessagesComposeFragment, which blocks the send when either is exceeded.
+ */
+internal const val SUBJECT_MAX_LENGTH = 150
+internal const val BODY_MAX_LENGTH = 20000
 
 /**
  * The write-message editor. Stateless w.r.t. business logic: everything is a parameter, and the only

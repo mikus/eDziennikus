@@ -4,23 +4,27 @@
 
 package eu.mikus.edziennik.ui.messages.compose
 
-import android.annotation.SuppressLint
 import android.os.Bundle
-import android.text.*
-import android.text.Spanned.*
-import android.text.style.*
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AutoCompleteTextView
-import android.widget.ScrollView
 import android.widget.Toast
-import androidx.core.view.isVisible
-import androidx.core.widget.addTextChangedListener
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -31,24 +35,27 @@ import eu.mikus.edziennik.data.api.events.MessageSentEvent
 import eu.mikus.edziennik.data.api.events.RecipientListGetEvent
 import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.db.entity.Message
-import eu.mikus.edziennik.data.db.entity.Teacher
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.databinding.MessagesComposeFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
-import eu.mikus.edziennik.ext.DAY
 import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.MessagesConfigDialog
 import eu.mikus.edziennik.ui.messages.list.MessagesFragment
-import eu.mikus.edziennik.utils.DefaultTextStyles
 import eu.mikus.edziennik.utils.Themes
-import eu.mikus.edziennik.utils.managers.MessageManager.UIConfig
 import eu.mikus.edziennik.utils.managers.TextStylingManager.HtmlMode.ORIGINAL
-import eu.mikus.edziennik.utils.managers.TextStylingManager.StylingConfig
-import eu.mikus.edziennik.utils.span.*
+import eu.mikus.edziennik.utils.managers.TextStylingManager.StylingConfigBase
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * Shell host for the Compose write-message editor. Owns everything that is NOT editor state: the
+ * bottom-sheet actions, the FAB, the send/save-draft/discard-draft flows, the save-on-leave prompt
+ * and the two EventBus results. The recipient/subject state lives in [MessagesComposeViewModel]; the
+ * rich-text body lives in the AndroidView bridge inside [MessagesComposeScreen], and is reached
+ * through the [bodyConfig] published by it.
+ */
 class MessagesComposeFragment : Fragment(), CoroutineScope {
     companion object {
         private const val TAG = "MessagesComposeFragment"
@@ -57,27 +64,40 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
     private lateinit var app: App
     private lateinit var activity: MainActivity
     private lateinit var b: MessagesComposeFragmentBinding
+    private lateinit var vm: MessagesComposeViewModel
 
     private val job: Job = Job()
     override val coroutineContext: CoroutineContext
         get() = job + Dispatchers.Main
 
-    private val manager
-        get() = app.messageManager
-    private val textStylingManager
-        get() = app.textStylingManager
-    private val greetingText
-        get() = app.profile.config.ui.messagesGreetingText ?: "\n\nZ poważaniem\n${app.profile.accountOwnerName}"
+    /**
+     * The body field's styling config, published once from the bridge's AndroidView factory - the
+     * only way to read/serialize the body (there is no Compose rich-text editor).
+     */
+    private var bodyConfig: StylingConfigBase? = null
 
-    private val teachers = mutableListOf<Teacher>()
+    /** Computed once by [applyInitialState]; the bridge seeds its field from it a single time. */
+    private var initialBody: CharSequence? = null
 
-    private lateinit var stylingConfig: StylingConfig
-    private lateinit var uiConfig: UIConfig
-    private var changedRecipients = false
-    private var changedSubject = false
+    /** The body is not VM state, so its dirty flag is tracked here (legacy `changedBody`). */
     private var changedBody = false
+
     private var discardDraftItem: BottomSheetPrimaryItem? = null
-    private var draftMessageId: Long? = null
+
+    /**
+     * True once [applyInitialState] has run - it both gates the editor's first composition and is
+     * the run-once guard for [applyInitialState] itself.
+     */
+    private var initialReady by mutableStateOf(false)
+
+    // The three inline validation errors. Snapshot state so sendMessage() - a plain method - can
+    // push them into the composition, replacing the legacy `xxxLayout.error = ...` assignments.
+    private var recipientsError by mutableStateOf<String?>(null)
+    private var subjectError by mutableStateOf<String?>(null)
+    private var bodyError by mutableStateOf<String?>(null)
+
+    private val isLibrus
+        get() = app.profile.loginStoreType == LoginType.LIBRUS
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         activity = (getActivity() as MainActivity?) ?: return null
@@ -85,28 +105,108 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         app = activity.application as App
         requireContext().theme.applyStyle(Themes.appTheme, true)
         // activity, context and profile is valid
-        b = MessagesComposeFragmentBinding.inflate(inflater)
+        b = MessagesComposeFragmentBinding.inflate(inflater, container, false)
         return b.root
     }
+
     override fun onDestroy() {
         EventBus.getDefault().unregister(this)
+        // NOTE: the job is deliberately NOT cancelled here - saveDraftDialog() saves and navigates
+        // away in the same handler, so cancelling on destroy would abort the draft write.
         super.onDestroy()
     }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // TODO check if app, activity, b can be null
         if (!isAdded)
             return
 
         EventBus.getDefault().register(this)
 
-        b.breakpoints.visibility = if (App.devMode) View.VISIBLE else View.GONE
-        b.breakpoints.setOnClickListener {
-            b.breakpoints.isEnabled = true
-            @SuppressLint("SetTextI18n")
-            b.breakpoints.text = "Breakpoints!"
-            // do your job
+        vm = ViewModelProvider(
+            this,
+            MessagesComposeViewModel.Factory(app, activity),
+        )[MessagesComposeViewModel::class.java]
+
+        setUpBottomSheet()
+        setUpFab()
+
+        if (vm.loadTeachers())
+            activity.snackbar(getString(R.string.messages_compose_recipients_downloading))
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            // fillFromBundle resolves the recipient IDs against the teacher list, so the seed can
+            // only be computed once that list is in.
+            vm.isRecipientListReady.first { it }
+            applyInitialState()
         }
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            vm.duplicateRecipientEvents.collect {
+                Toast.makeText(activity, R.string.messages_compose_recipient_exists, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        b.composeView.setAppThemeContent {
+            val isReady by vm.isRecipientListReady.collectAsStateWithLifecycle()
+
+            if (!initialReady) {
+                // The body field seeds itself ONCE, in its AndroidView factory, so the editor must
+                // not compose before `initialBody` exists - a later value would be ignored. The
+                // legacy fragment showed its fields disabled during the same wait.
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                val teachers by vm.teachers.collectAsStateWithLifecycle()
+                val selectedRecipients by vm.selectedRecipients.collectAsStateWithLifecycle()
+                val recipientQuery by vm.recipientQuery.collectAsStateWithLifecycle()
+                val subject by vm.subject.collectAsStateWithLifecycle()
+
+                MessagesComposeScreen(
+                    app = app,
+                    activity = activity,
+                    teachers = teachers,
+                    selectedRecipients = selectedRecipients,
+                    recipientQuery = recipientQuery,
+                    subject = subject,
+                    isRecipientListReady = isReady,
+                    initialBody = initialBody,
+                    textStylingEnabled = app.data.messagesConfig.textStyling,
+                    isLibrus = isLibrus,
+                    recipientsError = recipientsError,
+                    subjectError = subjectError,
+                    bodyError = bodyError,
+                    suggestions = vm::suggestions,
+                    categoryMembers = vm::categoryMembers,
+                    // every field edit clears that field's error, as the legacy text watchers did
+                    onQueryChange = {
+                        recipientsError = null
+                        vm.onQueryChange(it)
+                    },
+                    onSubjectChange = {
+                        subjectError = null
+                        vm.onSubjectChange(it)
+                    },
+                    onAddRecipient = {
+                        recipientsError = null
+                        vm.addRecipient(it)
+                    },
+                    onRemoveRecipient = {
+                        recipientsError = null
+                        vm.removeRecipient(it)
+                    },
+                    onToggleCategoryMember = vm::toggleCategoryMember,
+                    onBodyConfigReady = { bodyConfig = it },
+                    onBodyChanged = {
+                        bodyError = null
+                        changedBody = true
+                    },
+                )
+            }
+        }
+    }
+
+    private fun setUpBottomSheet() {
         discardDraftItem = BottomSheetPrimaryItem(true)
             .withTitle(R.string.messages_compose_discard_draft)
             .withIcon(CommunityMaterial.Icon3.cmd_text_box_remove_outline)
@@ -139,121 +239,9 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
                     MessagesConfigDialog(activity, false, null, null).show()
                 }
         )
-
-        launch {
-            delay(100)
-            getRecipientList()
-
-            createView()
-        }
     }
 
-    private fun getMessageBody(): String {
-        return if (app.data.messagesConfig.textStyling)
-            textStylingManager.getHtmlText(stylingConfig)
-        else
-            b.text.text?.toString() ?: ""
-    }
-
-    private fun getRecipientList() {
-        if (app.data.messagesConfig.syncRecipientList && System.currentTimeMillis() - app.profile.lastReceiversSync > 1 * DAY * 1000) {
-            activity.snackbar("Pobieranie listy odbiorców...")
-            EdziennikTask.recipientListGet(App.profileId).enqueue(activity)
-        }
-        else {
-            launch {
-                val list = withContext(Dispatchers.Default) {
-                    app.db.teacherDao().getAllNow(App.profileId).filter { it.loginId != null }
-                }
-                updateRecipientList(list)
-            }
-        }
-    }
-
-    private fun createView() {
-        b.recipientsLayout.setBoxCornerRadii(0f, 0f, 0f, 0f)
-        b.subjectLayout.setBoxCornerRadii(0f, 0f, 0f, 0f)
-        b.textLayout.setBoxCornerRadii(0f, 0f, 0f, 0f)
-
-        b.recipients.addTextChangedListener(onTextChanged = { _, _, _, _ ->
-            b.recipientsLayout.error = null
-            changedRecipients = true
-        })
-        b.subject.addTextChangedListener(onTextChanged = { _, _, _, _ ->
-            b.subjectLayout.error = null
-            changedSubject = true
-        })
-        b.text.addTextChangedListener(onTextChanged = { _, _, _, _ ->
-            b.textLayout.error = null
-            changedBody = true
-        })
-
-        b.subjectLayout.counterMaxLength = when (app.profile.loginStoreType) {
-            LoginType.LIBRUS -> 150
-            else -> -1
-        }
-        b.textLayout.counterMaxLength = when (app.profile.loginStoreType) {
-            LoginType.LIBRUS -> 20000
-            else -> -1
-        }
-
-        b.recipients.chipTokenizer = MessagesComposeChipTokenizer(activity, b.recipients, teachers)
-        b.recipients.setIllegalCharacterIdentifier { c ->
-            c.toString().matches("[\\n;:_ ]".toRegex())
-        }
-        b.recipients.setOnChipRemoveListener {
-            b.recipients.setSelection(b.recipients.text.length)
-        }
-
-        b.recipients.addTextChangedListener( beforeTextChanged = { _, _, _, _ ->
-            b.recipients.ignoreThreshold = false
-        })
-        b.recipients.onDismissListener = AutoCompleteTextView.OnDismissListener {
-            b.recipients.ignoreThreshold = false
-        }
-        b.recipientsLayout.setEndIconOnClickListener {
-            b.recipients.error = null
-            b.recipients.ignoreThreshold = true
-            b.recipients.showDropDown()
-            val adapter = b.recipients.adapter ?: return@setEndIconOnClickListener
-            if (adapter is MessagesComposeSuggestionAdapter)
-                adapter.filter.filter(null)
-        }
-
-        b.recipientsLayout.isEnabled = false
-        b.subjectLayout.isEnabled = false
-        b.textLayout.isEnabled = false
-
-        val styles = DefaultTextStyles.getAsList(b.fontStyle)
-
-        uiConfig = UIConfig(
-            context = activity,
-            recipients = b.recipients,
-            subject = b.subject,
-            body = b.text,
-            teachers = teachers,
-            greetingOnCompose = app.profile.config.ui.messagesGreetingOnCompose,
-            greetingOnReply = app.profile.config.ui.messagesGreetingOnReply,
-            greetingOnForward = app.profile.config.ui.messagesGreetingOnForward,
-            greetingText = greetingText,
-        )
-        stylingConfig = StylingConfig(
-            editText = b.text,
-            fontStyleGroup = b.fontStyle.styles,
-            fontStyleClear = b.fontStyle.clear,
-            styles = styles,
-            textHtml = if (App.devMode) b.textHtml else null,
-            htmlMode = ORIGINAL,
-        )
-
-        b.fontStyle.root.isVisible = app.data.messagesConfig.textStyling
-        if (app.data.messagesConfig.textStyling) {
-            textStylingManager.attach(stylingConfig)
-            b.fontStyle.styles.addOnButtonCheckedListener { _, _, _ ->
-                changedBody = true
-            }
-        }
-
+    private fun setUpFab() {
         activity.navView.bottomBar.apply {
             fabEnable = true
             fabExtendedText = getString(R.string.messages_compose_send)
@@ -267,13 +255,66 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         activity.gainAttentionFAB()
     }
 
+    /**
+     * Seeds the editor from the nav arguments - the reply/forward/draft/message-a-teacher payloads.
+     * Runs exactly once per fragment: the recipient list can be re-synced (and the view re-created)
+     * afterwards, and re-applying would clobber whatever the user has typed.
+     */
+    private fun applyInitialState() {
+        if (initialReady)
+            return
+
+        val initial = app.messageManager.fillFromBundle(
+            context = activity,
+            args = arguments,
+            teachers = vm.teachers.value,
+            greeting = vm.greeting,
+        )
+        vm.applyInitial(initial)
+        initialBody = initial.body
+        if (initial.isDraft)
+            addDiscardDraftItem()
+
+        changedBody = false
+        initialReady = true
+    }
+
+    /** The discard-draft action only exists once there IS a draft, and is added a single time. */
+    private fun addDiscardDraftItem() {
+        discardDraftItem?.let {
+            activity.bottomSheet.addItemAt(2, it)
+        }
+        discardDraftItem = null
+    }
+
+    /**
+     * The body as sent: HTML only when the styling toolbar is on, plain text otherwise
+     * (legacy `getMessageBody`).
+     */
+    private fun sendBody(): String {
+        val config = bodyConfig ?: return ""
+        return if (app.data.messagesConfig.textStyling)
+            app.textStylingManager.getHtmlText(config, htmlMode = ORIGINAL)
+        else
+            config.editText.text?.toString() ?: ""
+    }
+
+    /**
+     * The body as stored in a draft - ALWAYS serialized to HTML, regardless of the styling setting,
+     * because that is what the legacy `saveAsDraft` did (and what the draft loader expects).
+     */
+    private fun draftBody(): String {
+        val config = bodyConfig ?: return ""
+        return app.textStylingManager.getHtmlText(config, htmlMode = ORIGINAL)
+    }
+
     private fun onBeforeNavigate(): Boolean {
-        val messageText = b.text.text?.toString()?.trim() ?: ""
-        val greetingText = this.greetingText.trim()
+        val bodyText = bodyConfig?.editText?.text?.toString()?.trim() ?: ""
+        val greeting = vm.greeting.text.trim()
         // navigateUp if nothing changed
-        if ((!changedRecipients || b.recipients.allChips.isEmpty())
-            && (!changedSubject || b.subject.text.isNullOrBlank())
-            && (!changedBody || messageText.isEmpty() || messageText == greetingText)
+        if ((!vm.changedRecipients || vm.selectedRecipients.value.isEmpty())
+            && (!vm.changedSubject || vm.subject.value.isBlank())
+            && (!changedBody || bodyText.isEmpty() || bodyText == greeting)
         )
             return true
         saveDraftDialog()
@@ -297,15 +338,18 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
 
     private fun saveDraft() {
         launch {
-            manager.saveAsDraft(uiConfig, stylingConfig, App.profileId, draftMessageId)
+            app.messageManager.saveAsDraft(
+                profileId = App.profileId,
+                messageId = vm.draftMessageId.value,
+                recipients = vm.selectedRecipients.value,
+                subject = vm.subject.value,
+                bodyHtml = draftBody(),
+            )
             Toast.makeText(activity, R.string.messages_compose_draft_saved, Toast.LENGTH_SHORT).show()
-            changedRecipients = false
-            changedSubject = false
+            vm.markSaved()
             changedBody = false
         }
-        if (discardDraftItem != null)
-            activity.bottomSheet.addItemAt(2, discardDraftItem!!)
-        discardDraftItem = null
+        addDiscardDraftItem()
     }
 
     private fun discardDraftDialog() {
@@ -314,8 +358,9 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             .setMessage(R.string.messages_compose_discard_draft_text)
             .setPositiveButton(R.string.remove) { _, _ ->
                 launch {
-                    if (draftMessageId != null)
-                        manager.deleteDraft(App.profileId, draftMessageId!!)
+                    vm.draftMessageId.value?.let {
+                        app.messageManager.deleteDraft(App.profileId, it)
+                    }
                     Toast.makeText(activity, R.string.messages_compose_draft_discarded, Toast.LENGTH_SHORT).show()
                     activity.navigateUp(skipBeforeNavigate = true)
                 }
@@ -324,109 +369,56 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             .show()
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun updateRecipientList(list: List<Teacher>) { launch {
-        withContext(Dispatchers.Default) {
-            teachers.clear()
-            teachers.addAll(list.sortedBy { it.fullName })
-            Teacher.types.mapTo(teachers) {
-                Teacher(-1, -it.toLong(), Teacher.typeName(activity, it), "")
-            }
-            /*teachers.forEach {
-                println(it)
-            }*/
-        }
-
-        b.recipientsLayout.isEnabled = true
-        b.subjectLayout.isEnabled = true
-        b.textLayout.isEnabled = true
-
-        val adapter = MessagesComposeSuggestionAdapter(activity, teachers)
-        b.recipients.setAdapter(adapter)
-
-        val message = manager.fillWithBundle(uiConfig, arguments)
-        if (message != null && message.isDraft) {
-            draftMessageId = message.id
-            if (discardDraftItem != null)
-                activity.bottomSheet.addItemAt(2, discardDraftItem!!)
-            discardDraftItem = null
-        }
-
-        when {
-            b.recipients.text.isBlank() -> b.recipients.requestFocus()
-            b.subject.text.isNullOrBlank() -> b.subject.requestFocus()
-            else -> b.text.requestFocus()
-        }
-
-        if (!app.data.messagesConfig.textStyling)
-            b.text.setText(b.text.text?.toString())
-        b.text.setSelection(0)
-         (b.root as? ScrollView)?.smoothScrollTo(0, 0)
-
-        changedRecipients = false
-        changedSubject = false
-        changedBody = false
-    }}
-
     private fun sendMessage() {
-        b.recipientsLayout.error = null
-        b.subjectLayout.error = null
-        b.textLayout.error = null
+        recipientsError = null
+        subjectError = null
+        bodyError = null
 
-        if (b.recipients.tokenValues.isNotEmpty()) {
-            b.recipientsLayout.error = getString(R.string.messages_compose_recipients_error)
+        // a leftover, un-chipped token in the recipient field (legacy `tokenValues.isNotEmpty()`)
+        if (vm.recipientQuery.value.isNotBlank()) {
+            recipientsError = getString(R.string.messages_compose_recipients_error)
             return
         }
-        val recipients = mutableSetOf<Teacher>()
-        b.recipients.allChips.forEach { chip ->
-            if (chip.data !is Teacher)
-                return@forEach
-            val teacher = chip.data as Teacher
-
-            recipients += teacher
-            //println(teacher)
-        }
-        val subject = b.subject.text?.toString()
-        val text = b.text.text
+        val recipients = vm.selectedRecipients.value
         if (recipients.isEmpty()) {
-            b.recipientsLayout.error = getString(R.string.messages_compose_recipients_empty)
+            recipientsError = getString(R.string.messages_compose_recipients_empty)
             return
         }
-        if (subject.isNullOrBlank() || subject.length < 3) {
-            b.subjectLayout.error = getString(R.string.messages_compose_subject_empty)
+        val subject = vm.subject.value
+        if (subject.isBlank() || subject.length < 3) {
+            subjectError = getString(R.string.messages_compose_subject_empty)
             return
         }
-        if (text.isNullOrBlank() || text.length < 3) {
-            b.textLayout.error = getString(R.string.messages_compose_text_empty)
+        val bodyText = bodyConfig?.editText?.text?.toString() ?: ""
+        if (bodyText.isBlank() || bodyText.length < 3) {
+            bodyError = getString(R.string.messages_compose_text_empty)
             return
         }
 
-        // do magic
-        // apparently this removes an underline
-        // span from the text where the caret is
-        b.subject.requestFocus()
-        b.subject.clearFocus()
-        activity.navView.bottomSheet.hideKeyboard()
-        b.text.clearFocus()
-        b.text.setSelection(0)
-
-        if (b.subjectLayout.counterMaxLength != -1 && b.subject.length() > b.subjectLayout.counterMaxLength)
-            return
-        if (b.textLayout.counterMaxLength != -1 && b.text.length() > b.textLayout.counterMaxLength)
-            return
-
-        val body = getMessageBody()
+        // Librus is the only profile type with length limits; the screen shows the counters, and -
+        // as in the legacy fragment - going over them silently blocks the send.
+        if (isLibrus) {
+            if (subject.length > SUBJECT_MAX_LENGTH)
+                return
+            if (bodyText.length > BODY_MAX_LENGTH)
+                return
+        }
 
         activity.bottomSheet.hideKeyboard()
 
         MaterialAlertDialogBuilder(activity)
-                .setTitle(R.string.messages_compose_confirm_title)
-                .setMessage(R.string.messages_compose_confirm_text)
-                .setPositiveButton(R.string.send) { _, _ ->
-                    EdziennikTask.messageSend(App.profileId, recipients, subject.trim(), body).enqueue(activity)
-                }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
+            .setTitle(R.string.messages_compose_confirm_title)
+            .setMessage(R.string.messages_compose_confirm_text)
+            .setPositiveButton(R.string.send) { _, _ ->
+                EdziennikTask.messageSend(
+                    App.profileId,
+                    recipients.toSet(),
+                    subject.trim(),
+                    sendBody(),
+                ).enqueue(activity)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     override fun onResume() {
@@ -450,7 +442,7 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         EventBus.getDefault().removeStickyEvent(event)
 
         activity.snackbarDismiss()
-        updateRecipientList(event.teacherList)
+        vm.setTeachers(event.teacherList)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
@@ -464,9 +456,9 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             return
         }
 
-        if (draftMessageId != null) {
+        vm.draftMessageId.value?.let { messageId ->
             launch {
-                manager.deleteDraft(App.profileId, draftMessageId!!)
+                app.messageManager.deleteDraft(App.profileId, messageId)
             }
         }
 

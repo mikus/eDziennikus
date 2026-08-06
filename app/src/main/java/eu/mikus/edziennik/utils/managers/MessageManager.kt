@@ -8,9 +8,6 @@ import android.content.Context
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.widget.EditText
-import com.hootsuite.nachos.NachoTextView
-import com.hootsuite.nachos.chip.ChipInfo
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import com.mikepenz.iconics.utils.colorRes
 import com.mikepenz.iconics.view.IconicsImageView
@@ -26,15 +23,11 @@ import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.ext.appendSpan
 import eu.mikus.edziennik.ext.appendText
 import eu.mikus.edziennik.ext.fixName
-import eu.mikus.edziennik.ext.setText
 import eu.mikus.edziennik.ui.messages.MessagesUtils
 import eu.mikus.edziennik.ui.messages.compose.SubjectMode
 import eu.mikus.edziennik.ui.messages.compose.greetingFor
 import eu.mikus.edziennik.ui.messages.compose.subjectMode
-import eu.mikus.edziennik.utils.TextInputKeyboardEdit
 import eu.mikus.edziennik.utils.html.BetterHtml
-import eu.mikus.edziennik.utils.managers.TextStylingManager.HtmlMode.ORIGINAL
-import eu.mikus.edziennik.utils.managers.TextStylingManager.StylingConfig
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.span.BoldSpan
@@ -42,18 +35,6 @@ import eu.mikus.edziennik.utils.span.ItalicSpan
 import eu.mikus.edziennik.compat.colorAttr
 
 class MessageManager(private val app: App) {
-
-    class UIConfig(
-        val context: Context,
-        val recipients: NachoTextView,
-        val subject: EditText,
-        val body: TextInputKeyboardEdit,
-        val teachers: List<Teacher>,
-        val greetingOnCompose: Boolean,
-        val greetingOnReply: Boolean,
-        val greetingOnForward: Boolean,
-        val greetingText: String,
-    )
 
     /** Everything the Compose editor needs to seed itself from a nav-args bundle. */
     data class InitialCompose(
@@ -70,9 +51,6 @@ class MessageManager(private val app: App) {
         val onForward: Boolean,
         val text: String,
     )
-
-    private val textStylingManager
-        get() = app.textStylingManager
 
     suspend fun getMessage(profileId: Int, args: Bundle?): MessageFull? {
         val id = args?.getLong("messageId") ?: return null
@@ -173,41 +151,7 @@ class MessageManager(private val app: App) {
         }
     }
 
-    suspend fun saveAsDraft(config: UIConfig, stylingConfig: StylingConfig, profileId: Int, messageId: Long?) {
-        val teachers = config.recipients.allChips.mapNotNull { it.data as? Teacher }
-        val subject = config.subject.text?.toString() ?: ""
-        val body = textStylingManager.getHtmlText(stylingConfig, htmlMode = ORIGINAL)
-
-        withContext(Dispatchers.Default) {
-            if (messageId != null) {
-                app.db.messageRecipientDao().clearFor(profileId, messageId)
-            }
-
-            val message = Message(
-                profileId = profileId,
-                id = messageId ?: System.currentTimeMillis(),
-                type = Message.TYPE_DRAFT,
-                subject = subject,
-                body = body,
-                senderId = -1L,
-                addedDate = System.currentTimeMillis(),
-            )
-            val metadata = Metadata(profileId, MetadataType.MESSAGE, message.id, true, true)
-
-            val recipients = teachers.map {
-                MessageRecipient(profileId, it.id, message.id)
-            }
-
-            app.db.messageDao().replace(message)
-            app.db.messageRecipientDao().addAll(recipients)
-            app.db.metadataDao().add(metadata)
-        }
-    }
-
-    /**
-     * Data-based counterpart of the legacy [saveAsDraft] - takes the editor state as plain values
-     * instead of reading it out of Views. Same DB writes.
-     */
+    /** Takes the editor state as plain values; the Compose editor has no Views to read. */
     suspend fun saveAsDraft(
         profileId: Int,
         messageId: Long?,
@@ -240,8 +184,8 @@ class MessageManager(private val app: App) {
     }
 
     /**
-     * Data-based counterpart of [fillWithBundle] (+ the fillWith* helpers) - returns what the
-     * Compose editor should start with, instead of writing into Views.
+     * Returns what the Compose editor should start with, for every nav-args payload: a draft, a
+     * reply/forward, message-a-teacher, or a plain new message.
      *
      * A null [args] is treated as an empty bundle (MainActivity always hands the fragment
      * `args ?: Bundle()`, so this is the "new message" case).
@@ -296,8 +240,8 @@ class MessageManager(private val app: App) {
     }
 
     /**
-     * Looks the IDs up in [teachers], attaching the avatar the legacy chips had
-     * (see [createRecipientChips]). Unknown IDs are dropped.
+     * Looks the IDs up in [teachers], attaching the avatar the legacy recipient chips had.
+     * Unknown IDs are dropped.
      */
     private fun resolveRecipients(teachers: List<Teacher>, teacherIds: List<Long>): List<Teacher> {
         return teacherIds.mapNotNull { teacherId ->
@@ -314,7 +258,7 @@ class MessageManager(private val app: App) {
         }
     }
 
-    /** The quoted-original body of a reply/forward, incl. the greeting - as in [fillWithMessage]. */
+    /** The quoted-original body of a reply/forward, incl. the greeting. */
     private fun buildReplyForwardBody(
         context: Context,
         message: MessageFull,
@@ -353,111 +297,5 @@ class MessageManager(private val app: App) {
         val body = message.body ?: context.getString(R.string.messages_compose_body_load_failed)
         spanned.appendText(BetterHtml.fromHtml(context, body))
         return spanned
-    }
-
-    fun fillWithBundle(config: UIConfig, args: Bundle?): Message? {
-        args ?: return null
-        val messageJson = args.getString("message")
-        val teacherId = args.getLong("messageRecipientId")
-        val subject = args.getString("messageSubject")
-        val payloadType = args.getString("type")
-
-        if (config.greetingOnCompose)
-            config.body.setText(config.greetingText)
-        if (subject != null)
-            config.subject.setText(subject)
-
-        val message = if (messageJson != null)
-            app.gson.fromJson(messageJson, MessageFull::class.java)
-        else null
-
-        when {
-            message != null && message.isDraft -> {
-                fillWithDraftMessage(config, message)
-            }
-            message != null -> {
-                fillWithMessage(config, message, payloadType)
-            }
-            teacherId != 0L -> {
-                fillWithRecipientIds(config, teacherId)
-            }
-        }
-
-        return message
-    }
-
-    private fun createRecipientChips(config: UIConfig, vararg teacherIds: Long?): List<ChipInfo> {
-        return teacherIds.mapNotNull { teacherId ->
-            val teacher = config.teachers.firstOrNull { it.id == teacherId } ?: return@mapNotNull null
-            teacher.image = MessagesUtils.getProfileImage(
-                diameterDp = 48,
-                textSizeBigDp = 24,
-                textSizeMediumDp = 16,
-                textSizeSmallDp = 12,
-                count = 1,
-                teacher.fullName
-            )
-            ChipInfo(teacher.fullName, teacher)
-        }
-    }
-
-    private fun fillWithRecipientIds(config: UIConfig, vararg teacherIds: Long?) {
-        config.recipients.addTextWithChips(createRecipientChips(config, *teacherIds))
-    }
-
-    private fun fillWithMessage(config: UIConfig, message: MessageFull, payloadType: String?) {
-        val spanned = SpannableStringBuilder()
-
-        val dateString = config.context.getString(
-            R.string.messages_reply_date_time_format,
-            Date.fromMillis(message.addedDate).formattedStringShort,
-            Time.fromMillis(message.addedDate).stringHM,
-        )
-        // add original message info
-        spanned.appendText("W dniu ")
-        spanned.appendSpan(dateString, ItalicSpan(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        spanned.appendText(", ")
-        spanned.appendSpan(message.senderName.fixName(), ItalicSpan(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        spanned.appendText(" napisał(a):")
-        spanned.setSpan(BoldSpan(), 0, spanned.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        spanned.appendText("\n\n")
-
-        val greeting = when (payloadType) {
-            "reply" -> {
-                config.subject.setText(R.string.messages_compose_subject_reply_format, message.subject)
-                if (config.greetingOnReply)
-                    config.greetingText
-                else null
-            }
-            "forward" -> {
-                config.subject.setText(R.string.messages_compose_subject_forward_format, message.subject)
-                if (config.greetingOnForward)
-                    config.greetingText
-                else null
-            }
-            else -> null
-        }
-
-        if (greeting == null) {
-            spanned.replace(0, 0, "\n\n")
-        } else {
-            spanned.replace(0, 0, "$greeting\n\n\n")
-        }
-
-        val body = message.body ?: config.context.getString(R.string.messages_compose_body_load_failed)
-        spanned.appendText(BetterHtml.fromHtml(config.context, body))
-
-        fillWithRecipientIds(config, message.senderId)
-        config.body.text = spanned
-    }
-
-    private fun fillWithDraftMessage(config: UIConfig, message: MessageFull) {
-        val recipientIds = message.recipients?.map { it.id }?.toTypedArray() ?: emptyArray()
-        fillWithRecipientIds(config, *recipientIds)
-
-        config.subject.setText(message.subject)
-
-        val body = message.body ?: config.context.getString(R.string.messages_compose_body_load_failed)
-        config.body.setText(BetterHtml.fromHtml(config.context, body))
     }
 }
