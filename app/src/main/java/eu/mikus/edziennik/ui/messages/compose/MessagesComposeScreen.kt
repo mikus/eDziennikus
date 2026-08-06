@@ -3,9 +3,6 @@
  */
 package eu.mikus.edziennik.ui.messages.compose
 
-import android.content.Context
-import android.text.style.AbsoluteSizeSpan
-import android.text.style.ForegroundColorSpan
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -21,9 +18,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
@@ -34,11 +35,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -60,13 +62,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Teacher
-import eu.mikus.edziennik.ext.asSpannable
-import eu.mikus.edziennik.ext.concat
 import eu.mikus.edziennik.ext.getNameInitials
 import eu.mikus.edziennik.ext.resolveAttr
 import eu.mikus.edziennik.ui.compose.IconicsIcon
@@ -125,7 +124,7 @@ fun MessagesComposeScreen(
     onSubjectChange: (String) -> Unit,
     onAddRecipient: (Teacher) -> Unit,
     onRemoveRecipient: (Teacher) -> Unit,
-    onToggleCategoryMember: (Teacher, Boolean) -> Unit,
+    onCommitCategory: (shownIds: Set<Long>, checkedIds: Set<Long>) -> Unit,
     onBodyConfigReady: (StylingConfigBase) -> Unit,
     onBodyChanged: () -> Unit,
     modifier: Modifier = Modifier,
@@ -203,12 +202,15 @@ fun MessagesComposeScreen(
     }
 
     categoryType?.let { type ->
+        // Snapshot the roster at open, as the platform dialog did into its labels/checked arrays.
+        // Without this, a RecipientListGetEvent landing while the picker is open would swap the
+        // member list under the user's finger.
+        val members = remember(type) { categoryMembers(type) }
         RecipientCategoryDialog(
-            activity = activity,
             type = type,
-            members = categoryMembers(type),
+            members = members,
             selectedRecipients = selectedRecipients,
-            onToggleCategoryMember = onToggleCategoryMember,
+            onCommit = onCommitCategory,
             onDismiss = { categoryType = null },
         )
     }
@@ -478,66 +480,134 @@ private fun TeacherAvatar(teacher: Teacher, size: Dp) {
 }
 
 /**
- * The multi-choice category picker MessagesComposeChipCreator used to show when a type-group chip was
- * created. Still a platform [MaterialAlertDialogBuilder]: it is a stock multi-choice list, and the
- * item labels are two-line spannables the platform dialog renders for free.
+ * The types whose rows carried a secondary `typeDescription` line in the legacy ChipCreator. The
+ * legacy `when` listed every other type explicitly as null and fell through to `typeDescription` for
+ * anything unlisted, i.e. TYPE_OTHER; since the picker only ever opens for a [Teacher.types] entry,
+ * enumerating the five described types is equivalent.
+ */
+private val DESCRIBED_TYPES = setOf(
+    Teacher.TYPE_PARENTS_COUNCIL,
+    Teacher.TYPE_EDUCATOR,
+    Teacher.TYPE_PARENT,
+    Teacher.TYPE_STUDENT,
+    Teacher.TYPE_OTHER,
+)
+
+/**
+ * The multi-choice category picker MessagesComposeChipCreator used to show. Now a native M3
+ * [AlertDialog] - the full-slot overload, which is stable (no `@ExperimentalMaterial3Api`) - so it
+ * inherits AppTheme's M3 shapes, colours and buttons instead of the platform MD2 dialog theme.
  *
- * Everything it shows is snapshotted when it opens (as the legacy dialog did), so the effect keys on
- * [type] alone; the checkbox callbacks go straight to [onToggleCategoryMember].
+ * Apply-on-OK, unlike the legacy dialog: ticks stage in [checked] and only [onCommit] mutates the
+ * ViewModel. The legacy Cancel button was a no-op lie (both platform buttons passed a null listener
+ * while each tick mutated the selection immediately), so Cancel now genuinely discards.
+ *
+ * [members] must already be snapshotted by the caller - see the `remember(type)` at the call site.
+ *
+ * NOTE: `onDismissRequest` fires for back press and outside tap ONLY. Both buttons therefore clear
+ * the caller's `categoryType` themselves via [onDismiss], or the dialog becomes unclosable.
  */
 @Composable
 private fun RecipientCategoryDialog(
-    activity: AppCompatActivity,
     type: Int,
     members: List<Teacher>,
     selectedRecipients: List<Teacher>,
-    onToggleCategoryMember: (Teacher, Boolean) -> Unit,
+    onCommit: (shownIds: Set<Long>, checkedIds: Set<Long>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    DisposableEffect(type) {
-        val labels = members.map { categoryItemLabel(activity, type, it) }.toTypedArray()
-        val checked = members.map { member -> selectedRecipients.any { it.id == member.id } }.toBooleanArray()
-        val dialog = MaterialAlertDialogBuilder(activity)
-            .setTitle(
-                activity.getString(
+    // Seeded once per opening (the composable leaves the tree on dismiss, so reopening re-seeds).
+    // mutableStateSetOf is backed by a PersistentOrderedSet, so toSet() iterates in tick order and
+    // new recipients append in the same order the legacy per-tick toggle produced.
+    val checked = remember(type) {
+        mutableStateSetOf<Long>().apply {
+            addAll(members.filter { m -> selectedRecipients.any { it.id == m.id } }.map { it.id })
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(
                     R.string.messages_compose_add_recipients_format,
-                    Teacher.typeName(activity, type),
+                    Teacher.typeName(LocalContext.current, type),
                 ),
             )
-            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
-                onToggleCategoryMember(members[which], isChecked)
+        },
+        text = {
+            // The M3 `text` slot is measured with weight(1f, fill = false), i.e. bounded by the space
+            // left after title + buttons - so a LazyColumn scrolls here without an explicit heightIn,
+            // and a several-hundred-row roster keeps its row allocation bounded.
+            LazyColumn {
+                items(members, key = { it.id }) { member ->
+                    CategoryMemberRow(
+                        teacher = member,
+                        showDescription = type in DESCRIBED_TYPES,
+                        checked = member.id in checked,
+                        onCheckedChange = { on ->
+                            if (on) checked.add(member.id) else checked.remove(member.id)
+                        },
+                    )
+                }
             }
-            .setPositiveButton(R.string.ok, null)
-            .setNeutralButton(R.string.cancel, null)
-            .setOnDismissListener { onDismiss() }
-            .show()
-        onDispose { dialog.dismiss() }
-    }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val shownIds = members.map { it.id }.toSet()
+                    val checkedIds = checked.toSet()
+                    onCommit(shownIds, checkedIds)
+                    onDismiss()
+                },
+            ) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 /**
- * A category row label: the name, plus - for the types the legacy ChipCreator gave a description to -
- * a smaller, secondary-coloured `typeDescription` on a second line. The legacy `when` listed every
- * other type explicitly as null and fell through to `typeDescription` for anything unlisted, i.e.
- * TYPE_OTHER; since the picker is only ever opened for a [Teacher.types] entry, enumerating the five
- * described types is equivalent.
+ * One picker row: a checkbox plus the name, and for [showDescription] types the `typeDescription` on
+ * a second line. The WHOLE ROW is the toggle target, because the platform `setMultiChoiceItems` list
+ * it replaces rendered a CheckedTextView that toggled on a tap anywhere in the row.
+ *
+ * The M3 dialog `text` slot pre-provides onSurfaceVariant + bodyMedium, so the name line sets its
+ * colour and style explicitly or it would render as secondary text.
  */
-private fun categoryItemLabel(context: Context, type: Int, teacher: Teacher): CharSequence {
-    val description = when (type) {
-        Teacher.TYPE_PARENTS_COUNCIL,
-        Teacher.TYPE_EDUCATOR,
-        Teacher.TYPE_PARENT,
-        Teacher.TYPE_STUDENT,
-        Teacher.TYPE_OTHER -> teacher.typeDescription
-        else -> null
+@Composable
+private fun CategoryMemberRow(
+    teacher: Teacher,
+    showDescription: Boolean,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Column(Modifier.padding(start = 8.dp)) {
+            Text(
+                text = teacher.fullName,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            if (showDescription)
+                teacher.typeDescription?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+        }
     }
-    return listOfNotNull(
-        teacher.fullName.asSpannable(
-            ForegroundColorSpan(android.R.attr.textColorPrimary.resolveAttr(context)),
-        ),
-        description?.asSpannable(
-            ForegroundColorSpan(android.R.attr.textColorSecondary.resolveAttr(context)),
-            AbsoluteSizeSpan(14, true),
-        ),
-    ).concat("\n")
 }

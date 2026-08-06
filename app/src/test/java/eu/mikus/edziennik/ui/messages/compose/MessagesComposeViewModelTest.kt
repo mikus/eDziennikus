@@ -178,20 +178,6 @@ class MessagesComposeViewModelTest {
         assertEquals(listOf(301L, 300L), model.categoryMembers(Teacher.TYPE_TEACHER).map { it.id })
     }
 
-    @Test
-    fun `toggleCategoryMember adds when checked and removes when unchecked`() = runTest(dispatcher) {
-        val model = vm()
-        model.toggleCategoryMember(kowalska, true)
-        assertEquals(listOf(100L), model.selectedRecipients.value.map { it.id })
-
-        model.toggleCategoryMember(kowalska, true)
-        assertEquals(1, model.selectedRecipients.value.size)
-
-        model.toggleCategoryMember(kowalska, false)
-        assertEquals(emptyList(), model.selectedRecipients.value)
-        assertTrue(model.changedRecipients)
-    }
-
     /**
      * Seeds a VM with the three TYPE_TEACHER fixtures visible and [selected] already chosen, with
      * both dirty flags reset - i.e. the reply/forward/draft entry state, which is where an untouched

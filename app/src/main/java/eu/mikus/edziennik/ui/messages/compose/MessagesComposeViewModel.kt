@@ -125,18 +125,6 @@ class MessagesComposeViewModel(
             members
     }
 
-    fun toggleCategoryMember(teacher: Teacher, checked: Boolean) {
-        _selectedRecipients.value = if (checked) {
-            if (_selectedRecipients.value.any { it.id == teacher.id })
-                _selectedRecipients.value
-            else
-                _selectedRecipients.value + teacher
-        } else {
-            _selectedRecipients.value.filter { it.id != teacher.id }
-        }
-        changedRecipients = true
-    }
-
     /**
      * Commits one category-picker session. [shownIds] are the members the picker displayed,
      * [checkedIds] the subset left ticked when the user pressed OK. Recipients outside [shownIds]

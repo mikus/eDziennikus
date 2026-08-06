@@ -199,7 +199,10 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
                         recipientsError = null
                         vm.removeRecipient(it)
                     },
-                    onToggleCategoryMember = vm::toggleCategoryMember,
+                    onCommitCategory = { shownIds, checkedIds ->
+                        recipientsError = null
+                        vm.commitCategorySelection(shownIds, checkedIds)
+                    },
                     onBodyConfigReady = { bodyConfig = it },
                     onBodyChanged = {
                         bodyError = null
