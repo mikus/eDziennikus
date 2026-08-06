@@ -805,6 +805,7 @@
     <string name="save">Speichern</string>
     <string name="saved">Gespeichert</string>
     <string name="school_notices_no_data">Keine Schulankündigungen</string>
+    <string name="send">Senden</string>
     <string name="sending_message">Nachricht senden…</string>
     <string name="settings_about_changelog_text">Änderungsprotokoll</string>
     <string name="settings_about_crash_subtext">Oder besser nicht klicken…</string>

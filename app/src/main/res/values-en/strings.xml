@@ -810,6 +810,7 @@
     <string name="save">Save</string>
     <string name="saved">Saved</string>
     <string name="school_notices_no_data">No school announcements.</string>
+    <string name="send">Send</string>
     <string name="sending_message">Sending message…</string>
     <string name="settings_about_changelog_text">Changelog</string>
     <string name="settings_about_crash_subtext">Or better do not click…</string>
