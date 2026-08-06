@@ -189,6 +189,13 @@ class TextStylingManager(private val app: App) {
                 .replace("</sub><sub>", "")
                 .replace("</sup><sup>", "")
                 .replace("p style=\"margin-top:0; margin-bottom:0;\"", "p")
+                // toHtml encodes a blank line by closing and reopening the paragraph, so </p><p>
+                // stands for TWO newlines - but BetterHtml.fromHtml rewrites <p to <span (no
+                // newline) and </p> to </span><br> (one), restoring only k-1 of every run of k >= 2.
+                // Emit the second newline explicitly or every blank line is lost when the draft is
+                // read back. Matches "</p><p" rather than "</p><p>" so it still fires when a
+                // dir="rtl" attribute survives the strip above; "</p></p>" cannot match.
+                .replace("</p><p", "</p><br><p")
                 .replace("<br></p>", "</p><br>")
                 // replace multiple newlines so they convert fromHtml correctly
                 // this should not be breaking with htmlCompatibleMode == true,

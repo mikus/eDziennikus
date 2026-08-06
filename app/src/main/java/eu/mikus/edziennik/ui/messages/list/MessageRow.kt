@@ -58,7 +58,9 @@ fun MessageRow(
     val subject = remember(message, query, highlight) {
         AnnotatedString(message.subject).withSearchHighlight(query, highlight)
     }
-    val preview = remember(message) { message.bodyHtml?.toString()?.take(200).orEmpty() }
+    // trim() before take(): a body may open with a blank line (the default signature does), and a
+    // 2-line preview that leads with one would render as empty rows
+    val preview = remember(message) { message.bodyHtml?.toString()?.trim()?.take(200).orEmpty() }
     val date = remember(message) { Date.fromMillis(message.addedDate).formattedStringShort }
 
     Card(
