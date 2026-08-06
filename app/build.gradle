@@ -188,7 +188,6 @@ dependencies {
     implementation "eu.szkolny:cafebar:5bf0c618de"
     implementation "eu.szkolny.fslogin:lib:2.0.0"
     implementation "eu.szkolny:mhttp:af4b62e6e9"
-    implementation "eu.szkolny:nachos:0e5dfcaceb"
     implementation "eu.szkolny.selective-dao:annotation:27f8f3f194"
     implementation "eu.szkolny:ssl-provider:1.0.0"
     implementation "pl.szczodrzynski:navlib:0.8.0"

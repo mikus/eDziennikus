@@ -39,7 +39,6 @@ val LICENSES: List<LicenseEntry> = listOf(
     LicenseEntry("FSLogin", "2021", "kuba2k2", LicenseType.MIT, "https://github.com/szkolny-eu/FSLogin"),
     LicenseEntry("material-about-library", "2016-2020", "Daniel Stone", LicenseType.APACHE_2, "https://github.com/szkolny-eu/material-about-library"),
     LicenseEntry("MHttp", "2018", "Mot.", LicenseType.APACHE_2, "https://github.com/szkolny-eu/mhttp"),
-    LicenseEntry("Nachos for Android", "2016", "Hootsuite Media, Inc.", LicenseType.APACHE_2, "https://github.com/szkolny-eu/nachos"),
     LicenseEntry("Material Number Sliding Picker", "2019", "Alessandro Crugnola", LicenseType.MIT, "https://github.com/kuba2k2/NumberSlidingPicker"),
     LicenseEntry("RecyclerTabLayout", "2017", "nshmura", LicenseType.APACHE_2, "https://github.com/kuba2k2/RecyclerTabLayout"),
     LicenseEntry("Tachyon", "2019", "LinkedIn Corporation", LicenseType.BSD, "https://github.com/kuba2k2/Tachyon"),
