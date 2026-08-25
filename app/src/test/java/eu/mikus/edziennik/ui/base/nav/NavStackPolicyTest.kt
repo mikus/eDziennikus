@@ -137,9 +137,11 @@ class NavStackPolicyTest {
 
     @Test
     fun `truncation on an empty stack is a no-op`() {
-        // ATTENDANCE declares popTo = HOME, so this DOES enter the truncation and the `size > 1`
-        // guard is what makes it a no-op. A popTo-less target would skip the branch entirely and
-        // this would only re-test RELOAD, leaving the guard unpinned.
+        // ATTENDANCE declares popTo = HOME, so this reaches the truncation condition - though the
+        // `size > 1` half then short-circuits, so the body never runs. Note this case cannot detect
+        // the truncation being deleted or relaxed to `popTo != null`: empty-in, empty-out either
+        // way. It pins only "an empty stack survives a popTo == HOME target without throwing";
+        // tests 5 and 6 are what pin the truncation itself.
         val d = decideNavigation(
             current = NavTarget.ATTENDANCE,
             currentArguments = null,
@@ -230,13 +232,23 @@ class NavStackPolicyTest {
         val original = mutableListOf<Pair<NavTarget, Bundle?>>(root to null, a to null)
         val snapshot = original.toList()
 
-        listOf(
+        val decisions = listOf(
             decideNavigation(a, null, original, a, null),         // RELOAD
             decideNavigation(a, null, original, b, null),         // PUSH (SETTINGS has no popTo)
             decideNavigation(b, null, original, a, null),         // POP
-        ).forEach { d ->
+        )
+        val sizes = decisions.map { it.stack.size }
+
+        decisions.forEach { d ->
             assertNotSame(original, d.stack)
             assertEquals(snapshot, original)
         }
+
+        // assertNotSame alone cannot catch a subList VIEW - that is a distinct object which also
+        // leaves its backing list unmutated, yet the caller's navBackStack.clear() would empty it
+        // and wipe the decision. Mutating the input afterwards is the check that actually bites:
+        // if take() were ever "optimised" to subList(), these sizes would collapse to 0.
+        original.clear()
+        assertEquals(sizes, decisions.map { it.stack.size })
     }
 }

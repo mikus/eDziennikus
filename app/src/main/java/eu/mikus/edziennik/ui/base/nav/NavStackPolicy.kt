@@ -14,8 +14,9 @@ enum class NavTransition { RELOAD, POP, PUSH }
  *
  * [stack] never aliases the caller's mutable back stack and is never a subList view of it - the
  * caller clears its own list before copying this one into it, and would otherwise wipe the
- * decision. (The one instance this can return unchanged is the shared `EmptyList` singleton, when
- * an empty list is passed in; that is not a MutableList, so it can never be the caller's.)
+ * decision. (The one instance it can hand back is the shared `EmptyList` singleton - returned both
+ * for an empty input and from a POP at index 0 - which is not a MutableList, so it can never be the
+ * caller's list either way.)
  *
  * [arguments] is the resolved-or-null argument bundle for the target: null means "the caller
  * supplies an empty Bundle". Constructing one is an Android call, so it stays at the call site.
