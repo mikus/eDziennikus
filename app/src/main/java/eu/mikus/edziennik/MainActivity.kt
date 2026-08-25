@@ -57,6 +57,8 @@ import eu.mikus.edziennik.sync.UpdateWorker
 import eu.mikus.edziennik.ui.base.MainSnackbar
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.base.enums.NavTargetLocation
+import eu.mikus.edziennik.ui.base.nav.NavTransition
+import eu.mikus.edziennik.ui.base.nav.decideNavigation
 import eu.mikus.edziennik.ui.dialogs.ChangelogDialog
 import eu.mikus.edziennik.ui.dialogs.settings.ProfileConfigDialog
 import eu.mikus.edziennik.ui.dialogs.sync.ServerMessageDialog
@@ -966,9 +968,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             drawer.currentProfile = App.profileId
         }
 
-        val arguments = args
-            ?: navBackStack.firstOrNull { it.first == navTarget }?.second
-            ?: Bundle()
+        val decision = decideNavigation(
+            current = this.navTarget,
+            currentArguments = this.navArguments,
+            stack = navBackStack,
+            target = navTarget,
+            requestedArguments = args,
+        )
+        val arguments = decision.arguments ?: Bundle()
         bottomSheet.close()
         bottomSheet.removeAllContextual()
         bottomSheet.toggleGroupEnabled = false
@@ -986,59 +993,27 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         fragment.arguments = arguments
         val transaction = fragmentManager.beginTransaction()
 
-        if (navTarget == this.navTarget) {
-            // just reload the current target
-            transaction.setCustomAnimations(
-                R.anim.fade_in,
-                R.anim.fade_out
-            )
-        } else {
-            navBackStack.keys().lastIndexOf(navTarget).let {
-                if (it == -1)
-                    return@let navTarget
-                // pop the back stack up until that target
-                transaction.setCustomAnimations(
-                    R.anim.task_close_enter,
-                    R.anim.task_close_exit
-                )
+        transaction.setCustomAnimations(
+            when (decision.transition) {
+                NavTransition.RELOAD -> R.anim.fade_in
+                NavTransition.POP -> R.anim.task_close_enter
+                NavTransition.PUSH -> R.anim.task_open_enter
+            },
+            when (decision.transition) {
+                NavTransition.RELOAD -> R.anim.fade_out
+                NavTransition.POP -> R.anim.task_close_exit
+                NavTransition.PUSH -> R.anim.task_open_exit
+            },
+        )
 
-                // navigating grades_add -> grades
-                // navTarget == grades_add
-                // navBackStack = [home, grades, grades_editor]
-                // it == 1
-                //
-                // navTarget = target
-                // remove 1
-                // remove 2
-                val popCount = navBackStack.size - it
-                for (i in 0 until popCount) {
-                    navBackStack.removeAt(navBackStack.lastIndex)
-                }
-                this.navTarget = navTarget
-                this.navArguments = arguments
-
-                return@let null
-            }?.let {
-                // target is neither current nor in the back stack
-                // so navigate to it
-                transaction.setCustomAnimations(
-                    R.anim.task_open_enter,
-                    R.anim.task_open_exit
-                )
-                navBackStack.add(this.navTarget to this.navArguments)
-                this.navTarget = navTarget
-                this.navArguments = arguments
-            }
-        }
-
-        if (navTarget.popTo == NavTarget.HOME) {
-            // if the current has popToHome, let only home be in the back stack
-            // probably `if (navTarget.popToHome)` in popBackStack() is not needed now
-            val popCount = navBackStack.size - 1
-            for (i in 0 until popCount) {
-                navBackStack.removeAt(navBackStack.lastIndex)
-            }
-        }
+        navBackStack.clear()
+        navBackStack.addAll(decision.stack)
+        this.navTarget = decision.target
+        // RELOAD deliberately leaves navArguments alone, exactly as the inline version did.
+        // Do not delete this guard on the strength of a green unit suite - the policy cannot
+        // express it, so nothing in NavStackPolicyTest covers it.
+        if (decision.transition != NavTransition.RELOAD)
+            this.navArguments = arguments
 
         d("NavDebug", "Current fragment ${navTarget.name}, back stack:")
         navBackStack.forEachIndexed { index, item ->
