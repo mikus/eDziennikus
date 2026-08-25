@@ -24,7 +24,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
-import androidx.navigation.NavOptions
 import com.danimahardhika.cafebar.CafeBar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jetradarmobile.snowfall.SnowfallView
@@ -843,6 +842,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     override fun onDestroy() {
         d(TAG, "Activity destroyed")
+        // Nothing cancelled this before, so every destruction leaked the scope - and recreate() runs
+        // on every theme change (SettingsFragment's SettingsEffect.Recreate). All four launch sites
+        // are lifecycle-scoped UI/DB work; the only cancellation-visible write (PROFILE_MARK_AS_READ)
+        // has no internal suspension point, so it is all-or-nothing.
+        job.cancel()
         super.onDestroy()
     }
 
@@ -868,13 +872,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
          | |    / _ \ / _` |/ _` | | '_ ` _ \ / _ \ __| '_ \ / _ \ / _` / __|
          | |___| (_) | (_| | (_| | | | | | | |  __/ |_| | | | (_) | (_| \__ \
          |______\___/ \__,_|\__,_| |_| |_| |_|\___|\__|_| |_|\___/ \__,_|__*/
-    val navOptions = NavOptions.Builder()
-        .setEnterAnim(R.anim.task_open_enter) // new fragment enter
-        .setExitAnim(R.anim.task_open_exit) // old fragment exit
-        .setPopEnterAnim(R.anim.task_close_enter) // old fragment enter back
-        .setPopExitAnim(R.anim.task_close_exit) // new fragment exit
-        .build()
-
     private fun canNavigate(): Boolean = onBeforeNavigate?.invoke() != false
 
     fun resumePausedNavigation(): Boolean {
