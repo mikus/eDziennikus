@@ -10,7 +10,6 @@ import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
-import com.google.android.material.elevation.ElevationOverlayProvider
 import com.mikepenz.iconics.IconicsDrawable
 import com.mikepenz.iconics.utils.colorInt
 
@@ -31,13 +30,6 @@ fun getColorFromAttr(context: Context, @AttrRes attr: Int): Int =
 /** navlib: theme-aware drawable lookup (non-null, like navlib's). */
 fun Context.getDrawableFromRes(@DrawableRes res: Int): Drawable =
     ContextCompat.getDrawable(this, res)!!
-
-/** navlib: the Material elevation-overlay surface color at [dp] elevation. */
-fun elevateSurface(context: Context, dp: Int): Int {
-    val provider = ElevationOverlayProvider(context)
-    val elevationPx = dp * context.resources.displayMetrics.density
-    return provider.compositeOverlay(provider.themeSurfaceColor, elevationPx)
-}
 
 /**
  * navlib: alpha-composite [color2] over [color1] using color2's alpha as the blend ratio,
