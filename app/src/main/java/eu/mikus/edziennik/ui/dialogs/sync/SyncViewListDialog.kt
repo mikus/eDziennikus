@@ -52,6 +52,7 @@ class SyncViewListDialog(
         if (selected.isEmpty())
             return DISMISS
 
+        (activity as? MainActivity)?.markSyncStarting()
         EdziennikTask.syncProfile(
             App.profileId,
             selected
@@ -60,6 +61,7 @@ class SyncViewListDialog(
     }
 
     override suspend fun onNeutralClick(): Boolean {
+        (activity as? MainActivity)?.markSyncStarting()
         EdziennikTask.syncProfile(App.profileId).enqueue(activity)
         return DISMISS
     }

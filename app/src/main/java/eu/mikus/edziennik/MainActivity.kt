@@ -493,6 +493,23 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         UpdateProgressDialog(this, event.update ?: return, event.downloadId).show()
     }
 
+    /**
+     * Immediate feedback for a sync started from the bottom sheet's Sync row, mirroring
+     * [onApiTaskStartedEvent]'s gate: the boxed screens show it through their Compose
+     * PullToRefreshBox (via SyncStatus), every other screen through the host indicator.
+     *
+     * Without this the row shows nothing until ApiService actually starts and posts
+     * ApiTaskStartedEvent, and that is not a bounded wait - IApiTask.enqueue only calls
+     * startForegroundService, so the event is posted later, inside ApiService.runTask, after service
+     * creation and task.prepare. syncFeature has always marked eagerly for the same reason
+     * (SyncStatus.markRefreshing's KDoc); this makes the sheet's row consistent with it.
+     */
+    fun markSyncStarting() {
+        app.syncStatus.markRefreshing()
+        if (!::navTarget.isInitialized || navTarget !in boxedNavTargets)
+            swipeRefreshLayout.isRefreshing = true
+    }
+
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskStartedEvent(event: ApiTaskStartedEvent) {
         if (!::navTarget.isInitialized || navTarget !in boxedNavTargets)
