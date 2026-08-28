@@ -14,11 +14,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import eu.mikus.edziennik.App
-import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.databinding.TemplateFragmentBinding
 import eu.mikus.edziennik.ext.addOnPageSelectedListener
 import eu.mikus.edziennik.ui.base.lazypager.FragmentLazyPagerAdapter
-import eu.mikus.edziennik.utils.SwipeRefreshLayoutNoTouch
 import kotlin.coroutines.CoroutineContext
 
 class LabFragment : Fragment(), CoroutineScope {
@@ -42,10 +40,6 @@ class LabFragment : Fragment(), CoroutineScope {
         context ?: return null
         app = activity.application as App
         b = TemplateFragmentBinding.inflate(inflater)
-        when (activity) {
-            is MainActivity -> b.refreshLayout.setParent((activity as MainActivity).swipeRefreshLayout)
-        }
-        b.refreshLayout.isEnabled = false
         return b.root
     }
 
@@ -54,8 +48,7 @@ class LabFragment : Fragment(), CoroutineScope {
 
         val pagerAdapter = FragmentLazyPagerAdapter(
             parentFragmentManager,
-                b.refreshLayout,
-                listOf(
+                fragments = listOf(
                         LabPageFragment() to "click me",
                         LabProfileFragment() to "JSON"
                 )

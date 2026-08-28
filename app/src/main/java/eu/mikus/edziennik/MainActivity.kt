@@ -43,10 +43,8 @@ import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.*
 import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.api.models.Update
-import eu.mikus.edziennik.data.db.entity.Message
 import eu.mikus.edziennik.data.db.entity.Metadata.*
 import eu.mikus.edziennik.data.db.entity.Profile
-import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.ActivitySzkolnyBinding
 import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.sync.AppManagerDetectedEvent
@@ -69,7 +67,6 @@ import eu.mikus.edziennik.ui.error.ErrorSnackbar
 import eu.mikus.edziennik.ui.event.EventManualDialog
 import eu.mikus.edziennik.ui.login.LoginActivity
 import eu.mikus.edziennik.ui.messages.list.MessagesFragment
-import eu.mikus.edziennik.ui.timetable.TimetableFragment
 import eu.mikus.edziennik.utils.*
 import eu.mikus.edziennik.utils.Utils.d
 import eu.mikus.edziennik.utils.Utils.dpToPx
@@ -317,8 +314,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             drawer.setUnreadCounterList(unreadCounters)
         }
 
-        b.swipeRefreshLayout.isEnabled = true
-        b.swipeRefreshLayout.setOnRefreshListener { launch { syncCurrentFeature() } }
         b.swipeRefreshLayout.setColorSchemeResources(
             R.color.md_blue_500,
             R.color.md_amber_500,
@@ -483,66 +478,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
          |_____/ \__, |_| |_|\___|
                   __/ |
                  |__*/
-    private suspend fun syncCurrentFeature() {
-        if (app.profile.archived) {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.profile_archived_title)
-                .setMessage(
-                    R.string.profile_archived_text,
-                    app.profile.studentSchoolYearStart,
-                    app.profile.studentSchoolYearStart + 1
-                )
-                .setPositiveButton(R.string.ok, null)
-                .show()
-            swipeRefreshLayout.isRefreshing = false
-            return
-        }
-        if (app.profile.shouldArchive()) {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.profile_archiving_title)
-                .setMessage(
-                    R.string.profile_archiving_format,
-                    app.profile.dateYearEnd.formattedString
-                )
-                .setPositiveButton(R.string.ok, null)
-                .show()
-        }
-        if (app.profile.isBeforeYear()) {
-            MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.profile_year_not_started_title)
-                .setMessage(
-                    R.string.profile_year_not_started_format,
-                    app.profile.dateSemester1Start.formattedString
-                )
-                .setPositiveButton(R.string.ok, null)
-                .show()
-            swipeRefreshLayout.isRefreshing = false
-            return
-        }
-
-        // Pre-sync provider-availability check was removed when SzkolnyApi was
-        // dropped. Errors from the actual sync surface from each provider's
-        // own HTTP calls.
-        swipeRefreshLayout.isRefreshing = true
-        Toast.makeText(this, fragmentToSyncName(navTarget), Toast.LENGTH_SHORT).show()
-        val featureType = when (navTarget) {
-            NavTarget.MESSAGES -> when (MessagesFragment.pageSelection) {
-                Message.TYPE_SENT -> FeatureType.MESSAGES_SENT
-                else -> FeatureType.MESSAGES_INBOX
-            }
-            else -> navTarget.featureType
-        }
-        val arguments = when (navTarget) {
-            NavTarget.TIMETABLE -> JsonObject("weekStart" to TimetableFragment.pageSelection?.weekStart?.stringY_m_d)
-            else -> null
-        }
-        EdziennikTask.syncProfile(
-            App.profileId,
-            featureType?.let { setOf(it) },
-            arguments = arguments
-        ).enqueue(this)
-    }
-
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
     fun onUpdateEvent(event: Update) {
         EventBus.getDefault().removeStickyEvent(event)
@@ -664,23 +599,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onUserActionRequiredEvent(event: UserActionRequiredEvent) {
         app.userActionManager.execute(this, event, UserActionManager.UserActionCallback())
-    }
-
-    private fun fragmentToSyncName(navTarget: NavTarget): Int {
-        return when (navTarget) {
-            NavTarget.TIMETABLE -> R.string.sync_feature_timetable
-            NavTarget.AGENDA -> R.string.sync_feature_agenda
-            NavTarget.GRADES -> R.string.sync_feature_grades
-            NavTarget.HOMEWORK -> R.string.sync_feature_homework
-            NavTarget.BEHAVIOUR -> R.string.sync_feature_notices
-            NavTarget.ATTENDANCE -> R.string.sync_feature_attendance
-            NavTarget.MESSAGES -> when (MessagesFragment.pageSelection) {
-                Message.TYPE_SENT -> R.string.sync_feature_messages_outbox
-                else -> R.string.sync_feature_messages_inbox
-            }
-            NavTarget.ANNOUNCEMENTS -> R.string.sync_feature_announcements
-            else -> R.string.sync_feature_syncing_all
-        }
     }
 
     /*    _____       _             _
