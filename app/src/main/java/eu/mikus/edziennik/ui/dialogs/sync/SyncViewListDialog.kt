@@ -52,8 +52,6 @@ class SyncViewListDialog(
         if (selected.isEmpty())
             return DISMISS
 
-        if (activity is MainActivity)
-            activity.swipeRefreshLayout.isRefreshing = true
         EdziennikTask.syncProfile(
             App.profileId,
             selected
@@ -62,8 +60,6 @@ class SyncViewListDialog(
     }
 
     override suspend fun onNeutralClick(): Boolean {
-        if (activity is MainActivity)
-            activity.swipeRefreshLayout.isRefreshing = true
         EdziennikTask.syncProfile(App.profileId).enqueue(activity)
         return DISMISS
     }
