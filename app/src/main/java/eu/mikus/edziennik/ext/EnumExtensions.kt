@@ -4,11 +4,8 @@
 
 package eu.mikus.edziennik.ext
 
-import android.view.View
-import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.data.db.enums.*
 import eu.mikus.edziennik.ui.base.enums.NavTarget
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 
 fun Int.asFeatureType() = FeatureType.values().first { it.id == this }
 fun Int.asLoginMethod() = LoginMethod.values().first { it.id == this }
@@ -63,13 +60,3 @@ fun <E : Enum<E>> Int.toEnum(type: Class<*>): Enum<E> = when (type) {
 
 fun getFeatureTypesNecessary() = FeatureType.values().filter { it.isAlwaysNeeded }.toSet()
 fun getFeatureTypesUnnecessary() = FeatureType.values().filter { !it.isAlwaysNeeded }.toSet()
-
-fun NavTarget.toBottomSheetItem(activity: MainActivity) =
-    BottomSheetPrimaryItem(isContextual = false).also {
-        it.titleRes = this.nameRes
-        if (this.icon != null)
-            it.iconicsIcon = this.icon
-        it.onClickListener = View.OnClickListener {
-            activity.navigate(navTarget = this)
-        }
-    }

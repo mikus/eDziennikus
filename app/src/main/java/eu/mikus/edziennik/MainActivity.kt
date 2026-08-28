@@ -28,6 +28,7 @@ import com.danimahardhika.cafebar.CafeBar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jetradarmobile.snowfall.SnowfallView
 import com.mikepenz.iconics.IconicsDrawable
+import com.mikepenz.iconics.typeface.IIcon
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import com.mikepenz.iconics.utils.colorInt
 import com.mikepenz.iconics.utils.sizeDp
@@ -435,7 +436,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 continue
             if (target.devModeOnly && !App.devMode)
                 continue
-            bottomSheet += target.toBottomSheetItem(this)
+            bottomSheet += target.toBottomSheetItem()
         }
     }
 
@@ -1135,4 +1136,21 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     ) = mainSnackbar.snackbar(text, actionText, onClick)
 
     fun snackbarDismiss() = mainSnackbar.dismiss()
+
+    /** Absorbed from ext/EnumExtensions.kt in P26 — its only caller was the BOTTOM_SHEET loop in
+     *  onCreate, and it was that file's only navlib dependency. isContextual = false is load-bearing:
+     *  these are the shell's own rows and must survive removeAllContextual(). */
+    private fun NavTarget.toBottomSheetItem() =
+        BottomSheetPrimaryItem(isContextual = false).also {
+            it.titleRes = this.nameRes
+            if (this.icon != null)
+                it.iconicsIcon = this.icon
+            it.onClickListener = View.OnClickListener {
+                navigate(navTarget = this)
+            }
+        }
 }
+
+/** navlib: an IIcon as a navlib ImageHolder. Absorbed from ext/GraphicsExtensions.kt in P26 —
+ *  every caller was in this file, and it was that file's only navlib dependency. */
+private fun IIcon.toImageHolder() = ImageHolder(this)

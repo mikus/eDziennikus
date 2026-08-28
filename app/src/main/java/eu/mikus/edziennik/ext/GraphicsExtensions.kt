@@ -12,8 +12,6 @@ import android.graphics.drawable.Drawable
 import android.util.TypedValue
 import androidx.annotation.*
 import androidx.core.content.res.ResourcesCompat
-import com.mikepenz.iconics.typeface.IIcon
-import pl.szczodrzynski.navlib.ImageHolder
 
 fun colorFromName(name: String?): Int {
     val i = (name ?: "").crc32()
@@ -96,5 +94,3 @@ fun Drawable.setTintColor(color: Int): Drawable {
     )
     return this
 }
-
-fun IIcon.toImageHolder() = ImageHolder(this)
