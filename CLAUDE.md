@@ -10,7 +10,7 @@ The canonical upstream is `szkolny-eu/szkolny-android`; this checkout is a fork 
 
 ## Build & toolchain
 
-Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Temurin 17). Gradle 9.5.0, AGP 8.13.2, Kotlin 2.3.20, `compileSdk`/`targetSdk` 35, `minSdk` 16.
+Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Temurin 17). Gradle 9.5.0, AGP 8.13.2, Kotlin 2.3.20, `compileSdk`/`targetSdk` 35, `minSdk` 23.
 
 | Task | Purpose |
 |---|---|
@@ -129,7 +129,7 @@ Dependencies in `app/build.gradle`:
 - `io.mockk:mockk:1.13.13` for Kotlin-friendly mocking.
 - `org.robolectric:robolectric:4.14.1` for Android-framework fakes on the JVM (first stable with SDK 35 support).
 
-We deliberately do **not** depend on `androidx.test:core` or `androidx.test.ext:junit` — both declare `minSdkVersion=19` and the production app is `minSdk=16`. Use `org.robolectric.RuntimeEnvironment.getApplication()` instead of `ApplicationProvider.getApplicationContext()`. A unit-test-only manifest at `app/src/test/AndroidManifest.xml` re-declares the `tools:overrideLibrary` directives needed for the test variant (the main manifest's overrides don't flow into the unit-test merged manifest).
+We deliberately do **not** depend on `androidx.test:core` or `androidx.test.ext:junit`. The original reason was a manifest-merger failure: they declare `minSdkVersion=19` against a then-`minSdk=16` app. **That reason has expired** — `minSdk` is 23, and the highest declared value among those artifacts is 19 (`androidx.test:monitor`; `core`/`runner`/`annotation` declare 14), so none of them would fail the merge now. The exclusion is therefore a live decision to re-take, not a constraint: adopting them would mean adding deps and re-checking the merged test manifest, so treat it as its own change rather than a cleanup. Use `org.robolectric.RuntimeEnvironment.getApplication()` instead of `ApplicationProvider.getApplicationContext()`. A unit-test-only manifest at `app/src/test/AndroidManifest.xml` re-declares the `tools:overrideLibrary` directives needed for the test variant (the main manifest's overrides don't flow into the unit-test merged manifest).
 
 Robolectric tests can instantiate the production `App.onCreate()` directly — there's no native library load to fake out anymore (the `szkolny-signing` JNI dep was deleted along with SzkolnyApi). Tests that just need an `Application` instance can either let the real `App` boot, or swap in stock `android.app.Application::class` via `@Config(application = …)` if they want isolation from app-wide singletons. See `RobolectricSmokeTest.kt` for the canonical shape.
 
@@ -179,7 +179,7 @@ There is no Play AAB upload, no nightly cron, and no Discord/Firebase distributi
 
 ## Constraints to keep in mind
 
-- **`minSdk = 16` (Android 4.1)**: guard newer APIs with `Build.VERSION.SDK_INT` / `@RequiresApi`. Core library desugaring is enabled, so `java.time` and streams are fine without checks.
+- **`minSdk = 23` (Android 6.0)**: guard newer APIs with `Build.VERSION.SDK_INT` / `@RequiresApi`. Core library desugaring is enabled, so `java.time` and streams are fine without checks. Note that guards for API levels **≤ 23 are now dead code** — `lintDebug` already reports them as `Unnecessary; SDK_INT is always >= 23` (e.g. three in `MainActivity.kt`). Don't add new ones; removing the existing ones is a separate, test-backed change.
 - **R8 full mode is off** (`android.enableR8.fullMode=false`). Don't rely on aggressive shrinking in release builds.
 - **`android.enableJetifier=true`** is on for transitively-pulled legacy support libs.
 - **All commit messages in this repo follow `[Area] Title` convention** (e.g., `[UI] …`, `[API/Librus] …`, `[Actions] …`, `[Gradle] …`). Match the prefix style when adding commits.

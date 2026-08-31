@@ -253,11 +253,13 @@ dependencies {
 
     // Robolectric — Android framework fakes on the JVM. 4.14.1 is the first stable
     // release with Android 14 / 15 (SDK 35) support. We do NOT depend on
-    // androidx.test:core or androidx.test.ext:junit: both ship AndroidManifest.xml
-    // files with uses-sdk:minSdkVersion="19" which fail manifest-merger against the
-    // app's production minSdk=16. Use Robolectric's RuntimeEnvironment.getApplication()
-    // in place of ApplicationProvider.getApplicationContext(). Revisit if/when
-    // we raise minSdk or need fragment/activity test scaffolds.
+    // androidx.test:core or androidx.test.ext:junit. Historically they shipped
+    // AndroidManifest.xml files with uses-sdk:minSdkVersion="19" that failed
+    // manifest-merger against the app's then-minSdk=16. That blocker is GONE:
+    // minSdk is 23 and the highest declared value among those artifacts is 19.
+    // Keeping them out is now a choice, not a constraint - Robolectric's
+    // RuntimeEnvironment.getApplication() replaces ApplicationProvider and works
+    // fine. Revisit deliberately if fragment/activity test scaffolds are needed.
     testImplementation "org.robolectric:robolectric:4.14.1"
 
     // Compose UI tests run under Robolectric in app/src/test (no androidTest, no emulator).
