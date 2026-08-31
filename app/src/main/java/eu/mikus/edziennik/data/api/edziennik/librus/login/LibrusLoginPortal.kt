@@ -310,6 +310,7 @@ class LibrusLoginPortal(val data: DataLibrus, val onSuccess: () -> Unit) {
                 .userAgent(LIBRUS_USER_AGENT)
                 .addParams(params)
                 .post()
+                .allowErrorCode(HTTP_BAD_REQUEST)
                 .allowErrorCode(HTTP_UNAUTHORIZED)
                 .callback(callback)
                 .build()
