@@ -450,11 +450,11 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
                 return
         }
 
-        // The platform IMM, NOT WindowInsetsControllerCompat. That compat class's (Window, View)
-        // ctor falls through to a base `Impl` when SDK_INT < 20, and `Impl.hide(int)` is an empty
-        // method (`0: return`) — verified in androidx.core 1.9.0 and 1.16.0. This app is minSdk 16,
-        // so the compat route would silently stop hiding the IME on API 16-19. This is the identical
-        // call navlib's hideKeyboard() made, and it works on every supported API.
+        // The platform IMM, matching navlib's hideKeyboard() byte-for-byte. Deliberately NOT
+        // WindowInsetsControllerCompat: on API 30+ that resolves to Impl30, which routes through the
+        // platform WindowInsetsController (async, animated) instead of the IMM — a real behaviour
+        // change on most devices, and this refactor must be invisible. (Below 30 it picks Impl23/26,
+        // which do use the IMM; the no-op base Impl needs SDK_INT < 20, unreachable at minSdk 23.)
         (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
             .hideSoftInputFromWindow(requireView().windowToken, 0)
         clearBodyComposingSpans()
