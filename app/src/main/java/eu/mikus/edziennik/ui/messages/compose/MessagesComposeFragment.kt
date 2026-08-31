@@ -4,10 +4,12 @@
 
 package eu.mikus.edziennik.ui.messages.compose
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
@@ -46,6 +48,7 @@ import eu.mikus.edziennik.data.db.entity.Teacher
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.databinding.MessagesComposeFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.MessagesConfigDialog
@@ -53,8 +56,6 @@ import eu.mikus.edziennik.ui.messages.list.MessagesFragment
 import eu.mikus.edziennik.utils.Themes
 import eu.mikus.edziennik.utils.managers.TextStylingManager.HtmlMode.ORIGINAL
 import eu.mikus.edziennik.utils.managers.TextStylingManager.StylingConfigBase
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -90,7 +91,9 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
     /** The body is not VM state, so its dirty flag is tracked here (legacy `changedBody`). */
     private var changedBody = false
 
-    private var discardDraftItem: BottomSheetPrimaryItem? = null
+    /** Drives the discard-draft row. The fragment is the expert: it learns of a draft at seed time
+     *  (`initial.isDraft`) and after every successful save. */
+    private var hasDraft = false
 
     /**
      * True once [applyInitialState] has run - it both gates the editor's first composition and is
@@ -158,7 +161,7 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         // crash on `lateinit vm` the next time this editor opens.
         EventBus.getDefault().register(this)
 
-        setUpBottomSheet()
+        declareScreenActions()
         setUpFab()
 
         if (vm.loadTeachers())
@@ -286,51 +289,21 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         }
     }
 
-    private fun setUpBottomSheet() {
-        discardDraftItem = BottomSheetPrimaryItem(true)
-            .withTitle(R.string.messages_compose_discard_draft)
-            .withIcon(CommunityMaterial.Icon3.cmd_text_box_remove_outline)
-            .withOnClickListener {
-                activity.bottomSheet.close()
-                prompt = Prompt.DiscardDraft
-            }
-
-        activity.bottomSheet.prependItems(
-            BottomSheetPrimaryItem(true)
-                .withTitle(R.string.messages_compose_send_long)
-                .withIcon(CommunityMaterial.Icon3.cmd_send_outline)
-                .withOnClickListener {
-                    activity.bottomSheet.close()
-                    sendMessage()
-                },
-            BottomSheetPrimaryItem(true)
-                .withTitle(R.string.messages_compose_save_draft)
-                .withIcon(CommunityMaterial.Icon.cmd_content_save_edit_outline)
-                .withOnClickListener {
-                    activity.bottomSheet.close()
-                    saveDraft()
-                },
-            BottomSheetSeparatorItem(true),
-            BottomSheetPrimaryItem(true)
-                .withTitle(R.string.menu_messages_config)
-                .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                .withOnClickListener {
-                    activity.bottomSheet.close()
-                    MessagesConfigDialog(activity, false, null, null).show()
-                }
-        )
+    private fun declareScreenActions() {
+        activity.setScreenActions(messagesComposeActions(
+            hasDraft = hasDraft,
+            onSend = ::sendMessage,
+            onSaveDraft = ::saveDraft,
+            onDiscard = { prompt = Prompt.DiscardDraft },
+            onConfig = { MessagesConfigDialog(activity, false, null, null).show() },
+        ))
     }
 
     private fun setUpFab() {
-        activity.navView.bottomBar.apply {
-            fabEnable = true
-            fabExtendedText = getString(R.string.messages_compose_send)
-            fabIcon = CommunityMaterial.Icon3.cmd_send_outline
-
-            setFabOnClickListener {
-                sendMessage()
-            }
-        }
+        activity.setScreenFab(ScreenFab(
+            labelRes = R.string.messages_compose_send,
+            icon = CommunityMaterial.Icon3.cmd_send_outline,
+        ) { sendMessage() })
 
         activity.gainAttentionFAB()
     }
@@ -352,19 +325,13 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
         )
         vm.applyInitial(initial)
         initialBody = initial.body
-        if (initial.isDraft)
-            addDiscardDraftItem()
+        if (initial.isDraft) {
+            hasDraft = true
+            declareScreenActions()
+        }
 
         changedBody = false
         initialReady = true
-    }
-
-    /** The discard-draft action only exists once there IS a draft, and is added a single time. */
-    private fun addDiscardDraftItem() {
-        discardDraftItem?.let {
-            activity.bottomSheet.addItemAt(2, it)
-        }
-        discardDraftItem = null
     }
 
     /**
@@ -434,7 +401,8 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
             vm.markSaved()
             changedBody = false
         }
-        addDiscardDraftItem()
+        hasDraft = true
+        declareScreenActions()
     }
 
     private fun discardDraft() {
@@ -482,7 +450,13 @@ class MessagesComposeFragment : Fragment(), CoroutineScope {
                 return
         }
 
-        activity.bottomSheet.hideKeyboard()
+        // The platform IMM, NOT WindowInsetsControllerCompat. That compat class's (Window, View)
+        // ctor falls through to a base `Impl` when SDK_INT < 20, and `Impl.hide(int)` is an empty
+        // method (`0: return`) — verified in androidx.core 1.9.0 and 1.16.0. This app is minSdk 16,
+        // so the compat route would silently stop hiding the IME on API 16-19. This is the identical
+        // call navlib's hideKeyboard() made, and it works on every supported API.
+        (activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+            .hideSoftInputFromWindow(requireView().windowToken, 0)
         clearBodyComposingSpans()
 
         prompt = Prompt.Send(recipients = recipients, subject = subject)
