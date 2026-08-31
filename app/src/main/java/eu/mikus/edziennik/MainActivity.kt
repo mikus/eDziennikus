@@ -105,7 +105,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     val errorSnackbar: ErrorSnackbar by lazy { ErrorSnackbar(this) }
     val requestHandler by lazy { MainActivityRequestHandler(this) }
 
-    val swipeRefreshLayout: SwipeRefreshLayoutNoTouch by lazy { b.swipeRefreshLayout }
+    // Private since P27: P26 removed the last external reader. A free instalment on the N2 invariant.
+    private val swipeRefreshLayout: SwipeRefreshLayoutNoTouch by lazy { b.swipeRefreshLayout }
 
     var onBeforeNavigate: (() -> Boolean)? = null
     private var pausedNavigationData: PausedNavigationData? = null
@@ -1156,6 +1157,40 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     ) = mainSnackbar.snackbar(text, actionText, onClick)
 
     fun snackbarDismiss() = mainSnackbar.dismiss()
+
+    /**
+     * Replace the current screen's menu rows. Replace-semantics and idempotent: a screen may
+     * re-declare when its state changes (MessagesCompose grows a discard-draft row this way).
+     *
+     * Applied synchronously — navlib has no settle pass to wait for (`javap` over all 79 classes of
+     * navlib-0.8.0 finds zero `postDelayed`/`Handler`/`Looper`), so nothing can outlive its screen.
+     * No emptiness guard: `addAll(0, emptyList())` mutates nothing and `removeAllContextual()` has
+     * already fired `notifyDataSetChanged()`.
+     */
+    fun setScreenActions(actions: List<ScreenAction>) {
+        bottomSheet.removeAllContextual()
+        val items = actions.toBottomSheetItems { bottomSheet.close(); it.onClick() }
+        bottomSheet.prependItems(*items.toTypedArray())
+    }
+
+    /**
+     * Set or clear the current screen's primary action. `null` means "no primary action right now" —
+     * the only way to express that without the caller touching `fabEnable`.
+     *
+     * Identity is written before `fabEnable = true` so the FAB never shows unlabelled for a frame.
+     * Deliberately does NOT call [gainAttentionFAB] — Timetable must not pulse on every page change.
+     */
+    fun setScreenFab(fab: ScreenFab?) {
+        if (fab == null) {
+            navView.bottomBar.fabEnable = false
+            navView.bottomBar.setFabOnClickListener(null)
+            return
+        }
+        navView.bottomBar.fabExtendedText = getString(fab.labelRes)
+        navView.bottomBar.fabIcon = fab.icon
+        navView.bottomBar.setFabOnClickListener(View.OnClickListener { fab.onClick() })
+        navView.bottomBar.fabEnable = true
+    }
 
     /** Absorbed from ext/EnumExtensions.kt in P26 — its only caller was the BOTTOM_SHEET loop in
      *  onCreate, and it was that file's only navlib dependency. isContextual = false is load-bearing:
