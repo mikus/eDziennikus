@@ -53,6 +53,8 @@ import eu.mikus.edziennik.sync.SyncWorker
 import eu.mikus.edziennik.sync.UpdateStateEvent
 import eu.mikus.edziennik.sync.UpdateWorker
 import eu.mikus.edziennik.ui.base.MainSnackbar
+import eu.mikus.edziennik.ui.base.ScreenAction
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.base.enums.NavTargetLocation
 import eu.mikus.edziennik.ui.base.nav.NavTransition
@@ -78,6 +80,7 @@ import pl.szczodrzynski.navlib.SystemBarsUtil.Companion.COLOR_HALF_TRANSPARENT
 import pl.szczodrzynski.navlib.bottomsheet.NavBottomSheet
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
+import pl.szczodrzynski.navlib.bottomsheet.items.IBottomSheetItem
 import pl.szczodrzynski.navlib.drawer.NavDrawer
 import pl.szczodrzynski.navlib.drawer.items.DrawerPrimaryItem
 import java.io.IOException
@@ -1171,3 +1174,26 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 /** navlib: an IIcon as a navlib ImageHolder. Absorbed from ext/GraphicsExtensions.kt in P26 —
  *  every caller was in this file, and it was that file's only navlib dependency. */
 private fun IIcon.toImageHolder() = ImageHolder(this)
+
+/**
+ * A screen's own menu rows as navlib items. Top-level and `internal` on purpose: it stays inside
+ * MainActivity.kt (the only file allowed to name navlib, per the N2 invariant) yet remains visible
+ * to `app/src/test`.
+ *
+ * `isContextual = true` on EVERY produced item — separators included — is the entire contract
+ * behind [MainActivity.navigateImpl]'s `removeAllContextual()`. See ScreenChromeMappingTest.
+ */
+internal fun List<ScreenAction>.toBottomSheetItems(
+    onClick: (ScreenAction) -> Unit,
+): List<IBottomSheetItem<*>> = flatMap { action ->
+    val item = BottomSheetPrimaryItem(isContextual = true).also {
+        it.titleRes = action.titleRes
+        it.descriptionRes = action.descriptionRes
+        it.iconicsIcon = action.icon
+        it.onClickListener = View.OnClickListener { onClick(action) }
+    }
+    if (action.separatorBefore)
+        listOf(BottomSheetSeparatorItem(isContextual = true), item)
+    else
+        listOf(item)
+}
