@@ -38,6 +38,8 @@ import eu.mikus.edziennik.databinding.TimetableFragmentBinding
 import eu.mikus.edziennik.ext.JsonObject
 import eu.mikus.edziennik.ext.getSchoolYearConstrains
 import eu.mikus.edziennik.ext.getStudentData
+import eu.mikus.edziennik.ui.base.ScreenAction
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.TimetableConfigDialog
@@ -48,8 +50,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import eu.szkolny.font.SzkolnyFont
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 
 class TimetableFragment : Fragment() {
     companion object {
@@ -127,71 +127,59 @@ class TimetableFragment : Fragment() {
             val lessonHeight = app.data.uiConfig.lessonHeight
             val colorSubjectName = app.profile.config.ui.timetableColorSubjectName
 
-            activity.navView.bottomBar.fabExtendedText = getString(R.string.timetable_today)
-            activity.navView.bottomBar.fabIcon = SzkolnyFont.Icon.szf_calendar_today_outline
-            activity.navView.setFabOnClickListener(View.OnClickListener {
-                viewModel?.requestDate(Date.getToday())
-            })
+            // Built here, armed only by onPageChanged below. A non-null ScreenFab means
+            // fabEnable = true, and this screen must ENTER with its FAB hidden: arming here would
+            // flash it for a frame, and on a timetableNotPublic profile TimetableScreen returns
+            // before the pager exists, so onPageChanged never fires and it would stick forever.
+            val todayFab = ScreenFab(
+                labelRes = R.string.timetable_today,
+                icon = SzkolnyFont.Icon.szf_calendar_today_outline,
+            ) { viewModel?.requestDate(Date.getToday()) }
 
-            activity.navView.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_timetable_sync)
-                    .withIcon(CommunityMaterial.Icon.cmd_calendar_sync_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        syncWeek(currentWeekStart())
-                    }),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.timetable_select_day)
-                    .withIcon(SzkolnyFont.Icon.szf_calendar_today_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        MaterialDatePicker.Builder.datePicker()
-                            .setSelection((pageSelection ?: Date.getToday()).inMillisUtc)
-                            .setCalendarConstraints(app.profile.getSchoolYearConstrains())
-                            .build()
-                            .apply {
-                                addOnPositiveButtonClickListener { millis ->
-                                    viewModel?.requestDate(Date.fromMillisUtc(millis))
-                                }
+            activity.setScreenActions(listOf(
+                ScreenAction(R.string.menu_timetable_sync, CommunityMaterial.Icon.cmd_calendar_sync_outline) {
+                    syncWeek(currentWeekStart())
+                },
+                ScreenAction(R.string.timetable_select_day, SzkolnyFont.Icon.szf_calendar_today_outline) {
+                    MaterialDatePicker.Builder.datePicker()
+                        .setSelection((pageSelection ?: Date.getToday()).inMillisUtc)
+                        .setCalendarConstraints(app.profile.getSchoolYearConstrains())
+                        .build()
+                        .apply {
+                            addOnPositiveButtonClickListener { millis ->
+                                viewModel?.requestDate(Date.fromMillisUtc(millis))
                             }
-                            .show(activity.supportFragmentManager, TAG)
-                    }),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_add_event)
-                    .withDescription(R.string.menu_add_event_desc)
-                    .withIcon(SzkolnyFont.Icon.szf_calendar_plus_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        EventManualDialog(activity, App.profileId, defaultDate = pageSelection).show()
-                    }),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_generate_block_timetable)
-                    .withDescription(R.string.menu_generate_block_timetable_desc)
-                    .withIcon(CommunityMaterial.Icon3.cmd_table_large)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        GenerateBlockTimetableDialog(activity)
-                    }),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_timetable_config)
-                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        TimetableConfigDialog(activity, false, null, null).show()
-                    }),
-                BottomSheetSeparatorItem(true),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_mark_as_read)
-                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            app.db.metadataDao().setAllSeen(App.profileId, MetadataType.LESSON_CHANGE, true)
                         }
-                        Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
-                    }),
-            )
+                        .show(activity.supportFragmentManager, TAG)
+                },
+                ScreenAction(
+                    R.string.menu_add_event,
+                    SzkolnyFont.Icon.szf_calendar_plus_outline,
+                    descriptionRes = R.string.menu_add_event_desc,
+                ) {
+                    EventManualDialog(activity, App.profileId, defaultDate = pageSelection).show()
+                },
+                ScreenAction(
+                    R.string.menu_generate_block_timetable,
+                    CommunityMaterial.Icon3.cmd_table_large,
+                    descriptionRes = R.string.menu_generate_block_timetable_desc,
+                ) {
+                    GenerateBlockTimetableDialog(activity)
+                },
+                ScreenAction(R.string.menu_timetable_config, CommunityMaterial.Icon.cmd_cog_outline) {
+                    TimetableConfigDialog(activity, false, null, null).show()
+                },
+                ScreenAction(
+                    R.string.menu_mark_as_read,
+                    CommunityMaterial.Icon.cmd_eye_check_outline,
+                    separatorBefore = true,
+                ) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        app.db.metadataDao().setAllSeen(App.profileId, MetadataType.LESSON_CHANGE, true)
+                    }
+                    Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+                },
+            ))
 
             b.composeView.setAppThemeContent {
                 val requested by vm.requestedDate.collectAsStateWithLifecycle()
@@ -211,7 +199,7 @@ class TimetableFragment : Fragment() {
                         onPageChanged = { date ->
                             vm.onPageChanged(date)
                             pageSelection = date
-                            activity.navView.bottomBar.fabEnable = date.value != Date.getToday().value
+                            activity.setScreenFab(todayFab.takeIf { date.value != Date.getToday().value })
                         },
                         dayFlow = vm::dayFlow,
                         onLessonClick = { pl ->
