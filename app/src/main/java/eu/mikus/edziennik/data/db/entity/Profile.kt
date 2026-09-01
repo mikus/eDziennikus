@@ -14,19 +14,17 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.ext.dateToSemester
 import eu.mikus.edziennik.ext.getDrawable
-import eu.mikus.edziennik.ext.getHolder
 import eu.mikus.edziennik.utils.models.Date
-import pl.szczodrzynski.navlib.drawer.IDrawerProfile
 
 @Entity(tableName = "profiles", primaryKeys = ["profileId"])
 open class Profile(
         @ColumnInfo(name = "profileId")
-        override var id: Int, /* needs to be var for ProfileArchiver */
+        var id: Int, /* needs to be var for ProfileArchiver */
         val loginStoreId: Int,
         val loginStoreType: LoginType,
 
-        override var name: String = "",
-        override var subname: String? = null,
+        var name: String = "",
+        var subname: String? = null,
 
         /**
          * The name of the student.
@@ -43,13 +41,13 @@ open class Profile(
 
         val studentData: JsonObject = JsonObject()
 
-) : IDrawerProfile {
+) {
     companion object {
         const val AGENDA_DEFAULT = 0
         const val AGENDA_CALENDAR = 1
     }
 
-    override var image: String? = null
+    var image: String? = null
     var empty = true
     var archived = false
     var syncEnabled = true
@@ -86,9 +84,9 @@ open class Profile(
     @delegate:Transient
     val config by lazy { App.config[this.id] }
 
-    override fun getImageDrawable(context: Context) = this.getDrawable(context)
-    override fun getImageHolder(context: Context) = this.getHolder()
-    override fun applyImageTo(imageView: ImageView) {
-        getImageHolder(imageView.context).applyTo(imageView)
+    fun getImageDrawable(context: Context) = this.getDrawable(context)
+
+    fun applyImageTo(imageView: ImageView) {
+        imageView.setImageDrawable(getDrawable(imageView.context))
     }
 }

@@ -41,6 +41,7 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import pl.droidsonroids.gif.GifDrawable
 import eu.mikus.edziennik.compat.toDrawerCounter
+import eu.mikus.edziennik.compat.toDrawerProfile
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.*
 import eu.mikus.edziennik.data.api.models.ApiError
@@ -300,7 +301,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             val allArchived = profiles.all { it.archived }
             drawer.setProfileList(profiles.filter {
                 it.id >= 0 && (!it.archived || allArchived)
-            }.toMutableList())
+            }.map { it.toDrawerProfile() }.toMutableList())
             //prepend the archived profile if loaded
             if (app.profile.archived && !allArchived) {
                 drawer.prependProfile(Profile(
@@ -311,7 +312,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     subname = "Archiwum - ${app.profile.subname}"
                 ).also {
                     it.archived = true
-                })
+                }.toDrawerProfile())
             }
             drawer.currentProfile = App.profileId
         }
@@ -901,7 +902,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     subname = "Archiwum - ${profile.subname}"
                 ).also {
                     it.archived = true
-                })
+                }.toDrawerProfile())
             }
 
             // the drawer profile is updated automatically when the drawer item is clicked
