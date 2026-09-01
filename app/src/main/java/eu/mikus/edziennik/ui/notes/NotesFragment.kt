@@ -20,6 +20,7 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Note
 import eu.mikus.edziennik.data.db.entity.Noteable
 import eu.mikus.edziennik.databinding.NotesFragmentBinding
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,15 +52,9 @@ class NotesFragment : Fragment() {
 
         viewModel = ViewModelProvider(this, NotesViewModel.Factory)[NotesViewModel::class.java]
 
-        // FAB add (owner-less note) — this is the first Compose host to also arm the FAB.
-        activity.navView.apply {
-            bottomBar.apply {
-                fabEnable = true
-                fabExtendedText = getString(R.string.notes_action_add)
-                fabIcon = CommunityMaterial.Icon3.cmd_text_box_plus_outline
-            }
-            setFabOnClickListener(::onNoteAddClick)
-        }
+        activity.setScreenFab(ScreenFab(R.string.notes_action_add, CommunityMaterial.Icon3.cmd_text_box_plus_outline) {
+            onNoteAddClick()
+        })
         activity.gainAttentionFAB()
 
         b.notesCompose.setAppThemeContent {
@@ -73,7 +68,7 @@ class NotesFragment : Fragment() {
         }
     }
 
-    private fun onNoteAddClick(view: View?) {
+    private fun onNoteAddClick() {
         NoteEditorDialog(activity = activity, owner = null, editingNote = null, profileId = App.profileId).show()
     }
 
