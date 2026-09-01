@@ -19,9 +19,7 @@ import eu.mikus.edziennik.config.AppData
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.LoginType
-import eu.mikus.edziennik.utils.ProfileImageHolder
 import eu.mikus.edziennik.utils.models.Date
-import pl.szczodrzynski.navlib.ImageHolder
 
 // TODO refactor Data* fields and make the receiver non-nullable
 operator fun Profile?.set(key: String, value: JsonElement) = this?.studentData?.add(key, value)
@@ -109,21 +107,5 @@ fun Profile.getDrawable(context: Context): Drawable {
 
     return context.getDrawableFromRes(R.drawable.profile).also {
         it.colorFilter = PorterDuffColorFilter(colorFromName(name), PorterDuff.Mode.DST_OVER)
-    }
-}
-
-fun Profile.getHolder(): ImageHolder {
-    if (archived) {
-        return ImageHolder(R.drawable.profile_archived, colorFromName(name))
-    }
-
-    return if (!image.isNullOrEmpty()) {
-        try {
-            ProfileImageHolder(image ?: "")
-        } catch (_: Exception) {
-            ImageHolder(R.drawable.profile, colorFromName(name))
-        }
-    } else {
-        ImageHolder(R.drawable.profile, colorFromName(name))
     }
 }

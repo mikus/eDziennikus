@@ -1,14 +1,17 @@
 /*
+ * Copyright (c) Kuba Szczodrzyński 2020-4-7.
  * Copyright (c) Mikolaj Olszewski 2026-9-1.
  */
 package eu.mikus.edziennik.compat
 
 import android.content.Context
 import android.widget.ImageView
+import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Profile
+import eu.mikus.edziennik.ext.colorFromName
 import eu.mikus.edziennik.ext.getDrawable
-import eu.mikus.edziennik.ext.getHolder
 import eu.mikus.edziennik.utils.models.UnreadCounter
+import pl.szczodrzynski.navlib.ImageHolder
 import pl.szczodrzynski.navlib.drawer.IDrawerProfile
 import pl.szczodrzynski.navlib.drawer.IUnreadCounter
 
@@ -21,7 +24,7 @@ import pl.szczodrzynski.navlib.drawer.IUnreadCounter
  */
 
 internal fun Profile.toDrawerProfile(): IDrawerProfile = object : IDrawerProfile {
-    override val id get() = this@toDrawerProfile.id
+    override val id: Int get() = this@toDrawerProfile.id
     override var name: String
         get() = this@toDrawerProfile.name
         set(value) { this@toDrawerProfile.name = value }
@@ -52,4 +55,34 @@ internal fun UnreadCounter.toDrawerCounter(): IUnreadCounter = object : IUnreadC
     override var drawerItemId: Int?
         get() = this@toDrawerCounter.drawerItemId
         set(value) { this@toDrawerCounter.drawerItemId = value }
+}
+
+private fun Profile.getHolder(): ImageHolder {
+    if (archived) {
+        return ImageHolder(R.drawable.profile_archived, colorFromName(name))
+    }
+
+    return if (!image.isNullOrEmpty()) {
+        try {
+            ProfileImageHolder(image ?: "")
+        } catch (_: Exception) {
+            ImageHolder(R.drawable.profile, colorFromName(name))
+        }
+    } else {
+        ImageHolder(R.drawable.profile, colorFromName(name))
+    }
+}
+
+/**
+ * navlib's [ImageHolder.applyTo] loads a `.gif` avatar by constructing a `GifDrawable`, which
+ * throws if the file is missing or is not a valid GIF; other formats go through
+ * `ImageView.setImageURI`, which never throws. Swallowing that degrades a corrupt GIF avatar to
+ * a blank image instead of crashing the drawer bind.
+ */
+private class ProfileImageHolder(url: String) : ImageHolder(url) {
+    override fun applyTo(imageView: ImageView, tag: String?): Boolean {
+        return try {
+            super.applyTo(imageView, tag)
+        } catch (_: Exception) { false }
+    }
 }
