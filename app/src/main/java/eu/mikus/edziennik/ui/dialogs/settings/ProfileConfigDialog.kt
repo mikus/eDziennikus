@@ -33,7 +33,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
-import com.mikepenz.materialdrawer.view.BezelImageView
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Profile
@@ -68,7 +67,7 @@ class ProfileConfigDialog(
                 AndroidView(
                     factory = { ImageViewFactory(it) },
                     update = { avatarKey.let { _ -> profile.applyImageTo(it) } },
-                    modifier = Modifier.size(120.dp),
+                    modifier = Modifier.size(120.dp).clip(CircleShape),
                 )
                 Box(
                     Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
@@ -111,7 +110,7 @@ class ProfileConfigDialog(
     }
 
     private fun ImageViewFactory(ctx: android.content.Context) =
-        BezelImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+        ImageView(ctx).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
 
     private fun requestImage() {
         mainActivity.requestHandler.requestProfileImage(profile) {
