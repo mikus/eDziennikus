@@ -97,10 +97,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = job + Dispatchers.Main
 
-    val b: ActivitySzkolnyBinding by lazy { ActivitySzkolnyBinding.inflate(layoutInflater) }
-    val navView: NavView by lazy { b.navView }
-    val drawer: NavDrawer by lazy { navView.drawer }
-    val bottomSheet: NavBottomSheet by lazy { navView.bottomSheet }
+    // Private since N2.4: nothing outside this file may reach the navlib shell, so the N4 Scaffold swap
+    // is a shell-only diff. `b` is included deliberately — it exposes b.navView, whose `drawer` and
+    // `bottomSheet` are public navlib fields, so leaving it public keeps a bypass that needs no navlib
+    // import and therefore matches no grep. (P27 privatised swipeRefreshLayout but left b public.)
+    private val b: ActivitySzkolnyBinding by lazy { ActivitySzkolnyBinding.inflate(layoutInflater) }
+    private val navView: NavView by lazy { b.navView }
+    private val drawer: NavDrawer by lazy { navView.drawer }
+    private val bottomSheet: NavBottomSheet by lazy { navView.bottomSheet }
     val mainSnackbar: MainSnackbar by lazy { MainSnackbar(this) }
     val errorSnackbar: ErrorSnackbar by lazy { ErrorSnackbar(this) }
     val requestHandler by lazy { MainActivityRequestHandler(this) }
