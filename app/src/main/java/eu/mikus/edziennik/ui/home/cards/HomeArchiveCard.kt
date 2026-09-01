@@ -65,8 +65,8 @@ class HomeArchiveCard(
                             .setTitle(R.string.home_archive_close_no_target_title)
                             .setMessage(R.string.home_archive_close_no_target_text, this@HomeArchiveCard.profile.name)
                             .setPositiveButton(R.string.ok) { _, _ ->
-                                activity.drawer.profileSelectionOpen()
-                                activity.drawer.open()
+                                activity.openProfileSelection()
+                                activity.openDrawer()
                             }
                             .show()
                     return@launch

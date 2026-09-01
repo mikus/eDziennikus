@@ -70,7 +70,7 @@ class MiniMenuConfigDialog(
         app.config.ui.miniMenuButtons = checked.filterValues { it }.keys
         if (activity is MainActivity) {
             activity.setDrawerItems()
-            activity.drawer.updateBadges()
+            activity.updateDrawerBadges()
         }
         return DISMISS
     }

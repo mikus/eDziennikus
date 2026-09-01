@@ -101,9 +101,7 @@ class SettingsFragment : Fragment() {
         SettingsEffect.Recreate -> activity.recreate()
         SettingsEffect.RescheduleSync -> SyncWorker.rescheduleNext(app)
         SettingsEffect.RescheduleUpdate -> UpdateWorker.rescheduleNext(app)
-        SettingsEffect.RefreshDrawer -> {
-            activity.navView.drawer.miniDrawerVisiblePortrait = app.config.ui.miniMenuVisible
-        }
+        SettingsEffect.RefreshDrawer -> activity.setMiniDrawerVisible(app.config.ui.miniMenuVisible)
     }
 
     private fun handleAction(action: SettingsAction) {
@@ -155,8 +153,8 @@ class SettingsFragment : Fragment() {
                     0 -> setHeaderBackground()
                     1 -> {
                         app.config.ui.headerBackground = null
-                        activity.drawer.setAccountHeaderBackground(null)
-                        activity.drawer.open()
+                        activity.setDrawerHeaderBackground(null)
+                        activity.openDrawer()
                     }
                 }
             }
@@ -165,9 +163,13 @@ class SettingsFragment : Fragment() {
     }
 
     private fun setHeaderBackground() = activity.requestHandler.requestHeaderBackground {
-        activity.drawer.setAccountHeaderBackground(null)
-        activity.drawer.setAccountHeaderBackground(app.config.ui.headerBackground)
-        activity.drawer.open()
+        // The null-first set is load-bearing: every pick saves to the same filesDir/header.jpg, so the
+        // second call passes an identical Uri, and ImageView.setImageURI no-ops for an equal Uri unless
+        // mResource != 0 — which only the null path (setImageResource) sets. Dropping it silently keeps
+        // the previous header from the second pick onward.
+        activity.setDrawerHeaderBackground(null)
+        activity.setDrawerHeaderBackground(app.config.ui.headerBackground)
+        activity.openDrawer()
     }
 
     private fun chooseAppBackground() {
