@@ -23,6 +23,8 @@ import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.AgendaFragmentBinding
 import eu.mikus.edziennik.ui.agenda.lessonchanges.LessonChangesDialog
 import eu.mikus.edziennik.ui.agenda.teacherabsence.TeacherAbsenceDialog
+import eu.mikus.edziennik.ui.base.ScreenAction
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.AgendaConfigDialog
@@ -30,8 +32,6 @@ import eu.mikus.edziennik.ui.event.EventDetailsDialog
 import eu.mikus.edziennik.ui.event.EventManualDialog
 import eu.szkolny.font.SzkolnyFont
 import java.time.YearMonth
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 
 class AgendaFragment : Fragment() {
     companion object {
@@ -62,42 +62,30 @@ class AgendaFragment : Fragment() {
 
         activity.gainAttention()
 
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_add_event)
-                    .withDescription(R.string.menu_add_event_desc)
-                    .withIcon(SzkolnyFont.Icon.szf_calendar_plus_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        EventManualDialog(activity, App.profileId, defaultDate = viewModel.selectedDate.value).show()
-                    }),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_agenda_config)
-                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        AgendaConfigDialog(activity, true, null, null).show()
-                    }),
-                BottomSheetSeparatorItem(true),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_mark_as_read)
-                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        viewModel.markAllSeen()
-                        Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
-                    }),
-            )
-        }, 100)
+        activity.setScreenActions(listOf(
+            ScreenAction(
+                R.string.menu_add_event,
+                SzkolnyFont.Icon.szf_calendar_plus_outline,
+                descriptionRes = R.string.menu_add_event_desc,
+            ) {
+                EventManualDialog(activity, App.profileId, defaultDate = viewModel.selectedDate.value).show()
+            },
+            ScreenAction(R.string.menu_agenda_config, CommunityMaterial.Icon.cmd_cog_outline) {
+                AgendaConfigDialog(activity, true, null, null).show()
+            },
+            ScreenAction(
+                R.string.menu_mark_as_read,
+                CommunityMaterial.Icon.cmd_eye_check_outline,
+                separatorBefore = true,
+            ) {
+                viewModel.markAllSeen()
+                Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+            },
+        ))
 
-        activity.navView.bottomBar.fabEnable = true
-        activity.navView.bottomBar.fabExtendedText = getString(R.string.add)
-        activity.navView.bottomBar.fabIcon = CommunityMaterial.Icon3.cmd_plus
-        activity.navView.setFabOnClickListener {
+        activity.setScreenFab(ScreenFab(R.string.add, CommunityMaterial.Icon3.cmd_plus) {
             EventManualDialog(activity, App.profileId, defaultDate = viewModel.selectedDate.value).show()
-        }
+        })
         activity.gainAttentionFAB()
 
         val startMonth = YearMonth.of(app.profile.dateSemester1Start.year, app.profile.dateSemester1Start.month)

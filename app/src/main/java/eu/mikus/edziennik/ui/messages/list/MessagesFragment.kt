@@ -21,11 +21,12 @@ import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.databinding.MessagesFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
+import eu.mikus.edziennik.ui.base.ScreenAction
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.MessagesConfigDialog
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 
 class MessagesFragment : Fragment() {
 
@@ -61,28 +62,16 @@ class MessagesFragment : Fragment() {
 
         viewModel = ViewModelProvider(this, MessagesViewModel.Factory)[MessagesViewModel::class.java]
 
-        activity.navView.apply {
-            bottomBar.apply {
-                fabEnable = true
-                fabExtendedText = getString(R.string.compose)
-                fabIcon = CommunityMaterial.Icon3.cmd_pencil_outline
-            }
-            setFabOnClickListener { activity.navigate(navTarget = NavTarget.MESSAGE_COMPOSE) }
-        }
+        activity.setScreenFab(ScreenFab(R.string.compose, CommunityMaterial.Icon3.cmd_pencil_outline) {
+            activity.navigate(navTarget = NavTarget.MESSAGE_COMPOSE)
+        })
         activity.gainAttentionFAB()
 
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItem(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_messages_config)
-                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                    .withOnClickListener {
-                        activity.bottomSheet.close()
-                        MessagesConfigDialog(activity, false, null, null).show()
-                    }
-            )
-        }, 100)
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_messages_config, CommunityMaterial.Icon.cmd_cog_outline) {
+                MessagesConfigDialog(activity, false, null, null).show()
+            },
+        ))
 
         b.messagesCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()

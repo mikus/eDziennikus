@@ -26,6 +26,8 @@ import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.databinding.HomeworkFragmentBinding
+import eu.mikus.edziennik.ui.base.ScreenAction
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.event.EventDetailsDialog
@@ -33,8 +35,6 @@ import eu.mikus.edziennik.ui.event.EventManualDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 
 class HomeworkFragment : Fragment() {
 
@@ -62,44 +62,31 @@ class HomeworkFragment : Fragment() {
 
         viewModel = ViewModelProvider(this, HomeworkViewModel.Factory)[HomeworkViewModel::class.java]
 
-        activity.navView.apply {
-            bottomBar.apply {
-                fabEnable = true
-                fabExtendedText = getString(R.string.add)
-                fabIcon = CommunityMaterial.Icon3.cmd_plus
-            }
-            setFabOnClickListener(::onAddClick)
-        }
+        activity.setScreenFab(ScreenFab(R.string.add, CommunityMaterial.Icon3.cmd_plus) { onAddClick() })
         activity.gainAttention()
         activity.gainAttentionFAB()
 
-        // Defer the bottom-sheet prepend one navlib settle-pass past onViewCreated (Phase-1 navlib-timing fix).
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_add_event)
-                    .withDescription(R.string.menu_add_event_desc)
-                    .withIcon(SzkolnyFont.Icon.szf_calendar_plus_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        EventManualDialog(activity, App.profileId, defaultType = Event.TYPE_HOMEWORK).show()
-                    }),
-                BottomSheetSeparatorItem(true),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_mark_as_read)
-                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        lifecycleScope.launch {
-                            withContext(Dispatchers.IO) {
-                                App.db.metadataDao().setAllSeen(App.profileId, MetadataType.HOMEWORK, true)
-                            }
-                            Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
-                        }
-                    }),
-            )
-        }, 100)
+        activity.setScreenActions(listOf(
+            ScreenAction(
+                R.string.menu_add_event,
+                SzkolnyFont.Icon.szf_calendar_plus_outline,
+                descriptionRes = R.string.menu_add_event_desc,
+            ) {
+                EventManualDialog(activity, App.profileId, defaultType = Event.TYPE_HOMEWORK).show()
+            },
+            ScreenAction(
+                R.string.menu_mark_as_read,
+                CommunityMaterial.Icon.cmd_eye_check_outline,
+                separatorBefore = true,
+            ) {
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        App.db.metadataDao().setAllSeen(App.profileId, MetadataType.HOMEWORK, true)
+                    }
+                    Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+                }
+            },
+        ))
 
         b.homeworkCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -118,7 +105,7 @@ class HomeworkFragment : Fragment() {
         }
     }
 
-    private fun onAddClick(view: View?) {
+    private fun onAddClick() {
         EventManualDialog(activity, App.profileId, defaultType = Event.TYPE_HOMEWORK).show()
     }
 
