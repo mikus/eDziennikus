@@ -1192,6 +1192,23 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         navView.bottomBar.fabEnable = true
     }
 
+    /** Drawer delegates (N2.4). Plain 1:1 pass-throughs so nothing outside this file names navlib.
+     *  [setDrawerItems] is the precedent for a public shell method that owns the drawer — it is a 53-line
+     *  item builder rather than a delegate, but MiniMenuConfigDialog already calls it beside a raw
+     *  drawer.updateBadges(), so these are its one-line siblings. Deliberately NOT combined: callers keep
+     *  their own composition (e.g. SettingsFragment's set-null-then-set-value refresh). */
+    fun openDrawer() = drawer.open()
+
+    fun openProfileSelection() = drawer.profileSelectionOpen()
+
+    fun setDrawerHeaderBackground(background: String?) = drawer.setAccountHeaderBackground(background)
+
+    fun updateDrawerBadges() = drawer.updateBadges()
+
+    fun setMiniDrawerVisible(visible: Boolean) {
+        drawer.miniDrawerVisiblePortrait = visible
+    }
+
     /** Absorbed from ext/EnumExtensions.kt in P26 — its only caller was the BOTTOM_SHEET loop in
      *  onCreate, and it was that file's only navlib dependency. isContextual = false is load-bearing:
      *  these are the shell's own rows and must survive removeAllContextual(). */
