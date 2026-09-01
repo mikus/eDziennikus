@@ -23,12 +23,13 @@ import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.databinding.MessageFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
+import eu.mikus.edziennik.ui.base.ScreenAction
+import eu.mikus.edziennik.ui.base.ScreenFab
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.MessagesConfigDialog
 import eu.mikus.edziennik.ui.messages.list.MessagesFragment
 import eu.mikus.edziennik.ui.notes.NoteListDialog
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 
 class MessageFragment : Fragment() {
 
@@ -60,18 +61,11 @@ class MessageFragment : Fragment() {
             this, MessageReadViewModel.Factory(messageId, activity.applicationContext),
         )[MessageReadViewModel::class.java]
 
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItem(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_messages_config)
-                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                    .withOnClickListener {
-                        activity.bottomSheet.close()
-                        MessagesConfigDialog(activity, false, null, null).show()
-                    }
-            )
-        }, 100)
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_messages_config, CommunityMaterial.Icon.cmd_cog_outline) {
+                MessagesConfigDialog(activity, false, null, null).show()
+            },
+        ))
 
         b.messageCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -99,19 +93,20 @@ class MessageFragment : Fragment() {
             is MessageReadUiState.Content -> {
                 val m = state.message
                 MessagesFragment.pageSelection = m.type   // back lands on the message's own tab (type == tab index)
+                // The FAB is re-passed on every emission — identical label and icon, and a fresh reply(m)
+                // closure whose payload is already fixed by the first Content emission, so an idempotent re-arm. The
+                // armedFor latch stays around gainAttentionFAB() ONLY: without it the pulse would replay on
+                // every state emission (starring, the seen-write, the body fetch), which is user-visible.
+                activity.setScreenFab(
+                    if (m.isReceived || m.isDeleted)
+                        ScreenFab(R.string.messages_reply, CommunityMaterial.Icon3.cmd_reply_outline) { reply(m) }
+                    else
+                        null
+                )
                 if (armedFor != m.id) {
                     armedFor = m.id
-                    if (m.isReceived || m.isDeleted) {
-                        activity.navView.apply {
-                            bottomBar.apply {
-                                fabEnable = true
-                                fabExtendedText = getString(R.string.messages_reply)
-                                fabIcon = CommunityMaterial.Icon3.cmd_reply_outline
-                            }
-                            setFabOnClickListener { reply(m) }
-                        }
+                    if (m.isReceived || m.isDeleted)
                         activity.gainAttentionFAB()
-                    }
                 }
             }
             MessageReadUiState.Loading -> {}
