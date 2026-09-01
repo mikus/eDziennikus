@@ -24,12 +24,12 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.databinding.FragmentBehaviourBinding
+import eu.mikus.edziennik.ui.base.ScreenAction
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 
 class BehaviourFragment : Fragment() {
 
@@ -56,25 +56,16 @@ class BehaviourFragment : Fragment() {
 
         viewModel = ViewModelProvider(this, BehaviourViewModel.Factory)[BehaviourViewModel::class.java]
 
-        // Defer the prepend one navlib settle-pass past onViewCreated so it lands after navlib's
-        // post-navigation bottom-sheet reset (the legacy fragment used startCoroutineTimer(100L)).
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_mark_as_read)
-                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                    .withOnClickListener {
-                        activity.bottomSheet.close()
-                        lifecycleScope.launch {
-                            withContext(Dispatchers.IO) {
-                                App.db.metadataDao().setAllSeen(App.profileId, MetadataType.NOTICE, true)
-                            }
-                            Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
-                        }
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_mark_as_read, CommunityMaterial.Icon.cmd_eye_check_outline) {
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        App.db.metadataDao().setAllSeen(App.profileId, MetadataType.NOTICE, true)
                     }
-            )
-        }, 100)
+                    Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+                }
+            },
+        ))
 
         b.behaviourCompose.setAppThemeContent {
             val listState = rememberLazyListState()

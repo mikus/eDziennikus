@@ -30,6 +30,7 @@ import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.data.db.full.AnnouncementFull
 import eu.mikus.edziennik.databinding.DialogAnnouncementBinding
 import eu.mikus.edziennik.databinding.FragmentAnnouncementsBinding
+import eu.mikus.edziennik.ui.base.ScreenAction
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,6 @@ import kotlinx.coroutines.withContext
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 
 class AnnouncementsFragment : Fragment() {
 
@@ -67,25 +67,20 @@ class AnnouncementsFragment : Fragment() {
 
         viewModel = ViewModelProvider(this, AnnouncementsViewModel.Factory)[AnnouncementsViewModel::class.java]
 
-        // Bottom-sheet "mark as read" (kept as-is; deferred to a later Compose phase).
-        activity.bottomSheet.prependItems(
-            BottomSheetPrimaryItem(true)
-                .withTitle(R.string.menu_mark_as_read)
-                .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                .withOnClickListener {
-                    activity.bottomSheet.close()
-                    if (app.profile.loginStoreType == LoginType.LIBRUS) {
-                        EdziennikTask.announcementsRead(App.profileId).enqueue(requireContext())
-                    } else {
-                        lifecycleScope.launch {
-                            withContext(Dispatchers.IO) {
-                                App.db.metadataDao().setAllSeen(App.profileId, MetadataType.ANNOUNCEMENT, true)
-                            }
-                            Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_mark_as_read, CommunityMaterial.Icon.cmd_eye_check_outline) {
+                if (app.profile.loginStoreType == LoginType.LIBRUS) {
+                    EdziennikTask.announcementsRead(App.profileId).enqueue(requireContext())
+                } else {
+                    lifecycleScope.launch {
+                        withContext(Dispatchers.IO) {
+                            App.db.metadataDao().setAllSeen(App.profileId, MetadataType.ANNOUNCEMENT, true)
                         }
+                        Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
                     }
                 }
-        )
+            },
+        ))
 
         b.announcementsCompose.setAppThemeContent {
             val listState = rememberLazyListState()

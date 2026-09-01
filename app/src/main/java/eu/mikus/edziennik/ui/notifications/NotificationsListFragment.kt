@@ -22,11 +22,11 @@ import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Notification
 import eu.mikus.edziennik.databinding.NotificationsListFragmentBinding
+import eu.mikus.edziennik.ui.base.ScreenAction
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
 
 class NotificationsListFragment : Fragment() {
 
@@ -54,23 +54,14 @@ class NotificationsListFragment : Fragment() {
 
         viewModel = ViewModelProvider(this, NotificationsViewModel.Factory)[NotificationsViewModel::class.java]
 
-        // Defer the prepend one navlib settle-pass past onViewCreated so it lands after navlib's
-        // post-navigation bottom-sheet reset (the legacy fragment used startCoroutineTimer(100L)).
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_remove_notifications)
-                    .withIcon(CommunityMaterial.Icon.cmd_delete_sweep_outline)
-                    .withOnClickListener {
-                        activity.bottomSheet.close()
-                        lifecycleScope.launch {
-                            withContext(Dispatchers.IO) { App.db.notificationDao().clearAll() }
-                            Toast.makeText(activity, R.string.menu_remove_notifications_success, Toast.LENGTH_SHORT).show()
-                        }
-                    }
-            )
-        }, 100)
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_remove_notifications, CommunityMaterial.Icon.cmd_delete_sweep_outline) {
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) { App.db.notificationDao().clearAll() }
+                    Toast.makeText(activity, R.string.menu_remove_notifications_success, Toast.LENGTH_SHORT).show()
+                }
+            },
+        ))
 
         b.notificationsCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
