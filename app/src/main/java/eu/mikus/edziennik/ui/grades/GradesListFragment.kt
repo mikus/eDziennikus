@@ -25,13 +25,12 @@ import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.databinding.GradesListFragmentBinding
 import eu.mikus.edziennik.ext.Bundle
+import eu.mikus.edziennik.ui.base.ScreenAction
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.GradesConfigDialog
 import eu.mikus.edziennik.utils.models.Date
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 
 class GradesListFragment : Fragment() {
 
@@ -65,27 +64,19 @@ class GradesListFragment : Fragment() {
 
         activity.gainAttention()
 
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_grades_config)
-                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        GradesConfigDialog(activity, true, null, null).show()
-                    }),
-                BottomSheetSeparatorItem(true),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_mark_as_read)
-                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        viewModel.markAllSeen()
-                        Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
-                    }),
-            )
-        }, 100)
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_grades_config, CommunityMaterial.Icon.cmd_cog_outline) {
+                GradesConfigDialog(activity, true, null, null).show()
+            },
+            ScreenAction(
+                R.string.menu_mark_as_read,
+                CommunityMaterial.Icon.cmd_eye_check_outline,
+                separatorBefore = true,
+            ) {
+                viewModel.markAllSeen()
+                Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+            },
+        ))
 
         val ctx = activity
         b.gradesCompose.setAppThemeContent {

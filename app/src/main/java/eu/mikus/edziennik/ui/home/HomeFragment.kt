@@ -33,6 +33,7 @@ import eu.mikus.edziennik.data.db.entity.Noteable
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.HomeFragmentBinding
 import eu.mikus.edziennik.ext.JsonObject
+import eu.mikus.edziennik.ui.base.ScreenAction
 import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
@@ -45,8 +46,6 @@ import eu.mikus.edziennik.ui.home.cards.HomeArchiveCard
 import eu.mikus.edziennik.ui.home.cards.HomeAvailabilityCard
 import eu.mikus.edziennik.ui.notes.NoteDetailsDialog
 import eu.mikus.edziennik.ui.notes.NoteEditorDialog
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 
 class HomeFragment : Fragment() {
     companion object {
@@ -77,49 +76,33 @@ class HomeFragment : Fragment() {
 
         activity.gainAttention()
 
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_add_remove_cards)
-                    .withIcon(Icon.cmd_card_bulleted_settings_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        HomeCardsDialog(activity, reloadOnDismiss = true).show()
-                    }),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_home_config)
-                    .withIcon(Icon.cmd_cog_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        HomeConfigDialog(activity, reloadOnDismiss = true).show()
-                    }),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_set_student_number)
-                    .withIcon(SzkolnyFont.Icon.szf_clipboard_list_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show()
-                    }),
-                BottomSheetSeparatorItem(true),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_mark_everything_as_read)
-                    .withIcon(Icon.cmd_eye_check_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        lifecycleScope.launch {
-                            withContext(Dispatchers.Default) {
-                                if (!app.data.uiConfig.enableMarkAsReadAnnouncements) {
-                                    app.db.metadataDao().setAllSeenExceptMessagesAndAnnouncements(App.profileId, true)
-                                } else {
-                                    app.db.metadataDao().setAllSeenExceptMessages(App.profileId, true)
-                                }
-                            }
-                            Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_add_remove_cards, Icon.cmd_card_bulleted_settings_outline) {
+                HomeCardsDialog(activity, reloadOnDismiss = true).show()
+            },
+            ScreenAction(R.string.menu_home_config, Icon.cmd_cog_outline) {
+                HomeConfigDialog(activity, reloadOnDismiss = true).show()
+            },
+            ScreenAction(R.string.menu_set_student_number, SzkolnyFont.Icon.szf_clipboard_list_outline) {
+                StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show()
+            },
+            ScreenAction(
+                R.string.menu_mark_everything_as_read,
+                Icon.cmd_eye_check_outline,
+                separatorBefore = true,
+            ) {
+                lifecycleScope.launch {
+                    withContext(Dispatchers.Default) {
+                        if (!app.data.uiConfig.enableMarkAsReadAnnouncements) {
+                            app.db.metadataDao().setAllSeenExceptMessagesAndAnnouncements(App.profileId, true)
+                        } else {
+                            app.db.metadataDao().setAllSeenExceptMessages(App.profileId, true)
                         }
-                    }),
-            )
-        }, 100)
+                    }
+                    Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+                }
+            },
+        ))
 
         b.composeView.setAppThemeContent {
             val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()

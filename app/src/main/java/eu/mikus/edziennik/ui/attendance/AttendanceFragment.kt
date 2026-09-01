@@ -22,11 +22,10 @@ import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.AttendanceFragmentBinding
+import eu.mikus.edziennik.ui.base.ScreenAction
 import eu.mikus.edziennik.ui.base.syncFeature
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.settings.AttendanceConfigDialog
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
 
 class AttendanceFragment : Fragment() {
     companion object {
@@ -63,29 +62,19 @@ class AttendanceFragment : Fragment() {
 
         activity.gainAttention()
 
-        // Defer the prepend one navlib settle-pass past onViewCreated so it lands after navlib's
-        // post-navigation bottom-sheet reset (the legacy fragment used startCoroutineTimer(100L)).
-        view.postDelayed({
-            if (!isAdded) return@postDelayed
-            activity.bottomSheet.prependItems(
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_attendance_config)
-                    .withIcon(CommunityMaterial.Icon.cmd_cog_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        AttendanceConfigDialog(activity, true, null, null).show()
-                    }),
-                BottomSheetSeparatorItem(true),
-                BottomSheetPrimaryItem(true)
-                    .withTitle(R.string.menu_mark_as_read)
-                    .withIcon(CommunityMaterial.Icon.cmd_eye_check_outline)
-                    .withOnClickListener(View.OnClickListener {
-                        activity.bottomSheet.close()
-                        viewModel.markAllSeen()
-                        Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
-                    }),
-            )
-        }, 100)
+        activity.setScreenActions(listOf(
+            ScreenAction(R.string.menu_attendance_config, CommunityMaterial.Icon.cmd_cog_outline) {
+                AttendanceConfigDialog(activity, true, null, null).show()
+            },
+            ScreenAction(
+                R.string.menu_mark_as_read,
+                CommunityMaterial.Icon.cmd_eye_check_outline,
+                separatorBefore = true,
+            ) {
+                viewModel.markAllSeen()
+                Toast.makeText(activity, R.string.main_menu_mark_as_read_success, Toast.LENGTH_SHORT).show()
+            },
+        ))
 
         if (pageSelection == 1)
             pageSelection = app.profile.config.attendance.attendancePageSelection
