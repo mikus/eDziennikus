@@ -40,6 +40,7 @@ import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import pl.droidsonroids.gif.GifDrawable
+import eu.mikus.edziennik.compat.toDrawerCounter
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.*
 import eu.mikus.edziennik.data.api.models.ApiError
@@ -320,7 +321,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         handleIntent(intent?.extras)
 
         app.db.metadataDao().unreadCounts.observe(this) { unreadCounters ->
-            drawer.setUnreadCounterList(unreadCounters)
+            drawer.setUnreadCounterList(unreadCounters.map { it.toDrawerCounter() }.toMutableList())
         }
 
         b.swipeRefreshLayout.setColorSchemeResources(
