@@ -195,7 +195,7 @@ private fun ProfileAvatar(
  * `ImageView` this replaces. As a [RememberObserver] it is started and stopped by `remember`, so it
  * owns the [drawable] it is given - do not share that instance with a View.
  */
-private class DrawableAvatarPainter(private val drawable: Drawable) : Painter(), RememberObserver {
+internal class DrawableAvatarPainter(private val drawable: Drawable) : Painter(), RememberObserver {
 
     /** Bumped per animation frame and read in [onDraw], which is what schedules the redraw. */
     private var redrawTicker by mutableIntStateOf(0)
