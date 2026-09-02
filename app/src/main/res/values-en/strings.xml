@@ -1039,6 +1039,7 @@
     <string name="sync_report_dialog_include_api_response">Include API response (recommended)</string>
     <string name="sync_report_dialog_title">Reporting error</string>
     <string name="sync_service">Sync service</string>
+    <string name="sync_status_done">Done</string>
     <string name="tap_target_set_as_read_text">Click on the icon to mark all data as read.</string>
     <string name="tap_target_set_as_read_title">Notifications</string>
     <string name="tap_target_switch_profile_text">Click on the menu header to change or add a student\'s profile. Here you\'ll also find a manual sync of all profiles.</string>

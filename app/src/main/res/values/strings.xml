@@ -1128,6 +1128,7 @@
     <string name="sync_report_dialog_include_api_response">Dołącz odpowiedź API (zalecane)</string>
     <string name="sync_report_dialog_title">Zgłaszanie błędu</string>
     <string name="sync_service">Usługa synchronizacji</string>
+    <string name="sync_status_done">Gotowe</string>
     <string name="tag_key_model" translatable="false">model</string>
     <string name="tag_key_position" translatable="false">position</string>
     <string name="tag_key_view_type" translatable="false">viewType</string>
