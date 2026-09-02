@@ -81,19 +81,16 @@ private val ContentEdgeShadowColors = listOf(Color(0x40000000), Color(0x00000000
  *
  * ### The mode is derived here, per composition
  *
- * [drawerMode] over `LocalConfiguration`, so `MainActivity`'s `configChanges="orientation|screenSize"`
- * recomposes the whole shell on rotation with no Activity restart and no new dependency. The rail is
- * therefore rendered from `mode == `[DrawerMode.Mini] - **not** from [ShellState.railVisible], which
- * is not read anywhere in this file (deliberately, not by omission): it is a rendering decision, and
- * deriving it twice from two different inputs is how the two get to disagree.
+ * [drawerMode] over `LocalConfiguration` and [ShellState.miniMenuVisible], so `MainActivity`'s
+ * `configChanges="orientation|screenSize"` recomposes the whole shell on rotation with no Activity
+ * restart and no new dependency, and `setMiniDrawerVisible` takes effect through the state read. The
+ * rail is rendered from `mode == `[DrawerMode.Mini], and that value is **never written back** into
+ * [ShellState]: it is a rendering decision, storing it would be a write/read loop, and it would latch
+ * across rotation, since landscape 480-899 dp is Mini whatever the setting says.
  *
- * @param miniMenuVisible `config.ui.miniMenuVisible` - **the setting itself, not "is the rail
- *   showing"**. [drawerMode] ignores it in landscape, so a caller that passes a mode-derived boolean
- *   (`drawerMode(...) == Mini`, which is true for any 480-899 dp landscape window) leaves it stuck on
- *   after a rotation into portrait and shows a rail the user turned off. It must also be read from
- *   something observable: the config is not, so a bare `App.config.ui.miniMenuVisible` inside
- *   `setAppThemeContent`'s lambda is captured once and `setMiniDrawerVisible` becomes inert - pass
- *   the [ShellState] field that setter writes.
+ * The setting is read off [state] rather than taken as a parameter on purpose. A `Boolean` parameter
+ * is the shape that invites `App.config.ui.miniMenuVisible` at the `setAppThemeContent` call site -
+ * a non-state read, captured once, leaving the Settings toggle inert with nothing failing.
  * @param profileImage the current profile's avatar for the toolbar, resolved by the caller from
  *   `Profile.getImageDrawable`. Kept separate from [profileImages] so the toolbar and the drawer
  *   header never share one `Drawable` - an animated `GifDrawable` has a single callback slot.
@@ -121,7 +118,6 @@ private val ContentEdgeShadowColors = listOf(Color(0x40000000), Color(0x00000000
 @Composable
 fun AppScaffold(
     state: ShellState,
-    miniMenuVisible: Boolean,
     currentProfileId: Int,
     profileName: String,
     profileImage: Drawable?,
@@ -137,7 +133,11 @@ fun AppScaffold(
     onRefreshLayoutReady: (SwipeRefreshLayoutNoTouch) -> Unit,
 ) {
     val configuration = LocalConfiguration.current
-    val mode = drawerMode(configuration.orientation, configuration.screenWidthDp, miniMenuVisible)
+    val mode = drawerMode(
+        orientation = configuration.orientation,
+        screenWidthDp = configuration.screenWidthDp,
+        miniMenuVisible = state.miniMenuVisible,
+    )
     val scope = rememberCoroutineScope()
 
     // A permanent drawer has no closed state to open from, and navlib's own `toggle()` reduces to a

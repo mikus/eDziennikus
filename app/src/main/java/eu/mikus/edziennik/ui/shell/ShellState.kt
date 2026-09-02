@@ -75,14 +75,21 @@ class ShellState {
     )
 
     /**
-     * Whether the icon rail is showing.
+     * The user's mini-menu **setting**, mirroring `app.config.ui.miniMenuVisible`.
      *
-     * **Derived from `drawerMode(...)`, not a mirror of a setter.** `setMiniDrawerVisible(Boolean)`
-     * writes `app.config.ui.miniMenuVisible` **and** must assign this field
-     * (`railVisible = drawerMode(...) == DrawerMode.Mini`), because the config is *not* observable:
-     * a config write alone leaves the rail's on/off switch inert.
+     * The mirror is the whole reason this field exists: the config is *not* observable, so a config
+     * write alone leaves the rail's on/off switch inert. `setMiniDrawerVisible(visible)` writes
+     * `app.config.ui.miniMenuVisible` **and** assigns `visible` here **verbatim** - never a derived
+     * value.
+     *
+     * **This is not "the rail is showing".** That is
+     * `drawerMode(orientation, screenWidthDp, miniMenuVisible) == DrawerMode.Mini`, computed in the
+     * composition (`AppScaffold`) and **never written back**: writing it back would be a write/read
+     * loop, and it would latch, because landscape 480-899 dp is [DrawerMode.Mini] *regardless* of
+     * the setting - so a derived `true` stored here would survive a rotation into portrait and show
+     * a rail the user had turned off.
      */
-    var railVisible: Boolean by mutableStateOf(false)
+    var miniMenuVisible: Boolean by mutableStateOf(false)
 
     // ---- overlays ----
 
