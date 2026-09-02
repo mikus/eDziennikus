@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -31,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
+import eu.mikus.edziennik.ui.base.AppSnackbarHost
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.utils.SwipeRefreshLayoutNoTouch
 import kotlinx.coroutines.launch
@@ -233,7 +233,7 @@ fun AppScaffold(
                         )
                     },
                     // The one instance `ShellState` owns, which both snackbar hosts also receive.
-                    snackbarHost = { SnackbarHost(state.snackbarHostState) },
+                    snackbarHost = { AppSnackbarHost(state.snackbarHostState) },
                     // `rootFrame` carries the app background behind the `ComposeView`. Per §7.12 this
                     // is not sufficient to make it visible - `AppTheme` wraps content in its own
                     // opaque `Surface`, as it already does on all 18 `setAppThemeContent` hosts - but
