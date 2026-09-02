@@ -15,12 +15,13 @@ import pl.szczodrzynski.navlib.ImageHolder
 import pl.szczodrzynski.navlib.drawer.IDrawerProfile
 import pl.szczodrzynski.navlib.drawer.IUnreadCounter
 
-/**
+/*
  * Adapters presenting app-side models to the navlib shell, so the models themselves need not
  * implement navlib interfaces.
  *
- * All of the app's remaining navlib profile/counter coupling is meant to live here, so that
- * swapping the shell (N4) can remove it in one move.
+ * Every remaining implementation of a navlib profile/counter interface is meant to live here, so
+ * that swapping the shell (N4) can remove them in one move. MainActivity still calls navlib's
+ * own APIs directly; that is the shell's job and goes with it.
  */
 
 internal fun Profile.toDrawerProfile(): IDrawerProfile = object : IDrawerProfile {
@@ -75,7 +76,7 @@ private fun Profile.getHolder(): ImageHolder {
 
 /**
  * navlib's [ImageHolder.applyTo] loads a `.gif` avatar by constructing a `GifDrawable`, which
- * throws if the file is missing or is not a valid GIF; other formats go through
+ * throws if the file is missing or is not a valid GIF; other formats fall back to
  * `ImageView.setImageURI`, which never throws. Swallowing that degrades a corrupt GIF avatar to
  * a blank image instead of crashing the drawer bind.
  */
