@@ -144,6 +144,9 @@ dependencies {
     implementation "androidx.navigation:navigation-compose:2.9.5"
     implementation "androidx.activity:activity-compose:1.8.2"
     implementation "androidx.recyclerview:recyclerview:1.2.1"
+    // The version navlib already resolves transitively, declared directly since the shell now
+    // creates SwipeRefreshLayoutNoTouch itself. 1.0.0 on purpose: the resolved graph is unchanged.
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
     implementation "androidx.room:room-runtime:2.4.3"
     implementation "androidx.room:room-ktx:2.4.3"
     implementation "androidx.work:work-runtime-ktx:2.7.1"

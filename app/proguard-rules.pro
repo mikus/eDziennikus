@@ -41,8 +41,6 @@
 -keepclassmembernames class androidx.appcompat.view.menu.StandardMenuPopup { private *; }
 -keepclassmembernames class androidx.appcompat.view.menu.MenuItemImpl { private *; }
 
--keepclassmembernames class com.mikepenz.materialdrawer.widget.MiniDrawerSliderView { private *; }
-
 -keep class .R
 -keep class **.R$* {
     <fields>;

@@ -4,12 +4,10 @@
 
 package eu.mikus.edziennik.ui.error
 
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.lifecycle.lifecycleScope
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.models.ApiError
@@ -65,13 +63,6 @@ class ErrorSnackbar(val activity: AppCompatActivity) {
      */
     fun setHostState(hostState: SnackbarHostState) {
         this.hostState = hostState
-    }
-
-    @Deprecated("navlib is gone; call setHostState(ShellState.snackbarHostState) instead.")
-    fun setCoordinator(coordinatorLayout: CoordinatorLayout, showAbove: View? = null) {
-        // Deliberately empty. `MainActivity.kt:184` still calls it and the shell swap that deletes
-        // that line deletes this method with it; until then every error report here is mute, which
-        // is only acceptable because the intermediate commits of this phase never ship.
     }
 
     fun addError(apiError: ApiError): ErrorSnackbar {

@@ -8,12 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -190,12 +187,13 @@ fun AppRail(
             // Passed explicitly: `contentColorFor(Transparent)` is `Color.Unspecified`. This is the
             // unselected icon colour, which is also what tints the item ripple.
             contentColor = unselectedIcon,
-            // navlib pads its rail vertically and *only* vertically - `MiniDrawerSliderView`'s insets
-            // listener does `recyclerView.setPadding(paddingLeft, systemWindowInsetTop, paddingRight,
-            // systemWindowInsetBottom)`. `NavigationRailDefaults.windowInsets` adds `Start`, which would
-            // squeeze a rail whose width is fixed at 72 dp when a landscape navigation bar is on that
-            // edge.
-            windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Vertical),
+            // None, not `NavigationRailDefaults.windowInsets`. navlib padded its rail vertically
+            // (`MiniDrawerSliderView`'s listener sets the recycler's top/bottom padding from the
+            // system window insets) because its rail spanned the window; this one sits inside
+            // `Scaffold`'s content, whose padding is the top and bottom bar heights and already
+            // includes those insets. `Scaffold` does not consume them, so asking for them here
+            // applies them twice - a status-bar height of dead space above the first rail icon.
+            windowInsets = WindowInsets(0),
         ) {
             for (entry in state.drawerEntries)
                 if (entry is DrawerEntry.Row && !entry.row.hiddenInRail)

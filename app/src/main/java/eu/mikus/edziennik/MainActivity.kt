@@ -7,16 +7,25 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
@@ -28,20 +37,15 @@ import com.danimahardhika.cafebar.CafeBar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jetradarmobile.snowfall.SnowfallView
 import com.mikepenz.iconics.IconicsDrawable
-import com.mikepenz.iconics.typeface.IIcon
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import com.mikepenz.iconics.utils.colorInt
 import com.mikepenz.iconics.utils.sizeDp
-import com.mikepenz.materialdrawer.model.*
-import com.mikepenz.materialdrawer.model.interfaces.*
-import com.mikepenz.materialdrawer.model.utils.hiddenInMiniDrawer
 import kotlinx.coroutines.*
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import pl.droidsonroids.gif.GifDrawable
-import eu.mikus.edziennik.compat.toDrawerCounter
-import eu.mikus.edziennik.compat.toDrawerProfile
+import eu.mikus.edziennik.compat.getColorFromAttr
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.*
 import eu.mikus.edziennik.data.api.models.ApiError
@@ -61,6 +65,7 @@ import eu.mikus.edziennik.ui.base.enums.NavTarget
 import eu.mikus.edziennik.ui.base.enums.NavTargetLocation
 import eu.mikus.edziennik.ui.base.nav.NavTransition
 import eu.mikus.edziennik.ui.base.nav.decideNavigation
+import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.ChangelogDialog
 import eu.mikus.edziennik.ui.dialogs.settings.ProfileConfigDialog
 import eu.mikus.edziennik.ui.dialogs.sync.ServerMessageDialog
@@ -72,26 +77,21 @@ import eu.mikus.edziennik.ui.error.ErrorSnackbar
 import eu.mikus.edziennik.ui.event.EventManualDialog
 import eu.mikus.edziennik.ui.login.LoginActivity
 import eu.mikus.edziennik.ui.messages.list.MessagesFragment
+import eu.mikus.edziennik.ui.shell.*
 import eu.mikus.edziennik.utils.*
 import eu.mikus.edziennik.utils.Utils.d
-import eu.mikus.edziennik.utils.Utils.dpToPx
 import eu.mikus.edziennik.utils.managers.UserActionManager
 import eu.mikus.edziennik.utils.models.Date
-import pl.szczodrzynski.navlib.*
-import pl.szczodrzynski.navlib.SystemBarsUtil.Companion.COLOR_HALF_TRANSPARENT
-import pl.szczodrzynski.navlib.bottomsheet.NavBottomSheet
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetPrimaryItem
-import pl.szczodrzynski.navlib.bottomsheet.items.BottomSheetSeparatorItem
-import pl.szczodrzynski.navlib.bottomsheet.items.IBottomSheetItem
-import pl.szczodrzynski.navlib.drawer.NavDrawer
-import pl.szczodrzynski.navlib.drawer.items.DrawerPrimaryItem
+import eu.mikus.edziennik.utils.models.UnreadCounter
 import java.io.IOException
 import java.util.*
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity(), CoroutineScope {
     companion object {
+        /** `androidx.activity`'s own default navigation-bar scrim, which is `private` there. */
+        private const val DEFAULT_DARK_SCRIM = 0x801b1b1b.toInt()
+
         private const val TAG = "MainActivity"
     }
 
@@ -99,20 +99,46 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     override val coroutineContext: CoroutineContext
         get() = job + Dispatchers.Main
 
-    // Private since N2.4: nothing outside this file may reach the navlib shell, so the N4 Scaffold swap
-    // is a shell-only diff. `b` is included deliberately — it exposes b.navView, whose `drawer` and
-    // `bottomSheet` are public navlib fields, so leaving it public keeps a bypass that needs no navlib
-    // import and therefore matches no grep. (P27 privatised swipeRefreshLayout but left b public.)
+    // Private since N2.4: nothing outside this file may reach the app shell, so a shell swap is a
+    // shell-only diff. `b` is now the reduced layout of §5 - rootFrame, the ComposeView and
+    // nightlyText - and holds no chrome at all; the chrome reads [state].
     private val b: ActivitySzkolnyBinding by lazy { ActivitySzkolnyBinding.inflate(layoutInflater) }
-    private val navView: NavView by lazy { b.navView }
-    private val drawer: NavDrawer by lazy { navView.drawer }
-    private val bottomSheet: NavBottomSheet by lazy { navView.bottomSheet }
+
+    /** Every piece of chrome state the M3 shell renders. The public seam methods write these. */
+    private val state = ShellState()
+
     val mainSnackbar: MainSnackbar by lazy { MainSnackbar(this) }
     val errorSnackbar: ErrorSnackbar by lazy { ErrorSnackbar(this) }
     val requestHandler by lazy { MainActivityRequestHandler(this) }
 
-    // Private since P27: P26 removed the last external reader. A free instalment on the N2 invariant.
-    private val swipeRefreshLayout: SwipeRefreshLayoutNoTouch by lazy { b.swipeRefreshLayout }
+    // Published by AppScaffold's AndroidView factory (§7.8), so it is null until the first
+    // traversal - roughly half a second after onResume. Every write goes through `?.`.
+    private var swipeRefreshLayout: SwipeRefreshLayoutNoTouch? = null
+
+    /** The last `profileDao().all` emission; [updateProfileList] derives `state.profiles` from it. */
+    private var allProfiles = listOf<Profile>()
+
+    /** The last `metadataDao().unreadCounts` emission, so [updateDrawerBadges] can recompute. */
+    private var unreadCounters = listOf<UnreadCounter>()
+
+    /**
+     * `drawer.currentProfile`, as snapshot state: the toolbar avatar, its subtitle and the drawer
+     * header all follow it, and `App.profileId` is not observable.
+     */
+    private var currentProfileId by mutableStateOf(App.profileId)
+
+    /**
+     * Navigations that arrived before `AppScaffold`'s factory created the container (§2.1), drained
+     * by [onContainerReady] once it exists. See [runWhenContainerReady] for who produces them.
+     */
+    private val pendingContainerNavigations = mutableListOf<() -> Unit>()
+
+    /**
+     * `gainAttention()`'s request, per screen. navlib rippled the bottom bar only for the 5 screens
+     * that ask; passing the bare `!config.ui.bottomSheetOpened` gate to `AppBottomBar` would hint on
+     * all 19. Cleared by every navigation.
+     */
+    private var sheetHintRequested by mutableStateOf(false)
 
     var onBeforeNavigate: (() -> Boolean)? = null
     private var pausedNavigationData: PausedNavigationData? = null
@@ -146,7 +172,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+        onBackPressedDispatcher.addCallback(this, preCompositionBackCallback)
 
         d(TAG, "Activity created")
 
@@ -165,23 +191,42 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         d(TAG, "Profile is valid, inflating views")
 
+        // Replaces navlib's SystemBarsUtil (§7.7), whose two SDK_INT guards were dead at minSdk 23.
+        // The luminance test is the one thing that block did that navlib itself did not: light bar
+        // icons when the window background is light, which is not the system dark-mode setting the
+        // app theme is independent of.
+        val barStyle = if (
+            ColorUtils.calculateLuminance(getColorFromAttr(this, android.R.attr.colorBackground)) > 0.6
+        )
+            // The second argument is the darkScrim, and `EdgeToEdgeApi23` applies it to the
+            // navigation bar unconditionally - API 23-25 has no light-navigation-bar mode. Passing
+            // TRANSPARENT there leaves light buttons on a transparent bar; this is
+            // `enableEdgeToEdge`'s own default for the same reason. API 26+ picks the light scrim.
+            SystemBarStyle.light(Color.TRANSPARENT, DEFAULT_DARK_SCRIM)
+        else
+            SystemBarStyle.dark(Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = barStyle, navigationBarStyle = barStyle)
+
         setContentView(b.root)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            ViewCompat.setOnApplyWindowInsetsListener(b.rootFrame) { view: View, insets: WindowInsetsCompat ->
-                val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                view.setPadding(bars.left, bars.top, bars.right, 0)
-                b.navView.bottomSheet.setPadding(0, 0, 0, bars.bottom)
-                b.swipeRefreshLayout.setPadding(0, 0, 0, bars.bottom)
-                b.nightlyText.updateLayoutParams<FrameLayout.LayoutParams> {
-                    this.bottomMargin = 8.dp + bars.bottom
-                }
-                insets
+        // Only the nightlyText leg survives: it is the one view left outside the ComposeView. The
+        // Scaffold owns its own insets, so padding rootFrame as well would double-pad the shell.
+        //
+        // No longer gated on API 35: that gate matched a window which only targetSdk 35 forced
+        // edge-to-edge, and `enableEdgeToEdge` above now does it on every API - so below 35 the
+        // badge would sit under the navigation bar.
+        ViewCompat.setOnApplyWindowInsetsListener(b.rootFrame) { _: View, insets: WindowInsetsCompat ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            b.nightlyText.updateLayoutParams<FrameLayout.LayoutParams> {
+                this.bottomMargin = 8.dp + bars.bottom
             }
+            insets
         }
 
-        mainSnackbar.setCoordinator(b.navView.coordinator, b.navView.bottomBar)
-        errorSnackbar.setCoordinator(b.navView.coordinator, b.navView.bottomBar)
+        // The ONE SnackbarHostState the Scaffold renders (§7.11). Handing either class its own
+        // compiles fine and leaves that host permanently invisible.
+        mainSnackbar.setHostState(state.snackbarHostState)
+        errorSnackbar.setHostState(state.snackbarHostState)
 
         val versionBadge = app.buildManager.versionBadge
         b.nightlyText.isVisible = versionBadge != null
@@ -192,102 +237,55 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         navLoading = true
 
-        b.navView.apply {
-            drawer.init(this@MainActivity)
+        state.headerBackground = app.config.ui.headerBackground
+        state.miniMenuVisible = app.config.ui.miniMenuVisible
 
-            SystemBarsUtil(this@MainActivity).run {
-                //paddingByKeyboard = b.navView
-                appFullscreen = false
-                statusBarColor = getColorFromAttr(context, android.R.attr.colorBackground)
-                statusBarDarker = false
-                statusBarFallbackLight = COLOR_HALF_TRANSPARENT
-                statusBarFallbackGradient = COLOR_HALF_TRANSPARENT
-                navigationBarTransparent = false
-
-                b.navView.configSystemBarsUtil(this)
-
-                // fix for setting status bar color to window color, outside of navlib
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    window.statusBarColor = statusBarColor
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                    && ColorUtils.calculateLuminance(statusBarColor) > 0.6
-                ) {
-                    @Suppress("deprecation")
-                    window.decorView.systemUiVisibility =
-                        window.decorView.systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                }
-
-                // TODO fix navlib navbar detection, orientation change issues, status bar color setting if not fullscreen
-
-                commit()
+        b.composeView.setAppThemeContent {
+            // Everything the shell needs that is not observable state lives here, so it is re-read
+            // on recomposition rather than captured once.
+            val profile = state.profiles.firstOrNull { it.id == currentProfileId }
+            // One Drawable per profile, memoised per emission: AppDrawer keys its painter on the
+            // instance, and a fresh Drawable per recomposition would restart an animated .gif avatar
+            // every frame. The toolbar's own avatar is resolved separately, because a Drawable has a
+            // single callback slot and must not be shared with a second painter.
+            val profileImages = remember(state.profiles) {
+                val images = state.profiles.associate { it.id to it.getImageDrawable(this) }
+                ({ id: Int -> images[id] })
             }
 
-            toolbar.apply {
-                subtitleFormat = R.string.toolbar_subtitle
-                subtitleFormatWithUnread = R.plurals.toolbar_subtitle_with_unread
-            }
-
-            bottomBar.apply {
-                fabEnable = false
-                fabExtendable = true
-                fabExtended = false
-                fabGravity = Gravity.CENTER
-                if (Themes.isDark) {
-                    setBackgroundColor(blendColors(
-                        getColorFromAttr(context, R.attr.colorSurface),
-                        getColorFromRes(R.color.colorSurface_4dp)
-                    ))
-                    elevation = dpToPx(4).toFloat()
-                }
-            }
-
-            bottomSheet.apply {
-                removeAllItems()
-                toggleGroupEnabled = false
-                textInputEnabled = false
-                onCloseListener = {
+            AppScaffold(
+                state = state,
+                currentProfileId = currentProfileId,
+                profileName = profile?.name.orEmpty(),
+                profileImage = remember(profile) { profile?.getImageDrawable(this) },
+                profileImages = profileImages,
+                sheetBaseRows = sheetBaseRows,
+                sheetHintEnabled = sheetHintRequested && !app.config.ui.bottomSheetOpened,
+                // CloseOnly and ToggleExpandable never arrive - AppScaffold swallows the first and
+                // the "More" group's state is local to AppDrawer - so navigating is all that is left.
+                onAction = { action ->
+                    when (action) {
+                        is DrawerAction.Navigate -> navigate(navTarget = action.target)
+                        is DrawerAction.SwitchProfile -> navigate(profileId = action.profileId)
+                        else -> {}
+                    }
+                },
+                onProfileLongClick = ::showProfileConfig,
+                onProfileSettingClick = { row -> row.target?.let(::onProfileSettingClick) },
+                onSyncClick = { SyncViewListDialog(this, navTarget).show() },
+                onSheetDismissed = {
                     if (!app.config.ui.bottomSheetOpened)
                         app.config.ui.bottomSheetOpened = true
-                }
-            }
+                },
+                onContainerReady = ::onContainerReady,
+                onRefreshLayoutReady = { swipeRefreshLayout = it },
+            )
 
-            drawer.apply {
-                setAccountHeaderBackground(app.config.ui.headerBackground)
-
-                drawerProfileListEmptyListener = {
-                    onProfileListEmptyEvent(ProfileListEmptyEvent())
-                }
-                drawerItemSelectedListener = { id, _, item ->
-                    if (item is ExpandableDrawerItem)
-                        false
-                    else
-                        navigate(navTarget = id.asNavTargetOrNull())
-                }
-                drawerProfileSelectedListener = { id, _, _, _ ->
-                    // why is this negated -_-
-                    !navigate(profileId = id)
-                }
-                drawerProfileLongClickListener = { _, profile, _, view ->
-                    if (view != null && profile is ProfileDrawerItem) {
-                        launch {
-                            val appProfile = withContext(Dispatchers.IO) {
-                                App.db.profileDao().getByIdNow(profile.identifier.toInt())
-                            } ?: return@launch
-                            drawer.close()
-                            ProfileConfigDialog(this@MainActivity, appProfile).show()
-                        }
-                        true
-                    } else {
-                        false
-                    }
-                }
-                drawerProfileImageLongClickListener = drawerProfileLongClickListener
-                drawerProfileSettingClickListener = this@MainActivity.profileSettingClickListener
-
-                miniDrawerVisibleLandscape = null
-                miniDrawerVisiblePortrait = app.config.ui.miniMenuVisible
-            }
+            // Registered AFTER AppScaffold on purpose. ModalNavigationDrawer installs its own
+            // PredictiveBackHandler *before* it composes this content, and the dispatcher runs the
+            // last-registered callback first - so this one wins, which is the only way the
+            // openDrawerOnBackPressed branch survives (the drawer would otherwise just close).
+            BackHandler { handleBackPressed() }
         }
 
         navTarget = NavTarget.HOME
@@ -298,38 +296,22 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         }
 
         app.db.profileDao().all.observe(this) { profiles ->
-            val allArchived = profiles.all { it.archived }
-            drawer.setProfileList(profiles.filter {
-                it.id >= 0 && (!it.archived || allArchived)
-            }.map { it.toDrawerProfile() }.toMutableList())
-            //prepend the archived profile if loaded
-            if (app.profile.archived && !allArchived) {
-                drawer.prependProfile(Profile(
-                    id = app.profile.id,
-                    loginStoreId = app.profile.loginStoreId,
-                    loginStoreType = app.profile.loginStoreType,
-                    name = app.profile.name,
-                    subname = "Archiwum - ${app.profile.subname}"
-                ).also {
-                    it.archived = true
-                }.toDrawerProfile())
-            }
-            drawer.currentProfile = App.profileId
+            allProfiles = profiles
+            updateProfileList()
+            // navlib's own drawerProfileListEmptyListener, which fired from setProfileList.
+            if (state.profiles.isEmpty())
+                onProfileListEmptyEvent(ProfileListEmptyEvent())
         }
 
         setDrawerItems()
 
-        handleIntent(intent?.extras)
-
         app.db.metadataDao().unreadCounts.observe(this) { unreadCounters ->
-            drawer.setUnreadCounterList(unreadCounters.map { it.toDrawerCounter() }.toMutableList())
+            this.unreadCounters = unreadCounters
+            updateDrawerBadges()
         }
 
-        b.swipeRefreshLayout.setColorSchemeResources(
-            R.color.md_blue_500,
-            R.color.md_amber_500,
-            R.color.md_green_500
-        )
+        // setColorSchemeResources moved into AppScaffold's AndroidView factory (§7.8): the view does
+        // not exist yet here, and the first navigation now runs from onContainerReady().
 
         SyncWorker.scheduleNext(app)
         UpdateWorker.scheduleNext(app)
@@ -342,11 +324,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                         app.db.profileDao().getNotArchivedOf(app.profile.archiveId!!)
                     }
                     if (profile != null)
-                        navigate(profile = profile)
+                        runWhenContainerReady { navigate(profile = profile) }
                     else
-                        navigate(profileId = 0)
+                        runWhenContainerReady { navigate(profileId = 0) }
                 } else {
-                    navigate(profileId = 0)
+                    runWhenContainerReady { navigate(profileId = 0) }
                 }
             }
         }
@@ -390,10 +372,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         // RATE SNACKBAR
         if (app.config.appRateSnackbarTime != 0L && app.config.appRateSnackbarTime <= System.currentTimeMillis()) {
-            navView.coordinator.postDelayed({
-                CafeBar.builder(this)
+            launch {
+                delay(10_000)
+                CafeBar.builder(this@MainActivity)
                     .content(R.string.rate_snackbar_text)
-                    .icon(IconicsDrawable(this).apply {
+                    .icon(IconicsDrawable(this@MainActivity).apply {
                         icon = CommunityMaterial.Icon3.cmd_star_outline
                         sizeDp = 24
                         colorInt = Themes.getPrimaryTextColor(this@MainActivity)
@@ -405,19 +388,19 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     .neutralText(R.string.rate_snackbar_neutral)
                     .neutralColor(0xff666666.toInt())
                     .onPositive { cafeBar ->
-                        Utils.openGooglePlay(this)
+                        Utils.openGooglePlay(this@MainActivity)
                         cafeBar.dismiss()
                         app.config.appRateSnackbarTime = 0
                     }
                     .onNegative { cafeBar ->
-                        Toast.makeText(this,
+                        Toast.makeText(this@MainActivity,
                             R.string.rate_snackbar_negative_message,
                             Toast.LENGTH_LONG).show()
                         cafeBar.dismiss()
                         app.config.appRateSnackbarTime = 0
                     }
                     .onNeutral { cafeBar ->
-                        Toast.makeText(this, R.string.ok, Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@MainActivity, R.string.ok, Toast.LENGTH_LONG).show()
                         cafeBar.dismiss()
                         app.config.appRateSnackbarTime =
                             System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000
@@ -426,32 +409,41 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     .swipeToDismiss(true)
                     .floating(true)
                     .show()
-            }, 10000)
-        }
-
-        // CONTEXT MENU ITEMS
-        bottomSheet.removeAllItems()
-        bottomSheet.appendItems(
-            BottomSheetPrimaryItem(false)
-                .withTitle(R.string.menu_sync)
-                .withIcon(CommunityMaterial.Icon.cmd_download_outline)
-                .withOnClickListener {
-                    bottomSheet.close()
-                    SyncViewListDialog(this, navTarget).show()
-                },
-            BottomSheetSeparatorItem(false),
-        )
-        for (target in NavTarget.values()) {
-            if (target.location != NavTargetLocation.BOTTOM_SHEET)
-                continue
-            if (target.devModeOnly && !App.devMode)
-                continue
-            bottomSheet += target.toBottomSheetItem()
+            }
         }
     }
 
-    private var profileSettingClickListener = { itemId: Int, _: View? ->
-        when (val item = itemId.asNavTarget()) {
+    /**
+     * The bottom sheet's base rows: the `BOTTOM_SHEET` targets, `devModeOnly` ones filtered out.
+     * The sync row is not here - `AppSheet` renders it from `onSyncClick`, so it cannot be dropped.
+     *
+     * No description, exactly as `toBottomSheetItem()` set none.
+     */
+    private val sheetBaseRows: List<SheetRow> by lazy {
+        NavTarget.values().mapNotNull { target ->
+            if (target.location != NavTargetLocation.BOTTOM_SHEET)
+                return@mapNotNull null
+            if (target.devModeOnly && !App.devMode)
+                return@mapNotNull null
+            val icon = target.icon ?: return@mapNotNull null
+            SheetRow(
+                titleRes = target.nameRes,
+                descriptionRes = null,
+                icon = icon,
+                separatorBefore = false,
+                onClick = { navigate(navTarget = target) },
+            )
+        }
+    }
+
+    /**
+     * The three `PROFILE_LIST` rows, from navlib's `drawerProfileSettingClickListener`. `PROFILE_ADD`
+     * is the app's only in-app add-profile route: [MainActivityRequestHandler.requestLogin] has
+     * exactly two references in the whole app, and this is one of them. `AppScaffold` closes the
+     * drawer afterwards.
+     */
+    private fun onProfileSettingClick(target: NavTarget) {
+        when (target) {
             NavTarget.PROFILE_ADD -> {
                 requestHandler.requestLogin()
             }
@@ -475,10 +467,92 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 }
             }
             else -> {
-                navigate(navTarget = item)
+                navigate(navTarget = target)
             }
         }
-        false
+    }
+
+    /** navlib's `drawerProfileLongClickListener`; the drawer is already closed by `AppScaffold`. */
+    private fun showProfileConfig(profileId: Int) {
+        launch {
+            val appProfile = withContext(Dispatchers.IO) {
+                App.db.profileDao().getByIdNow(profileId)
+            } ?: return@launch
+            ProfileConfigDialog(this@MainActivity, appProfile).show()
+        }
+    }
+
+    /**
+     * The first navigation, which §2.1 measured cannot run from `onCreate`, `onStart` or `onResume`:
+     * `AppScaffold`'s `AndroidView` factory builds `R.id.fragment` on the first traversal, and a
+     * transaction committed before that crashes on cold start. Also re-commits a fragment left
+     * orphaned by a process-death restore (§2.2).
+     */
+    private fun onContainerReady() {
+        handleIntent(intent?.extras)
+        // In arrival order, which is the order these ran in before the flip: the intent's own
+        // navigation, then a redelivered intent, then the archived-profile switch last.
+        while (pendingContainerNavigations.isNotEmpty())
+            pendingContainerNavigations.removeAt(0).invoke()
+    }
+
+    /**
+     * Runs [action] now if the container exists, and from [onContainerReady] otherwise. **Every
+     * navigation that can start before the first traversal has to go through this** - a transaction
+     * committed against a container that is not there yet throws §2.1's `No view found for id
+     * .../fragment`, and the container cannot be made to exist any earlier.
+     *
+     * Two producers reach it before the container does, and both did their work synchronously in
+     * `onCreate` before the flip:
+     *  - `onNewIntent`, because `launchMode="singleTop"` makes the system redeliver the start intent
+     *    between `onStart` and `onResume` every time it recreates this Activity. Measured: without
+     *    this, a process-death restore crashes in `FragmentActivity.onResume`.
+     *  - the archived-profile switch below, whose `launch` resumes on a plain main-thread message
+     *    while the first traversal waits for a vsync callback.
+     */
+    private fun runWhenContainerReady(action: () -> Unit) {
+        if (findViewById<View>(R.id.fragment) != null)
+            action()
+        else
+            pendingContainerNavigations += action
+    }
+
+    /**
+     * Back during the ~0.5 s before the first composition, when the `BackHandler` inside it does not
+     * exist yet (§2.1). The dispatcher runs the last-registered enabled callback, and that one is
+     * registered from the composition's apply pass, so this is shadowed from then on and fires only
+     * inside that window - where the platform default would otherwise finish the Activity and
+     * `openDrawerOnBackPressed` would exit the app instead of opening the drawer (§8).
+     */
+    private val preCompositionBackCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() = handleBackPressed()
+    }
+
+    /**
+     * navlib's `onBackPressed()` chain plus the `openDrawerOnBackPressed` gate that used to wrap it,
+     * as [shellBackPolicy]. `drawerOpen` is navlib's `isOpen()`, which reports true for as long as
+     * the drawer is permanent - passing false there would make back a no-op whenever the setting is
+     * on.
+     */
+    private fun handleBackPressed() {
+        val permanent = drawerMode(
+            orientation = resources.configuration.orientation,
+            screenWidthDp = resources.configuration.screenWidthDp,
+            miniMenuVisible = state.miniMenuVisible,
+        ) == DrawerMode.Permanent
+
+        val decision = shellBackPolicy(
+            sheetOpen = state.sheetVisible,
+            drawerOpen = state.drawerState.isOpen || permanent,
+            drawerDismissible = !permanent,
+            openDrawerOnBack = App.config.ui.openDrawerOnBackPressed,
+        )
+        when (decision) {
+            is ShellBack.CloseSheet -> state.sheetVisible = false
+            is ShellBack.CloseDrawer -> closeDrawer()
+            is ShellBack.OpenDrawer -> openDrawer()
+            is ShellBack.Content -> navigateUp()
+        }
     }
 
     /*     _____
@@ -517,20 +591,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     fun markSyncStarting() {
         app.syncStatus.markRefreshing()
         if (!::navTarget.isInitialized || navTarget !in boxedNavTargets)
-            swipeRefreshLayout.isRefreshing = true
+            swipeRefreshLayout?.isRefreshing = true
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskStartedEvent(event: ApiTaskStartedEvent) {
         if (!::navTarget.isInitialized || navTarget !in boxedNavTargets)
-            swipeRefreshLayout.isRefreshing = true
-        if (event.profileId == App.profileId) {
-            navView.toolbar.apply {
-                subtitleFormat = null
-                subtitleFormatWithUnread = null
-                subtitle = getString(R.string.toolbar_subtitle_syncing)
-            }
-        }
+            swipeRefreshLayout?.isRefreshing = true
+        // The subtitle protocol (§7.1) is explicit state now; nulling navlib's two format resources
+        // is what used to suppress the steady-state subtitle for the duration of a sync.
+        if (event.profileId == App.profileId)
+            state.subtitle = SyncSubtitle.Syncing(progress = -1f, text = null)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -543,49 +614,32 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskProgressEvent(event: ApiTaskProgressEvent) {
-        if (event.profileId == App.profileId) {
-            navView.toolbar.apply {
-                subtitleFormat = null
-                subtitleFormatWithUnread = null
-                subtitle = if (event.progress < 0f)
-                    event.progressText ?: ""
-                else
-                    getString(
-                        R.string.toolbar_subtitle_syncing_format,
-                        event.progress.roundToInt(),
-                        event.progressText ?: "",
-                    )
-
-            }
-        }
+        // subtitleOf() owns both cases: a negative progress renders the bare text, as this did.
+        if (event.profileId == App.profileId)
+            state.subtitle = SyncSubtitle.Syncing(event.progress, event.progressText)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
     fun onApiTaskFinishedEvent(event: ApiTaskFinishedEvent) {
         EventBus.getDefault().removeStickyEvent(event)
-        if (event.profileId == App.profileId) {
-            navView.toolbar.apply {
-                subtitleFormat = R.string.toolbar_subtitle
-                subtitleFormatWithUnread = R.plurals.toolbar_subtitle_with_unread
-                subtitle = "Gotowe"
-            }
-        }
+        // AppTopBar gives Done its ~2 s lifetime and then falls back to Idle, which is what
+        // restoring navlib's two format resources used to do.
+        if (event.profileId == App.profileId)
+            state.subtitle = SyncSubtitle.Done
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
     fun onApiTaskAllFinishedEvent(event: ApiTaskAllFinishedEvent) {
         EventBus.getDefault().removeStickyEvent(event)
-        swipeRefreshLayout.isRefreshing = false
+        swipeRefreshLayout?.isRefreshing = false
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
     fun onApiTaskErrorEvent(event: ApiTaskErrorEvent) {
         EventBus.getDefault().removeStickyEvent(event)
-        navView.toolbar.apply {
-            subtitleFormat = R.string.toolbar_subtitle
-            subtitleFormatWithUnread = R.plurals.toolbar_subtitle_with_unread
-            subtitle = "Gotowe"
-        }
+        // A failed sync ends the subtitle the same way a finished one does - this path showed
+        // "Gotowe" too - and the failure itself is reported by the error snackbar below.
+        state.subtitle = SyncSubtitle.Done
         mainSnackbar.dismiss()
         errorSnackbar.addError(event.error).show()
     }
@@ -711,8 +765,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             intentTargetId = navTarget.id
         }*/
 
+        // The container is built by AppScaffold's factory now, so it is looked up rather than bound.
+        // Nothing is inflated into it: navlib's fragment_loading placeholder was never visible
+        // before this ran, and inflating it now would introduce a flash that users do not see (§5).
         if (navLoading)
-            b.fragment.removeAllViews()
+            findViewById<ViewGroup>(R.id.fragment)?.removeAllViews()
 
         when {
             app.profile.id == 0 -> navigate(
@@ -730,7 +787,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 args = extras,
             )
             navLoading -> navigate()
-            else -> drawer.currentProfile = app.profile.id
+            else -> currentProfileId = app.profile.id
         }
         navLoading = false
     }
@@ -803,7 +860,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        handleIntent(intent?.extras)
+        val extras = intent?.extras
+        runWhenContainerReady { handleIntent(extras) }
     }
 
     @Suppress("deprecation")
@@ -841,12 +899,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     ): Boolean {
         d(TAG, "navigate(profileId = ${profile?.id ?: profileId}, target = ${navTarget?.name}, args = $args)")
         if (!(skipBeforeNavigate || navTarget == this.navTarget) && !canNavigate()) {
-            bottomSheet.close()
-            drawer.close()
+            state.sheetVisible = false
+            closeDrawer()
             // restore the previous profile if changing it with the drawer
-            // well, it still does not change the toolbar profile image,
-            // but that's now NavView's problem, not mine.
-            drawer.currentProfile = App.profile.id
+            currentProfileId = App.profile.id
             pausedNavigationData = PausedNavigationData(profileId, navTarget, args)
             return false
         }
@@ -885,30 +941,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             MessagesFragment.pageSelection = -1
             // set new drawer items for this profile
             setDrawerItems()
-
-            val previousArchivedId = if (app.profile.archived) app.profile.id else null
-            if (previousArchivedId != null) {
-                // prevents accidentally removing the first item if the archived profile is not shown
-                drawer.removeProfileById(previousArchivedId)
-            }
-            if (profile.archived) {
-                // add the same profile but with a different name
-                // (other fields are not needed by the drawer)
-                drawer.prependProfile(Profile(
-                    id = profile.id,
-                    loginStoreId = profile.loginStoreId,
-                    loginStoreType = profile.loginStoreType,
-                    name = profile.name,
-                    subname = "Archiwum - ${profile.subname}"
-                ).also {
-                    it.archived = true
-                }.toDrawerProfile())
-            }
-
-            // the drawer profile is updated automatically when the drawer item is clicked
-            // update it manually when switching profiles from other source
-            //if (drawer.currentProfile != app.profile.id)
-            drawer.currentProfile = App.profileId
+            // Rebuilds the rendered profile list for the new profile - which is both halves of what
+            // removeProfileById() + prependProfile() did - and moves the header onto it.
+            updateProfileList()
         }
 
         val decision = decideNavigation(
@@ -919,16 +954,17 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             requestedArguments = args,
         )
         val arguments = decision.arguments ?: Bundle()
-        bottomSheet.close()
-        bottomSheet.removeAllContextual()
-        bottomSheet.toggleGroupEnabled = false
-        drawer.close()
-        if (drawer.getSelection() != navTarget.id)
-            drawer.setSelection(navTarget.id, fireOnClick = false)
-        navView.toolbar.setTitle(navTarget.titleRes ?: navTarget.nameRes)
-        navView.bottomBar.fabEnable = false
-        navView.bottomBar.fabExtended = false
-        navView.bottomBar.setFabOnClickListener(null)
+        // The chrome reset: the sheet closes and drops the previous screen's contextual rows, the
+        // drawer closes and follows the new selection, and the FAB goes back to "no primary action"
+        // until this screen's setScreenFab(...) arrives.
+        state.sheetVisible = false
+        state.actions = emptyList()
+        sheetHintRequested = false
+        closeDrawer()
+        state.selectedTarget = navTarget
+        state.title = getString(navTarget.titleRes ?: navTarget.nameRes)
+        state.fab = null
+        state.fabExtended = false
 
         d("NavDebug", "Navigating from ${this.navTarget.name} to ${navTarget.name}")
 
@@ -1015,28 +1051,27 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     }
 
     /**
-     * Use the NavLib's menu button ripple to gain user attention
-     * that something has changed in the bottom sheet.
+     * Draw the user's attention to the bottom sheet, because something in it has changed.
+     *
+     * The pixel-targeted ripple navlib drew over the bottom bar has no Compose equivalent (§7.10),
+     * so `AppBottomBar` pulses the sheet button instead - same place, same 2 s delay, and it cancels
+     * on navigation instead of firing into the next screen. The flag is what keeps the hint per
+     * screen: only the 5 screens that call this ask for it, as today.
      */
     fun gainAttention() {
         if (app.config.ui.bottomSheetOpened)
             return
-        b.navView.postDelayed({
-            navView.gainAttentionOnBottomBar()
-        }, 2000)
+        sheetHintRequested = true
     }
 
-    fun gainAttentionFAB() {
-        navView.bottomBar.fabExtended = false
-
-        b.navView.postDelayed({
-            navView.bottomBar.fabExtended = true
-        }, 1000)
-
-        b.navView.postDelayed({
-            navView.bottomBar.fabExtended = false
-        }, 3000)
-    }
+    /**
+     * Kept as a no-op: `AppBottomBar`'s `FabAttentionEffect` now runs this pulse for every screen
+     * that arms a FAB, keyed on the current target so it cannot outlive the screen that asked -
+     * which is what the three uncancelled `postDelayed` calls here used to do. The signature stays
+     * because 6 fragments call it.
+     */
+    @Suppress("unused")
+    fun gainAttentionFAB() = Unit
 
     fun setAppBackground() {
         try {
@@ -1057,102 +1092,53 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
          | |  | | '__/ _` \ \ /\ / / _ \ '__| | | __/ _ \ '_ ` _ \/ __|
          | |__| | | | (_| |\ V  V /  __/ |    | | ||  __/ | | | | \__ \
          |_____/|_|  \__,_| \_/\_/ \___|_|    |_|\__\___|_| |_| |_|__*/
-    private fun createDrawerItem(target: NavTarget, level: Int = 1): IDrawerItem<*> {
-        val item = when {
-            // target.subItems != null -> ExpandableDrawerItem()
-            level > 1 -> SecondaryDrawerItem()
-            else -> DrawerPrimaryItem()
-        }
-
-        item.also {
-            it.identifier = target.id.toLong()
-            it.nameRes = target.nameRes
-            it.descriptionRes = target.descriptionRes ?: -1
-            it.icon = target.icon?.toImageHolder()
-            it.hiddenInMiniDrawer = !app.config.ui.miniMenuButtons.contains(target)
-            if (it is DrawerPrimaryItem)
-                it.appTitle = target.titleRes?.resolveString(this)
-            if (/* it is ColorfulBadgeable && */ target.badgeType != null)
-                it.badgeStyle = drawer.badgeStyle
-            it.isSelectedBackgroundAnimated = false
-            it.level = level
-        }
-        if (target.badgeType != null)
-            drawer.addUnreadCounterType(target.badgeType.id, target.id)
-
-        /* item.subItems = target.subItems?.map {
-            createDrawerItem(it, level + 1)
-        }?.toMutableList() ?: mutableListOf() */
-
-        return item
-    }
-
+    /**
+     * The drawer's rows, both lists: `DrawerEntries.main` for the drawer and the rail,
+     * `DrawerEntries.profileSettings` for the three `PROFILE_LIST` rows inside the expanded profile
+     * list. The second one is not optional - it carries the only in-app add-profile route.
+     *
+     * The profile list is closed first, as `drawer.profileSelectionClose()` did before `setItems`.
+     */
     fun setDrawerItems() {
         d("NavDebug", "setDrawerItems() app.profile = ${app.profile}")
-        val drawerItems = arrayListOf<IDrawerItem<*>>()
-        val drawerItemsMore = arrayListOf<IDrawerItem<*>>()
-        val drawerItemsBottom = arrayListOf<IDrawerItem<*>>()
-        val drawerProfiles = arrayListOf<ProfileSettingDrawerItem>()
-
-        for (target in NavTarget.values()) {
-            if (target.devModeOnly && !App.devMode)
-                continue
-            if (target.featureType != null && !app.profile.hasUIFeature(target.featureType))
-                continue
-
-            when (target.location) {
-                NavTargetLocation.DRAWER -> {
-                    drawerItems += createDrawerItem(target, level = 1)
-                }
-                NavTargetLocation.DRAWER_MORE -> {
-                    drawerItemsMore += createDrawerItem(target, level = 2)
-                }
-                NavTargetLocation.DRAWER_BOTTOM -> {
-                    drawerItemsBottom += createDrawerItem(target, level = 1)
-                }
-                NavTargetLocation.PROFILE_LIST -> {
-                    drawerProfiles += ProfileSettingDrawerItem().also {
-                        it.identifier = target.id.toLong()
-                        it.nameRes = target.nameRes
-                        it.descriptionRes = target.descriptionRes ?: -1
-                        it.icon = target.icon?.toImageHolder()
-                    }
-                }
-                else -> continue
-            }
-        }
-
-        drawerItems += ExpandableDrawerItem().also {
-            it.identifier = -1L
-            it.nameRes = R.string.menu_more
-            it.icon = CommunityMaterial.Icon.cmd_dots_horizontal.toImageHolder()
-            it.subItems = drawerItemsMore.toMutableList()
-            it.isSelectedBackgroundAnimated = false
-            it.isSelectable = false
-        }
-        drawerItems += DividerDrawerItem()
-        drawerItems += drawerItemsBottom
-
-        // seems that this cannot be open, because the itemAdapter has Profile items
-        // instead of normal Drawer items...
-        drawer.profileSelectionClose()
-        drawer.setItems(*drawerItems.toTypedArray())
-        drawer.removeAllProfileSettings()
-        drawer.addProfileSettings(*drawerProfiles.toTypedArray())
+        val entries = buildDrawerEntries(
+            targets = NavTarget.values().toList(),
+            devMode = App.devMode,
+            profileFeatures = app.profile.loginStoreType.features,
+            miniMenuButtons = app.config.ui.miniMenuButtons,
+        )
+        state.profileSelectionOpen = false
+        state.drawerEntries = entries.main
+        state.profileSettings = entries.profileSettings
     }
 
-    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
-        override fun handleOnBackPressed() {
-            if (App.config.ui.openDrawerOnBackPressed) {
-                if (drawer.isOpen)
-                    navigateUp()
-                else if (!navView.onBackPressed())
-                    drawer.open()
-            } else {
-                if (!navView.onBackPressed())
-                    navigateUp()
-            }
+    /**
+     * `state.profiles`, i.e. what `setProfileList` + `prependProfile` + `currentProfile` produced:
+     * every non-archived profile (or every profile, if they all are), with the loaded profile
+     * prepended under an "archive" name when it is archived and the others are not.
+     */
+    private fun updateProfileList() {
+        val allArchived = allProfiles.all { it.archived }
+        val profiles = allProfiles.filter {
+            it.id >= 0 && (!it.archived || allArchived)
+        }.toMutableList()
+        //prepend the archived profile if loaded
+        if (app.profile.archived && !allArchived) {
+            profiles.add(0, Profile(
+                id = app.profile.id,
+                loginStoreId = app.profile.loginStoreId,
+                loginStoreType = app.profile.loginStoreType,
+                name = app.profile.name,
+                // (other fields are not needed by the drawer)
+                subname = getString(R.string.profile_archived_subname_format, app.profile.subname)
+            ).also {
+                it.archived = true
+            })
         }
+        state.profiles = profiles
+        currentProfileId = App.profileId
+        // The per-profile badges are keyed by profile id, so they follow the rendered list.
+        updateDrawerBadges()
     }
 
     fun error(error: ApiError) = errorSnackbar.addError(error).show()
@@ -1168,90 +1154,89 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
      * Replace the current screen's menu rows. Replace-semantics and idempotent: a screen may
      * re-declare when its state changes (MessagesCompose grows a discard-draft row this way).
      *
-     * Applied synchronously — navlib has no settle pass to wait for (`javap` over all 79 classes of
-     * navlib-0.8.0 finds zero `postDelayed`/`Handler`/`Looper`), so nothing can outlive its screen.
-     * No emptiness guard: `addAll(0, emptyList())` mutates nothing and `removeAllContextual()` has
-     * already fired `notifyDataSetChanged()`.
+     * These are the sheet's *contextual* rows; the shell's own base rows are separate state, which
+     * is what navlib's `isContextual` flag used to express.
      */
     fun setScreenActions(actions: List<ScreenAction>) {
-        bottomSheet.removeAllContextual()
-        val items = actions.toBottomSheetItems { bottomSheet.close(); it.onClick() }
-        bottomSheet.prependItems(*items.toTypedArray())
+        state.actions = actions
     }
 
     /**
      * Set or clear the current screen's primary action. `null` means "no primary action right now" —
      * the only way to express that without the caller touching `fabEnable`.
      *
-     * Identity is written before `fabEnable = true` so the FAB never shows unlabelled for a frame.
      * Deliberately does NOT call [gainAttentionFAB] — Timetable must not pulse on every page change.
      */
     fun setScreenFab(fab: ScreenFab?) {
-        if (fab == null) {
-            navView.bottomBar.fabEnable = false
-            navView.bottomBar.setFabOnClickListener(null)
-            return
-        }
-        navView.bottomBar.fabExtendedText = getString(fab.labelRes)
-        navView.bottomBar.fabIcon = fab.icon
-        navView.bottomBar.setFabOnClickListener(View.OnClickListener { fab.onClick() })
-        navView.bottomBar.fabEnable = true
+        state.fab = fab
     }
 
-    /** Drawer delegates (N2.4). Plain 1:1 pass-throughs so nothing outside this file names navlib.
-     *  [setDrawerItems] is the precedent for a public shell method that owns the drawer — it is a 53-line
-     *  item builder rather than a delegate, but MiniMenuConfigDialog already calls it beside a raw
-     *  drawer.updateBadges(), so these are its one-line siblings. Deliberately NOT combined: callers keep
+    /** Drawer delegates (N2.4). Plain 1:1 pass-throughs so nothing outside this file names the shell.
+     *  [setDrawerItems] is the precedent for a public shell method that owns the drawer — it is an
+     *  item builder rather than a delegate, but MiniMenuConfigDialog already calls it beside
+     *  updateDrawerBadges(), so these are its one-line siblings. Deliberately NOT combined: callers keep
      *  their own composition (e.g. SettingsFragment's set-null-then-set-value refresh). */
-    fun openDrawer() = drawer.open()
+    fun openDrawer() {
+        // A permanent drawer has no closed state to open from, and navlib's setOpen returned early
+        // there for the same reason.
+        if (drawerMode(
+                orientation = resources.configuration.orientation,
+                screenWidthDp = resources.configuration.screenWidthDp,
+                miniMenuVisible = state.miniMenuVisible,
+            ) == DrawerMode.Permanent
+        ) return
+        launch(AndroidUiDispatcher.Main) { state.drawerState.open() }
+    }
 
-    fun openProfileSelection() = drawer.profileSelectionOpen()
+    /**
+     * Closing is safe in every mode: a permanent drawer's state is already closed. Guarded on
+     * `isOpen` - which is a plain state read - because `close()` animates, and animating needs the
+     * `Density` the drawer composable injects; `navigate()` can run before the first composition.
+     *
+     * [AndroidUiDispatcher.Main] rather than this scope's plain `Dispatchers.Main`, here and in
+     * [openDrawer]: `DrawerState.close()` suspends on `withFrameNanos`, and a context with no
+     * `MonotonicFrameClock` throws `IllegalStateException` instead of animating. Measured on the
+     * emulator - it took down every drawer navigation.
+     */
+    private fun closeDrawer() {
+        state.profileSelectionOpen = false
+        if (state.drawerState.isOpen)
+            launch(AndroidUiDispatcher.Main) { state.drawerState.close() }
+    }
 
-    fun setDrawerHeaderBackground(background: String?) = drawer.setAccountHeaderBackground(background)
+    /** navlib's own implementation did both halves; a flag alone leaves the switcher unreachable. */
+    fun openProfileSelection() {
+        state.profileSelectionOpen = true
+        openDrawer()
+    }
 
-    fun updateDrawerBadges() = drawer.updateBadges()
+    /**
+     * `null` falls back to `R.drawable.header`. The token forces the re-decode: every pick
+     * overwrites the same `filesDir/header.<ext>`, so the path alone never changes, and
+     * `SettingsFragment`'s null-then-value pair lands in a single frame.
+     */
+    fun setDrawerHeaderBackground(background: String?) {
+        state.headerBackground = background
+        state.headerBackgroundToken++
+    }
 
+    /** All five badge surfaces (§7.9), not just the drawer rows. */
+    fun updateDrawerBadges() {
+        state.badges = deriveBadges(
+            unreadCounts = unreadCounters,
+            profiles = state.profiles,
+            targets = NavTarget.values().toList(),
+            currentProfileId = App.profileId,
+        )
+    }
+
+    /**
+     * Writes the **raw** setting, never a derived value: in landscape 480-899 dp the rail is up
+     * regardless of it, so storing "is the rail showing" would latch and survive a rotation into
+     * portrait. The rail's real visibility is `drawerMode(...)`, computed in the composition.
+     */
     fun setMiniDrawerVisible(visible: Boolean) {
-        drawer.miniDrawerVisiblePortrait = visible
+        app.config.ui.miniMenuVisible = visible
+        state.miniMenuVisible = visible
     }
-
-    /** Absorbed from ext/EnumExtensions.kt in P26 — its only caller was the BOTTOM_SHEET loop in
-     *  onCreate, and it was that file's only navlib dependency. isContextual = false is load-bearing:
-     *  these are the shell's own rows and must survive removeAllContextual(). */
-    private fun NavTarget.toBottomSheetItem() =
-        BottomSheetPrimaryItem(isContextual = false).also {
-            it.titleRes = this.nameRes
-            if (this.icon != null)
-                it.iconicsIcon = this.icon
-            it.onClickListener = View.OnClickListener {
-                navigate(navTarget = this)
-            }
-        }
-}
-
-/** navlib: an IIcon as a navlib ImageHolder. Absorbed from ext/GraphicsExtensions.kt in P26 —
- *  every caller was in this file, and it was that file's only navlib dependency. */
-private fun IIcon.toImageHolder() = ImageHolder(this)
-
-/**
- * A screen's own menu rows as navlib items. Top-level and `internal` on purpose: it stays inside
- * MainActivity.kt (the only file allowed to name navlib, per the N2 invariant) yet remains visible
- * to `app/src/test`.
- *
- * `isContextual = true` on EVERY produced item — separators included — is the entire contract
- * behind [MainActivity.navigateImpl]'s `removeAllContextual()`. See ScreenChromeMappingTest.
- */
-internal fun List<ScreenAction>.toBottomSheetItems(
-    onClick: (ScreenAction) -> Unit,
-): List<IBottomSheetItem<*>> = flatMap { action ->
-    val item = BottomSheetPrimaryItem(isContextual = true).also {
-        it.titleRes = action.titleRes
-        it.descriptionRes = action.descriptionRes
-        it.iconicsIcon = action.icon
-        it.onClickListener = View.OnClickListener { onClick(action) }
-    }
-    if (action.separatorBefore)
-        listOf(BottomSheetSeparatorItem(isContextual = true), item)
-    else
-        listOf(item)
 }

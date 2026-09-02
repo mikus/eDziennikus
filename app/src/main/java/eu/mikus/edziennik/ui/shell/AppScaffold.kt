@@ -192,6 +192,19 @@ fun AppScaffold(
                         onProfileLongClick = profileLongClick,
                         onProfileSettingClick = profileSettingClick,
                     )
+                else
+                    // Empty but NOT zero-width. `ModalNavigationDrawer` anchors its sheet at
+                    // `Closed = -sheetWidth` and `Open = 0`; a 0 dp sheet puts both at 0, the offset
+                    // sits on both at once, and when a real sheet comes back on the way out of
+                    // Permanent mode that retained offset resolves to **Open** - the drawer showing
+                    // over the content after a rotation. Measured on the emulator. Keeping the width
+                    // keeps the two anchors apart, so the state stays Closed throughout. Nothing
+                    // renders: it is transparent and parked off-screen at the closed offset.
+                    Box(
+                        Modifier
+                            .width(ModalDrawerWidth)
+                            .fillMaxHeight(),
+                    )
             },
         ) {
             Row(Modifier.fillMaxSize()) {

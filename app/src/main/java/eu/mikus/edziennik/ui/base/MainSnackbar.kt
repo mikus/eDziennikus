@@ -4,7 +4,6 @@
 
 package eu.mikus.edziennik.ui.base
 
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -16,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import eu.mikus.edziennik.R
@@ -30,7 +28,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * owns instead of through navlib's `CoordinatorLayout` (design §7.11).
  *
  * `MainActivity.snackbar()`/`snackbarDismiss()` and their fragment callers are untouched; the only
- * seam that moved is the one that hands this class somewhere to show - [setCoordinator] became
+ * seam that moved is the one that hands this class somewhere to show - `setCoordinator` became
  * [setHostState].
  *
  * There is no `anchorView` equivalent and none is needed: the old instance was anchored above
@@ -57,13 +55,6 @@ class MainSnackbar(val activity: AppCompatActivity) {
      */
     fun setHostState(hostState: SnackbarHostState) {
         this.hostState = hostState
-    }
-
-    @Deprecated("navlib is gone; call setHostState(ShellState.snackbarHostState) instead.")
-    fun setCoordinator(coordinatorLayout: CoordinatorLayout, showAbove: View? = null) {
-        // Deliberately empty. `MainActivity.kt:183` still calls it and the shell swap that deletes
-        // that line deletes this method with it; until then every `snackbar(...)` here is mute,
-        // which is only acceptable because the intermediate commits of this phase never ship.
     }
 
     /**

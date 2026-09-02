@@ -530,7 +530,7 @@ private fun AccountHeader(
             .height(HeaderHeight),
     ) {
         Image(
-            painter = headerBackground(state.headerBackground),
+            painter = headerBackground(state.headerBackground, state.headerBackgroundToken),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
@@ -639,9 +639,9 @@ private fun AccountHeader(
  * Compose - a `BitmapPainter` would silently freeze it, exactly as `SettingsScreen.kt:174-176` does.
  */
 @Composable
-private fun headerBackground(path: String?): Painter {
+private fun headerBackground(path: String?, reloadToken: Int): Painter {
     val context = LocalContext.current
-    return remember(path) {
+    return remember(path, reloadToken) {
         val loaded = when {
             path == null -> null
             path.endsWith(".gif", ignoreCase = true) -> runCatching { GifDrawable(path) }.getOrNull()

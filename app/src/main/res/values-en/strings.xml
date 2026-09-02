@@ -1235,6 +1235,7 @@
     <string name="update_available_title">App update available</string>
     <string name="home_archive_close">Close archive</string>
     <string name="home_archive_title">Archived profile</string>
+    <string name="profile_archived_subname_format">Archive - %s</string>
     <string name="profile_archived_title">Profile is archived</string>
     <string name="profile_year_not_started_title">Holiday ;)</string>
     <string name="profile_archiving_title">The end of the school year</string>

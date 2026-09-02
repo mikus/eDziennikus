@@ -7,4 +7,7 @@
     <item name="move_card_down_action" type="id"/>
     <item name="move_card_up_action" type="id"/>
     <item name="bettermovementmethod_highlight_background_span" type="id" />
+    <!-- The Fragment content host. Created in Kotlin by the shell's AndroidView factory, so it is
+         declared here rather than in a layout - activity_szkolny.xml used to be its only declaration. -->
+    <item name="fragment" type="id"/>
 </resources>

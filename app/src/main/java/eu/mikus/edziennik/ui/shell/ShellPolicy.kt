@@ -106,9 +106,13 @@ sealed interface SyncSubtitle {
  * A resource descriptor, not a `String` - the house pattern for testable text
  * (`ui/home/LuckyNumberMessage.kt:17-19`). [quantity] non-null means [res] is a plural, resolved
  * with `pluralStringResource`.
+ *
+ * [res] carries no `@StringRes`/`@PluralsRes` annotation on purpose: it is one or the other
+ * depending on [quantity], and either annotation makes lint's `ResourceType` check fail at one of
+ * the two ends.
  */
 data class SubtitleText(
-    @StringRes val res: Int,
+    val res: Int,
     val args: List<Any> = emptyList(),
     val quantity: Int? = null,
 )

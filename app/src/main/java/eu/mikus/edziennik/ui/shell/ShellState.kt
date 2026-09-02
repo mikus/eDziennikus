@@ -113,6 +113,14 @@ class ShellState {
      */
     var headerBackground: String? by mutableStateOf(null)
 
+    /**
+     * Bumped by every `setDrawerHeaderBackground` call so `AppDrawer` re-decodes the file even when
+     * the path is unchanged - which it always is, because every pick overwrites the same
+     * `filesDir/header.<ext>`. `SettingsFragment` writes null-then-value to force the reload, but
+     * both writes land in one frame, so the composition only ever reads the final value.
+     */
+    var headerBackgroundToken: Int by mutableStateOf(0)
+
     // ---- component state ----
 
     /**

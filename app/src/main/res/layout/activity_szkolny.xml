@@ -4,33 +4,21 @@
     tools:context=".MainActivity"
     tools:theme="@style/AppTheme.Black">
 
+    <!--
+      ~ Reduced to app-owned views only: the shell (drawer, toolbar, bottom bar, FAB, sheet, the
+      ~ refresh indicator and the @id/fragment container) now lives inside the ComposeView.
+      ~ rootFrame and nightlyText survive because the app background (setAppBackground), the version
+      ~ badge and the seasonal snowfall/eggfall overlays hang off them and keep working unchanged.
+      -->
     <FrameLayout
         android:id="@+id/rootFrame"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <pl.szczodrzynski.navlib.NavView
-            android:id="@+id/navView"
+        <androidx.compose.ui.platform.ComposeView
+            android:id="@+id/composeView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:animateLayoutChanges="true">
-
-            <eu.mikus.edziennik.utils.SwipeRefreshLayoutNoTouch
-                android:id="@+id/swipeRefreshLayout"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <FrameLayout
-                    android:id="@+id/fragment"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <include layout="@layout/fragment_loading" />
-                </FrameLayout>
-
-            </eu.mikus.edziennik.utils.SwipeRefreshLayoutNoTouch>
-
-        </pl.szczodrzynski.navlib.NavView>
+            android:layout_height="match_parent" />
 
         <TextView
             android:id="@+id/nightlyText"
