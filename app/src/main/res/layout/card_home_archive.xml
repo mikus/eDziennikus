@@ -24,7 +24,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/home_archive_title"
-                android:textAppearance="@style/NavView.TextView.Title" />
+                android:textAppearance="@style/AppText.Title" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/homeArchiveText"

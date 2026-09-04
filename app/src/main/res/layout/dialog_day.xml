@@ -22,7 +22,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
             android:layout_marginBottom="8dp"
-            android:textAppearance="@style/NavView.TextView.Title"
+            android:textAppearance="@style/AppText.Title"
             android:textIsSelectable="true"
             tools:text="wtorek, 17 grudnia" />
 
@@ -31,7 +31,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
-            android:textAppearance="@style/NavView.TextView.Helper"
+            android:textAppearance="@style/AppText.Helper"
             android:textIsSelectable="true"
             android:visibility="gone"
             tools:text="8:00 - 14:20 (7 lekcji, 6 godzin, 20 minut)"
@@ -42,7 +42,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
-            android:textAppearance="@style/NavView.TextView.Helper"
+            android:textAppearance="@style/AppText.Helper"
             tools:text="[ - ] dodano notatki" />
 
         <View

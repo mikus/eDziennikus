@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="8dp"
             android:text="@string/grades_stats_title"
-            android:textAppearance="@style/NavView.TextView.Title" />
+            android:textAppearance="@style/AppText.Title" />
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/noData"
@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
             android:text="@string/grades_stats_normal"
-            android:textAppearance="@style/NavView.TextView.Subtitle" />
+            android:textAppearance="@style/AppText.Subtitle" />
 
         <LinearLayout
             android:id="@+id/normalLayout"
@@ -79,7 +79,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
-                    android:textAppearance="@style/NavView.TextView.Helper"
+                    android:textAppearance="@style/AppText.Helper"
                     tools:text="*z ocen proponowanych" />
             </LinearLayout>
 
@@ -116,7 +116,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
-                    android:textAppearance="@style/NavView.TextView.Helper"
+                    android:textAppearance="@style/AppText.Helper"
                     tools:text="*przewidywana średnia" />
             </LinearLayout>
 
@@ -153,7 +153,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
-                    android:textAppearance="@style/NavView.TextView.Helper"
+                    android:textAppearance="@style/AppText.Helper"
                     tools:text="*przewidywana średnia" />
             </LinearLayout>
 
@@ -185,7 +185,7 @@
             android:layout_marginHorizontal="8dp"
             android:layout_marginTop="8dp"
             android:text="@string/grades_stats_point"
-            android:textAppearance="@style/NavView.TextView.Subtitle" />
+            android:textAppearance="@style/AppText.Subtitle" />
 
         <LinearLayout
             android:id="@+id/pointLayout"
@@ -289,7 +289,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
             android:text="@string/grades_stats_university"
-            android:textAppearance="@style/NavView.TextView.Subtitle" />
+            android:textAppearance="@style/AppText.Subtitle" />
 
         <LinearLayout
             android:id="@+id/universityLayout"
@@ -388,7 +388,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="8dp"
             android:text="@string/grades_stats_disclaimer"
-            android:textAppearance="@style/NavView.TextView.Helper"
+            android:textAppearance="@style/AppText.Helper"
             android:textSize="12sp"
             android:textStyle="italic" />
 
@@ -412,7 +412,7 @@
                 android:layout_margin="8dp"
                 android:layout_weight="1"
                 android:text="@string/grades_stats_custom_config_notice"
-                android:textAppearance="@style/NavView.TextView.Helper"
+                android:textAppearance="@style/AppText.Helper"
                 android:textSize="12sp"
                 android:textStyle="italic" />
 

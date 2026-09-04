@@ -37,7 +37,7 @@
             android:ellipsize="middle"
             android:maxLines="2"
             android:singleLine="true"
-            android:textAppearance="@style/NavView.TextView.Helper"
+            android:textAppearance="@style/AppText.Helper"
             android:textSize="16sp"
             app:layout_constraintEnd_toStartOf="@+id/unread"
             app:layout_constraintStart_toEndOf="@+id/attendanceView"

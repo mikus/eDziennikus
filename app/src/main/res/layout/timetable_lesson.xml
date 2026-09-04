@@ -130,7 +130,7 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="middle"
                         android:singleLine="true"
-                        android:textAppearance="@style/NavView.TextView.Helper"
+                        android:textAppearance="@style/AppText.Helper"
                         android:textSize="12sp"
                         tools:text="Paweł Informatyczny • 2b3T n1" />
                 </LinearLayout>

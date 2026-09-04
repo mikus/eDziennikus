@@ -99,6 +99,38 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <!-- Text appearances restated from navlib ahead of dropping the AAR (Phase 32 / N5a), renamed
+         off the library's vocabulary. Values are navlib's verbatim; AppText.Normal is reached both
+         through AppTextView (installed as android:textViewStyle by AppTheme.Light/Dark) and
+         directly from MessageViewHolder.kt. -->
+    <style name="AppTextView">
+        <item name="android:textAppearance">@style/AppText.Normal</item>
+    </style>
+    <style name="AppText.Normal" parent="Widget.MaterialComponents.TextView">
+        <item name="android:textAppearance">?attr/textAppearanceBody2</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">?android:textColorPrimary</item>
+    </style>
+    <style name="AppText.Helper" parent="TextAppearance.AppCompat.Small">
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="AppText.Medium" parent="TextAppearance.AppCompat.Medium">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+    <style name="AppText.Title" parent="TextAppearance.AppCompat.Title">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+    <style name="AppText.Subtitle" parent="TextAppearance.AppCompat.Subhead">
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <style name="AppText.Small" parent="TextAppearance.AppCompat.Small">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <style name="AppText.Large" parent="TextAppearance.AppCompat.Large" />
+
     <style name="AppTheme" parent="NavView" />
 
     <!-- Base application theme. -->

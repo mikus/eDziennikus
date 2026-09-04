@@ -30,7 +30,7 @@
                 android:ellipsize="end"
                 android:maxLines="4"
                 android:minLines="2"
-                android:textAppearance="@style/NavView.TextView.Medium"
+                android:textAppearance="@style/AppText.Medium"
                 tools:text="Temat notatki. Ale może też\nbyć treść tutaj." />
 
             <!-- cmd_pencil_outline -->
@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:ellipsize="middle"
             android:singleLine="true"
-            android:textAppearance="@style/NavView.TextView.Helper"
+            android:textAppearance="@style/AppText.Helper"
             tools:text="Jakub Szczodrzyński • 23 października" />
     </LinearLayout>
 </FrameLayout>

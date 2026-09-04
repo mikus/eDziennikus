@@ -45,7 +45,7 @@ class MessageViewHolder(
 
         val isRead = item.isSent || item.isDraft || item.seen
         val typeface = if (isRead) adapter.typefaceNormal else adapter.typefaceBold
-        val style = if (isRead) R.style.NavView_TextView_Small else R.style.NavView_TextView_Normal
+        val style = if (isRead) R.style.AppText_Small else R.style.AppText_Normal
         // set text styles
         b.messageSender.setTextAppearance(activity, style)
         b.messageSender.typeface = typeface

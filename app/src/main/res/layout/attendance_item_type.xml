@@ -88,7 +88,7 @@
             android:layout_gravity="center_vertical"
             android:layout_marginHorizontal="8dp"
             android:layout_marginBottom="8dp"
-            android:textAppearance="@style/NavView.TextView.Helper"
+            android:textAppearance="@style/AppText.Helper"
             android:textSize="14sp"
             tools:text="57,67% • 521 przez cały rok • 134 w tym semestrze"
             tools:text1="Cały rok: 3 oceny • suma: 320 pkt"
