@@ -173,9 +173,13 @@
 
         <!-- Inherited from navlib's NavView.Dark, made explicit ahead of the reparent
              (Phase 32 / N5a). Values are navlib's verbatim - this block is a no-op today.
-             elevationOverlayColor is deliberately absent: NavView.Dark does not set it either, and
-             Dark inherits ?attr/colorOnSurface from Base.V14.Theme.MaterialComponents.Bridge, a
-             chain the reparent preserves. -->
+             elevationOverlayColor is deliberately absent: NavView.Dark did not set it either, and
+             Dark inherits ?attr/colorOnSurface from Base.V14.Theme.MaterialComponents.Bridge, which
+             the Phase 32 reparent onto Theme.MaterialComponents.NoActionBar preserved.
+             WARNING for N5b: that is NOT true of a Theme.Material3.* reparent, which sets
+             elevationOverlayColor to ?attr/colorPrimary (#64b5f6 here) and enables overlays in
+             light too - so every elevated dark surface would gain a blue wash. Pin
+             elevationOverlayColor = ?attr/colorOnSurface here BEFORE flipping the parent. -->
         <item name="colorSecondary">?colorAccent</item>
         <item name="colorSecondaryVariant">?colorAccent</item>
         <item name="android:windowBackground">?android:colorBackground</item>
