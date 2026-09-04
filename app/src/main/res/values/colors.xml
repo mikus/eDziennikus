@@ -68,4 +68,21 @@
     <color name="colorSurfaceLightGreen">#fff2fbd9</color>
 
     <color name="black">#000000</color>
+
+    <!-- Restated from navlib ahead of dropping the AAR (Phase 32 / N5a). Names are deliberately
+         unchanged: an app resource shadows the library's, so these are inert while navlib is still
+         on the classpath and become the only definition when it goes.
+         Elevation overlays. Live consumers: _4dp - drawable/timetable_lesson_bg_dark.xml and
+         ui/shell/AppBottomBar.kt; _6dp - layout/template_fragment.xml (the ref in lab_fragment.xml
+         sits inside a comment); _16dp - ext/DialogExtensions.kt. Material's ElevationOverlayProvider
+         is the real expert here (ui/shell/AppSheet.kt uses it) - see the design doc's
+         out-of-scope note. -->
+    <color name="colorSurface_4dp">#17ffffff</color>
+    <color name="colorSurface_6dp">#1cffffff</color>
+    <color name="colorSurface_16dp">#26ffffff</color>
+
+    <!-- Window backgrounds. No direct references anywhere: both are reached only through
+         android:colorBackground in AppTheme.Light/AppTheme.Dark. -->
+    <color name="background_light">#ffffff</color>
+    <color name="background_dark">#242424</color>
 </resources>

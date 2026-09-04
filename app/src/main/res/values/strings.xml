@@ -1236,6 +1236,7 @@
     <string name="toast_changing_profile">Zmieniam profil ucznia</string>
     <string name="today">dzisiaj</string>
     <string name="tomorrow">jutro</string>
+    <string name="toolbar_subtitle" translatable="false">%1$s</string>
     <string name="toolbar_subtitle_syncing">Synchronizuję…</string>
     <string name="toolbar_subtitle_syncing_format" translatable="false">[%d%%] %s</string>
     <string name="transition_name" translatable="false">transition_name</string>

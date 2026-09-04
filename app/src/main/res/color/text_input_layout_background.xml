@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Restated verbatim from navlib ahead of dropping the AAR (Phase 32 / N5a), alphas included.
+  ~ navlib's own comment read "increased alpha by 1/2" relative to Material's
+  ~ mtrl_filled_background_color. Reached only through boxBackgroundColor in AppTheme.Dark.
+  -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:alpha="0.24" android:color="?attr/colorOnSurface" android:state_hovered="true"/>
+    <item android:alpha="0.06" android:color="?attr/colorOnSurface" android:state_enabled="false"/>
+    <item android:alpha="0.18" android:color="?attr/colorOnSurface"/>
+</selector>
