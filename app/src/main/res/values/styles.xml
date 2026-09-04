@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
         <item name="colorAccent">@color/colorAccent</item>
@@ -140,6 +140,23 @@
         <item name="colorPrimaryVariant">#2196f3</item>
         <item name="colorAccent">#ff3d00</item>
 
+        <!-- Inherited from navlib's NavView.Light, made explicit ahead of the reparent
+             (Phase 32 / N5a). Values are navlib's verbatim - this block is a no-op today. -->
+        <item name="colorSecondary">?colorAccent</item>
+        <item name="colorSecondaryVariant">#018786</item>
+        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:colorBackground">@color/background_light</item>
+        <item name="colorSurface">#ffffff</item>
+        <item name="android:textColorPrimary">#db000000</item>
+        <item name="android:textColorSecondary">#99000000</item>
+        <item name="colorOnPrimary">#ffffff</item>
+        <item name="colorOnSecondary">#ffffff</item>
+        <item name="colorOnBackground">?android:textColorPrimary</item>
+        <item name="colorOnSurface">?android:textColorPrimary</item>
+        <item name="elevationOverlayColor">#ffffff</item>
+        <item name="boxBackgroundColor" tools:ignore="PrivateResource">@color/mtrl_filled_background_color</item>
+        <item name="android:textViewStyle">@style/AppTextView</item>
+
         <item name="colorFab">#4CAF50</item>
         <item name="colorFabIcon">#c8e6c9</item>
         <item name="colorOnFab">#ffffff</item>
@@ -158,6 +175,25 @@
         <item name="colorPrimaryDark">#1976d2</item>
         <item name="colorPrimaryVariant">#2196f3</item>
         <item name="colorAccent">#ffb300</item>
+
+        <!-- Inherited from navlib's NavView.Dark, made explicit ahead of the reparent
+             (Phase 32 / N5a). Values are navlib's verbatim - this block is a no-op today.
+             elevationOverlayColor is deliberately absent: NavView.Dark does not set it either, and
+             Dark inherits ?attr/colorOnSurface from Base.V14.Theme.MaterialComponents.Bridge, a
+             chain the reparent preserves. -->
+        <item name="colorSecondary">?colorAccent</item>
+        <item name="colorSecondaryVariant">?colorAccent</item>
+        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:colorBackground">@color/background_dark</item>
+        <item name="colorSurface">#333333</item>
+        <item name="android:textColorPrimary">#ffffffff</item>
+        <item name="android:textColorSecondary">#99ffffff</item>
+        <item name="colorOnPrimary">#ffffff</item>
+        <item name="colorOnSecondary">#ffffff</item>
+        <item name="colorOnBackground">?android:textColorPrimary</item>
+        <item name="colorOnSurface">?android:textColorPrimary</item>
+        <item name="boxBackgroundColor">@color/text_input_layout_background</item>
+        <item name="android:textViewStyle">@style/AppTextView</item>
 
         <item name="colorFab">#4CAF50</item>
         <item name="colorFabIcon">#c8e6c9</item>
