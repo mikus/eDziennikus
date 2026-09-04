@@ -131,10 +131,8 @@
     </style>
     <style name="AppText.Large" parent="TextAppearance.AppCompat.Large" />
 
-    <style name="AppTheme" parent="NavView" />
-
     <!-- Base application theme. -->
-    <style name="AppTheme.Light" parent="NavView.Light">
+    <style name="AppTheme.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
         <item name="colorPrimary">#2196f3</item>
         <item name="colorPrimaryDark">#1976d2</item>
         <item name="colorPrimaryVariant">#2196f3</item>
@@ -157,9 +155,6 @@
         <item name="boxBackgroundColor" tools:ignore="PrivateResource">@color/mtrl_filled_background_color</item>
         <item name="android:textViewStyle">@style/AppTextView</item>
 
-        <item name="colorFab">#4CAF50</item>
-        <item name="colorFabIcon">#c8e6c9</item>
-        <item name="colorOnFab">#ffffff</item>
         <item name="colorIcon">#8a000000</item>
 
         <item name="timetable_lesson_bg">@drawable/timetable_lesson_bg_light</item>
@@ -170,7 +165,7 @@
 
         <item name="materialAlertDialogTheme">@style/AppTheme.MaterialAlertDialog</item>
     </style>
-    <style name="AppTheme.Dark" parent="NavView.Dark">
+    <style name="AppTheme.Dark" parent="Theme.MaterialComponents.NoActionBar">
         <item name="colorPrimary">#64b5f6</item>
         <item name="colorPrimaryDark">#1976d2</item>
         <item name="colorPrimaryVariant">#2196f3</item>
@@ -195,9 +190,6 @@
         <item name="boxBackgroundColor">@color/text_input_layout_background</item>
         <item name="android:textViewStyle">@style/AppTextView</item>
 
-        <item name="colorFab">#4CAF50</item>
-        <item name="colorFabIcon">#c8e6c9</item>
-        <item name="colorOnFab">#ffffff</item>
         <item name="colorIcon">#b4ffffff</item>
 
         <item name="timetable_lesson_bg">@drawable/timetable_lesson_bg_dark</item>

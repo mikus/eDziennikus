@@ -162,8 +162,7 @@
             android:theme="@style/AppTheme.Black" />
         <activity android:name=".ui.settings.LicensesActivity"
             android:configChanges="orientation|keyboardHidden"
-            android:exported="false"
-            android:theme="@style/AppTheme" />
+            android:exported="false" />
         <activity android:name="com.canhub.cropper.CropImageActivity"
             android:configChanges="orientation|keyboardHidden"
             android:exported="false"
