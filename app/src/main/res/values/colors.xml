@@ -85,4 +85,26 @@
          android:colorBackground in AppTheme.Light/AppTheme.Dark. -->
     <color name="background_light">#ffffff</color>
     <color name="background_dark">#242424</color>
+
+    <!-- The Material palette entries the app consumes, restated ahead of dropping navlib
+         (Phase 32 / N5a). These are NOT navlib's: they come from com.mikepenz:materialize:1.2.1,
+         which the app never declares and which reaches it only transitively through navlib. The
+         resource inventory that drove this phase looked at navlib's own res/ and so missed them;
+         the AAPT2 link step after the AAR was removed is what found them. materialize defines 277
+         md_* colours - these 15 are the ones with call sites, values copied verbatim. -->
+    <color name="md_amber_500">#FFC107</color>
+    <color name="md_amber_800">#FF8F00</color>
+    <color name="md_black_1000">#000000</color>
+    <color name="md_blue_300">#64B5F6</color>
+    <color name="md_blue_500">#2196F3</color>
+    <color name="md_green_500">#4CAF50</color>
+    <color name="md_green_600">#43A047</color>
+    <color name="md_orange_500">#FF9800</color>
+    <color name="md_red_300">#E57373</color>
+    <color name="md_red_500">#F44336</color>
+    <color name="md_red_600">#E53935</color>
+    <color name="md_white_1000">#FFFFFF</color>
+    <color name="md_yellow_300">#FFF176</color>
+    <color name="md_yellow_500">#FFEB3B</color>
+    <color name="md_yellow_700">#FBC02D</color>
 </resources>
