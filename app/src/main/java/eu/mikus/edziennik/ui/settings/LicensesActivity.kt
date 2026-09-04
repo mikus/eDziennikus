@@ -25,9 +25,11 @@ class LicensesActivity : AppCompatActivity() {
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
-        // AppCompatActivity requires a Theme.AppCompat descendant; the app's @style/AppTheme
-        // (parent NavView) is not one, so set a MaterialComponents NoActionBar theme at runtime
+        // Picks the theme by the app's own dark/light setting, which the manifest cannot express
         // (the Compose Scaffold provides the top bar). Mirrors the legacy SettingsLicenseActivity.
+        // Until Phase 32 the manifest gave this activity @style/AppTheme, whose parent was navlib's
+        // empty NavView style and therefore not a Theme.AppCompat descendant; that entry is gone and
+        // the activity now inherits the application theme, but this call still decides dark vs light.
         setTheme(
             if (Themes.isDark) R.style.Theme_MaterialComponents_NoActionBar
             else R.style.Theme_MaterialComponents_Light_NoActionBar
