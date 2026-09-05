@@ -155,6 +155,34 @@
         <item name="boxBackgroundColor" tools:ignore="PrivateResource">@color/mtrl_filled_background_color</item>
         <item name="android:textViewStyle">@style/AppTextView</item>
 
+        <!-- Phase 33a (N5b): the 16 M3-only colour roles (light), generated from the single seed
+             #2196f3. All 16 are unset under the MaterialComponents parents, so adding them changes
+             nothing today; they exist so that the Theme.Material3 reparent cannot introduce M3's
+             own purple-seeded baseline palette. -->
+        <item name="colorPrimaryContainer">#d0e4ff</item>
+        <item name="colorOnPrimaryContainer">#001d36</item>
+        <item name="colorPrimaryInverse">#9ccaff</item>
+        <item name="colorSecondaryContainer">#d6e3f7</item>
+        <item name="colorOnSecondaryContainer">#101c2b</item>
+        <item name="colorTertiary">#6b5778</item>
+        <item name="colorOnTertiary">#ffffff</item>
+        <item name="colorTertiaryContainer">#f3daff</item>
+        <item name="colorOnTertiaryContainer">#251432</item>
+        <item name="colorErrorContainer">#ffdad4</item>
+        <item name="colorOnErrorContainer">#410001</item>
+        <item name="colorSurfaceVariant">#dfe2eb</item>
+        <item name="colorOnSurfaceVariant">#42474e</item>
+        <item name="colorSurfaceInverse">#2f3033</item>
+        <item name="colorOnSurfaceInverse">#f1f0f4</item>
+        <item name="colorOutline">#73777f</item>
+
+        <!-- Phase 33a (N5b): already what this theme resolves to, so the pin is byte-identical
+             today. It is here because ui/dialogs/base/RichTextFieldBridge.kt builds a style-less
+             TextInputLayout and sets boxBackgroundMode in code: under M3's OutlinedBox default the
+             message-composer field would end up in filled mode with boxBackgroundColor="@null" - a
+             filled box with no fill. -->
+        <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.FilledBox</item>
+
         <item name="colorIcon">#8a000000</item>
 
         <item name="timetable_lesson_bg">@drawable/timetable_lesson_bg_light</item>
@@ -193,6 +221,34 @@
         <item name="colorOnSurface">?android:textColorPrimary</item>
         <item name="boxBackgroundColor">@color/text_input_layout_background</item>
         <item name="android:textViewStyle">@style/AppTextView</item>
+
+        <!-- Phase 33a (N5b): the 16 M3-only colour roles (dark), generated from the single seed
+             #2196f3. All 16 are unset under the MaterialComponents parents, so adding them changes
+             nothing today; they exist so that the Theme.Material3 reparent cannot introduce M3's
+             own purple-seeded baseline palette. -->
+        <item name="colorPrimaryContainer">#00497f</item>
+        <item name="colorOnPrimaryContainer">#d0e4ff</item>
+        <item name="colorPrimaryInverse">#0061a6</item>
+        <item name="colorSecondaryContainer">#3c4858</item>
+        <item name="colorOnSecondaryContainer">#d6e3f7</item>
+        <item name="colorTertiary">#d6bee4</item>
+        <item name="colorOnTertiary">#3b2948</item>
+        <item name="colorTertiaryContainer">#523f5f</item>
+        <item name="colorOnTertiaryContainer">#f3daff</item>
+        <item name="colorErrorContainer">#930006</item>
+        <item name="colorOnErrorContainer">#ffdad4</item>
+        <item name="colorSurfaceVariant">#42474e</item>
+        <item name="colorOnSurfaceVariant">#c3c7d0</item>
+        <item name="colorSurfaceInverse">#e2e2e6</item>
+        <item name="colorOnSurfaceInverse">#2f3033</item>
+        <item name="colorOutline">#8d9199</item>
+
+        <!-- Phase 33a (N5b): already what this theme resolves to, so the pin is byte-identical
+             today. It is here because ui/dialogs/base/RichTextFieldBridge.kt builds a style-less
+             TextInputLayout and sets boxBackgroundMode in code: under M3's OutlinedBox default the
+             message-composer field would end up in filled mode with boxBackgroundColor="@null" - a
+             filled box with no fill. -->
+        <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.FilledBox</item>
 
         <item name="colorIcon">#b4ffffff</item>
 
