@@ -90,6 +90,11 @@ android {
                 // @RunWith(RobolectricTestRunner.class) JUnit 4 tests still run.
                 useJUnitPlatform()
                 jvmArgs '-Djdk.attach.allowAttachSelf=true', '-XX:+EnableDynamicAgentLoading', '-Xshare:off'
+                // Forwards -Dtheme.probe.regenerate=true into the test JVM, where
+                // ThemeAttrProbe reads it to rewrite its golden theme-attribute dump
+                // instead of asserting against it. Defaults to 'false' so the gate
+                // stays an assertion unless a regeneration is asked for explicitly.
+                systemProperty 'theme.probe.regenerate', System.getProperty('theme.probe.regenerate') ?: 'false'
             }
         }
     }
