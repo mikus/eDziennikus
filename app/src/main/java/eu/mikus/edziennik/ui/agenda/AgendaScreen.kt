@@ -41,6 +41,7 @@ import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
+import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.ui.event.EventRow
@@ -49,6 +50,13 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
+/**
+ * [subjectImportant] is the profile's `agendaSubjectImportant` preference, which picks whether an event
+ * row names its subject or its type — the legacy renderer's showType/showSubject pairing. It reads the
+ * live config by default rather than travelling through AgendaUiState, because AgendaConfigDialog
+ * reloads the fragment on dismiss; that is the same assumption AgendaViewModel.Factory already makes
+ * for the other two agenda flags.
+ */
 @Composable
 fun AgendaScreen(
     state: AgendaUiState,
@@ -60,6 +68,7 @@ fun AgendaScreen(
     onItemSeen: (EventFull) -> Unit,
     onLessonChangesClick: (Date) -> Unit,
     onTeacherAbsenceClick: (Date) -> Unit,
+    subjectImportant: Boolean = App.config[App.profileId].ui.agendaSubjectImportant,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -83,6 +92,7 @@ fun AgendaScreen(
             onItemSeen = onItemSeen,
             onLessonChangesClick = onLessonChangesClick,
             onTeacherAbsenceClick = onTeacherAbsenceClick,
+            subjectImportant = subjectImportant,
             modifier = modifier,
         )
     }
@@ -99,6 +109,7 @@ private fun AgendaContent(
     onItemSeen: (EventFull) -> Unit,
     onLessonChangesClick: (Date) -> Unit,
     onTeacherAbsenceClick: (Date) -> Unit,
+    subjectImportant: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val calendarState = rememberCalendarState(
@@ -149,6 +160,9 @@ private fun AgendaContent(
                     is AgendaItem.EventItem -> EventRow(
                         event = item.event,
                         unseen = item.unseen,
+                        showSubject = subjectImportant,
+                        showType = !subjectImportant,
+                        showTypeColor = true,
                         onClick = onEventClick,
                         onEditClick = onEventEditClick,
                         onAppear = onItemSeen,

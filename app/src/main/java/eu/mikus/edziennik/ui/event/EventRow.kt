@@ -45,6 +45,13 @@ import eu.mikus.edziennik.ui.compose.withSearchHighlight
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Week
 
+/**
+ * [showTypeColor] draws the event's category colour as a dot at the head of the details line — the
+ * in-Compose stand-in for the legacy `typeColor` circle (event_list_item.xml) and for the whole-card
+ * tint the agenda's renderer used. The legacy adapter defaulted it to [showType]; here it defaults
+ * off and every surface that wants it opts in, because homework deliberately shows neither (its
+ * legacy adapter passed showType = false, so the circle was hidden there too).
+ */
 @Composable
 fun EventRow(
     event: EventFull,
@@ -55,6 +62,7 @@ fun EventRow(
     showTime: Boolean = true,
     showSubject: Boolean = true,
     showType: Boolean = false,
+    showTypeColor: Boolean = false,
     showNotes: Boolean = true,
     onClick: (EventFull) -> Unit,
     onEditClick: ((EventFull) -> Unit)? = null,
@@ -76,6 +84,10 @@ fun EventRow(
     ) {
         Column(Modifier.fillMaxWidth().padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showTypeColor) {
+                    Box(Modifier.size(10.dp).clip(CircleShape).background(Color(event.eventColor)))
+                    Spacer(Modifier.width(6.dp))
+                }
                 if (event.hasAttachments) {
                     IconicsIcon(
                         CommunityMaterial.Icon.cmd_attachment,

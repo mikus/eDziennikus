@@ -177,8 +177,9 @@ private fun EventsCard(card: HomeCardUi.Events, modifier: Modifier, onEventClick
                 Text(stringResource(R.string.home_card_no_events), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else card.rows.forEach { event ->
                 EventRow(
-                    event = event, unseen = false, showTime = false, showType = card.showType,
-                    showSubject = card.showSubject, onClick = onEventClick, onEditClick = onEventEditClick,
+                    event = event, unseen = !event.seen, showTime = false, showType = card.showType,
+                    showSubject = card.showSubject, showTypeColor = true,
+                    onClick = onEventClick, onEditClick = onEventEditClick,
                 )
             }
         }
