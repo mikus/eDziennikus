@@ -57,6 +57,7 @@ private val DrawerScrimColor = Color(0x99000000)
 private val ContentEdgeShadowWidth = 4.dp
 private val ContentEdgeShadowColors = listOf(Color(0x40000000), Color(0x00000000))
 
+
 /**
  * The app shell: the drawer, the toolbar, the bottom bar with its FAB, the icon rail, the snackbar
  * host, the bottom sheet, and the `FrameLayout(R.id.fragment)` that all 19 fragment-backed
@@ -78,6 +79,32 @@ private val ContentEdgeShadowColors = listOf(Color(0x40000000), Color(0x00000000
  * [PermanentDrawerWidth] - which is navlib's own shape, `nv_drawerContainerLandscape` being a
  * horizontal sibling of the `CoordinatorLayout`. A conditional `Row` sibling (the rail, the permanent
  * drawer) is safe in a way that branching composables is not: it leaves the `Scaffold`'s group alone.
+ *
+ * ### Drawer gestures are on only while the drawer is open
+ *
+ * `gesturesEnabled` cannot simply stay on. Compose attaches [ModalNavigationDrawer]'s drag handler to
+ * the **whole content area** - not to an edge, as navlib's `DrawerLayout` did - so while the drawer
+ * was closed it swallowed every horizontal swipe in the app: the timetable's day pager, the agenda's
+ * month pager, attendance, messages and homework all stopped paging, and a mid-screen right-swipe
+ * opened the drawer instead. Gating on `isOpen` leaves the handler on only where the sheet is the
+ * only thing under the finger.
+ *
+ * The gate is `isOpen`, i.e. `AnchoredDraggableState.settledValue` - **not** `currentValue`, which
+ * flips as soon as a drag crosses the midpoint - so a swipe that closes the drawer keeps its gesture
+ * for the whole drag instead of having the handler disabled out from under it halfway through. Scrim
+ * tap-to-dismiss rides along: `ModalNavigationDrawer` gates that on `gesturesEnabled` too, and the
+ * drawer is open whenever there is a scrim to tap. Predictive back and the semantics `dismiss` action
+ * are not gated on it at all, so neither regresses.
+ *
+ * **Swipe-to-open is deliberately not restored.** A leading-edge drag strip was built and rejected
+ * for three reasons, recorded so it is not attempted again: as an overlapping sibling it removed the
+ * leading 20 dp of the app from hit-testing entirely (Compose stops hit-testing lower siblings at the
+ * first that registers a hit, and `DragGestureNode` implements `PointerInputModifierNode`
+ * unconditionally, so `enabled = false` does not exempt it); on gesture-nav devices - the default
+ * since Android 10 - the system back gesture claims that same edge before Compose sees it; and
+ * `DrawerState.anchoredDraggableState` is `internal`, so the sheet cannot track the finger and the
+ * drag would be ~160 dp of blind travel. The hamburger in [AppBottomBar] and the rail remain the
+ * way in.
  *
  * ### The mode is derived here, per composition
  *
@@ -180,7 +207,7 @@ fun AppScaffold(
     Box(Modifier.fillMaxSize()) {
         ModalNavigationDrawer(
             drawerState = state.drawerState,
-            gesturesEnabled = mode != DrawerMode.Permanent,
+            gesturesEnabled = mode != DrawerMode.Permanent && state.drawerState.isOpen,
             scrimColor = DrawerScrimColor,
             drawerContent = {
                 if (mode != DrawerMode.Permanent)
@@ -277,6 +304,7 @@ fun AppScaffold(
                 }
             }
         }
+
 
         // Self-guarding on `state.sheetVisible`, so no second guard here.
         AppSheet(
