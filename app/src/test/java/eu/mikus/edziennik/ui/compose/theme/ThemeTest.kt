@@ -10,21 +10,15 @@ import org.junit.jupiter.api.Test
 
 class ThemeTest {
 
-    @Test
-    fun `light theme resolves to the light Blue scheme`() {
-        assertEquals(BlueLightColors, resolveColorScheme(isDark = false, isBlack = false))
-    }
+    // The light/dark cases that used to live here are subsumed by ThemeParityTest's rows 0 and 1,
+    // which assert against the XML rather than against a hard-coded scheme.
 
     @Test
-    fun `dark theme resolves to the dark Blue scheme`() {
-        assertEquals(BlueDarkColors, resolveColorScheme(isDark = true, isBlack = false))
-    }
-
-    @Test
-    fun `black theme forces a pure-black background`() {
-        val scheme = resolveColorScheme(isDark = true, isBlack = true)
+    fun `black theme keeps a pure-black background and AMOLED containers`() {
+        val scheme = schemeFor(themeId = 2)
         assertEquals(Color(0xFF000000), scheme.background)
-        assertEquals(Color(0xFF000000), scheme.surface)
+        // The XML's own AppTheme.Black surface, which Compose previously contradicted with #000000.
+        assertEquals(Color(0xFF121212), scheme.surface)
         // Lock the full override (M3 cards tint from surfaceContainer*), not just background/surface.
         assertEquals(Color(0xFF000000), scheme.surfaceContainer)
     }

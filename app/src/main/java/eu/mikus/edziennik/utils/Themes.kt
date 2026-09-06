@@ -59,9 +59,6 @@ object Themes {
     val isDark: Boolean
         get() = theme.isDark
 
-    val isBlack: Boolean
-        get() = theme.id == 2
-
     fun getPrimaryTextColor(context: Context): Int {
         return getColorFromAttr(context, android.R.attr.textColorPrimary)
     }

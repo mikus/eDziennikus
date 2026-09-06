@@ -56,23 +56,6 @@ val BlueDarkColors: ColorScheme = darkColorScheme(
     surfaceContainerHighest = Color(0xFF31353B),
 )
 
-// Black/AMOLED override: force the background + the whole surface/container family to
-// (near-)black. ONE definition, applied to BOTH the static brand scheme (below) and the
-// API 31+ dynamic scheme (Theme.kt) so the two paths cannot drift. (Mirrors the fork's
-// AppTheme.Black overriding android:colorBackground/colorSurface.)
-fun ColorScheme.forceBlack(): ColorScheme = copy(
-    background = Color(0xFF000000),
-    surface = Color(0xFF000000),
-    surfaceContainerLowest = Color(0xFF000000),
-    surfaceContainerLow = Color(0xFF000000),
-    surfaceContainer = Color(0xFF000000),
-    surfaceContainerHigh = Color(0xFF0B0E13),
-    surfaceContainerHighest = Color(0xFF101419),
-)
-
-// Black/AMOLED is synthesized from the dark Blue scheme via the shared override above.
-val BlueBlackColors: ColorScheme = BlueDarkColors.forceBlack()
-
 /**
  * `(android:colorBackground, colorSurface)` per theme id, mirroring the `AppTheme.*` styles.
  *
