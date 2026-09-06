@@ -5,6 +5,8 @@
 package eu.mikus.edziennik.ui.messages.list
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
@@ -50,6 +53,12 @@ fun MessageRow(
     val highlight = remember(context) { Color(R.attr.colorControlHighlight.resolveAttr(context)) }
     val read = message.isSent || message.isDraft || message.seen
     val weight = if (read) FontWeight.Normal else FontWeight.Bold
+    // Unread needs more than stroke weight to read at a glance. The XML row this replaced carried
+    // two cues -- AppText.Normal/?textColorPrimary when unread against AppText.Small/?textColorSecondary
+    // when read -- and the Compose port kept only the weight. Restore the emphasis dimension, and add
+    // M3's conventional unread dot.
+    val titleColor =
+        if (read) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
 
     val info = remember(message) { MessagesUtils.getMessageInfo(app, message, 48, 24, 18, 12) }
     val name = remember(message, query, highlight) {
@@ -69,6 +78,14 @@ fun MessageRow(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Always occupies its slot, transparent when read, so both kinds of row stay aligned.
+            Box(
+                Modifier.size(8.dp).background(
+                    color = if (read) Color.Transparent else MaterialTheme.colorScheme.primary,
+                    shape = CircleShape,
+                )
+            )
+            Spacer(Modifier.width(8.dp))
             info.profileImage?.let { bmp ->
                 Image(bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp))
                 Spacer(Modifier.width(12.dp))
@@ -80,10 +97,10 @@ fun MessageRow(
                         IconicsIcon(noteIcon, contentDescription = null, sizeDp = 16, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(4.dp))
                     }
-                    Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = weight, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = weight, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Text(date, style = MaterialTheme.typography.labelSmall, fontWeight = weight, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(subject, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(subject, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (preview.isNotEmpty()) {
                     Text(preview, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
