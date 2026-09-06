@@ -4,7 +4,7 @@
 
 package eu.mikus.edziennik.ui.attendance
 
-import androidx.compose.foundation.background
+import android.text.Spanned
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -35,22 +34,26 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mikepenz.iconics.typeface.IIcon
+import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Attendance
 import eu.mikus.edziennik.data.db.entity.AttendanceType
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
+import eu.mikus.edziennik.ui.compose.UnreadDot
+import eu.mikus.edziennik.ui.compose.toAnnotatedString
 import eu.mikus.edziennik.utils.models.Week
 import kotlinx.coroutines.launch
 
@@ -181,10 +184,7 @@ private fun HeaderRow(
     ) {
         Text(if (expanded) "▾" else "▸", fontSize = 14.sp)
         Spacer(Modifier.width(8.dp))
-        if (hasUnseen) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-            Spacer(Modifier.width(8.dp))
-        }
+        if (hasUnseen) UnreadDot(Modifier.padding(end = 8.dp))
         Text(title, Modifier.weight(1f), fontWeight = FontWeight.Medium)
         trailing()
     }
@@ -214,10 +214,7 @@ private fun LeafRow(
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                text = att.subjectLongName ?: att.lessonTopic.orEmpty(),
-                fontWeight = if (leaf.unseen) FontWeight.Bold else FontWeight.Normal,
-            )
+            SubjectText(att, leaf.unseen)
             Text(att.typeName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 text = listOfNotNull(
@@ -233,6 +230,32 @@ private fun LeafRow(
         icon(att)?.let { IconicsIcon(it, contentDescription = null, modifier = Modifier.size(20.dp)) }
     }
     HorizontalDivider(Modifier.padding(start = 32.dp))
+}
+
+/**
+ * The subject line, in-Compose analog of AttendanceViewHolder's `getNoteSubstituteText` +
+ * [eu.mikus.edziennik.utils.managers.NoteManager.Companion.prependIcon] pair (same shape as
+ * `EventRow.EventTopicText`): a replacing note stands in for the subject name, and a note of either kind
+ * is flagged by a leading glyph — swap-horizontal when it replaces the original, playlist-edit otherwise.
+ * Notes are unconditionally shown because both legacy hosts used the adapter default `showNotes = true`.
+ */
+@Composable
+private fun SubjectText(att: AttendanceFull, unseen: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (att.hasNotes()) {
+            val noteIcon = if (att.hasReplacingNotes())
+                CommunityMaterial.Icon3.cmd_swap_horizontal
+            else
+                CommunityMaterial.Icon3.cmd_playlist_edit
+            IconicsIcon(noteIcon, contentDescription = null, sizeDp = 18, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(4.dp))
+        }
+        val text = remember(att) {
+            val raw: CharSequence = att.getNoteSubstituteText(true) ?: att.subjectLongName ?: att.lessonTopic.orEmpty()
+            (raw as? Spanned)?.toAnnotatedString() ?: AnnotatedString(raw.toString())
+        }
+        Text(text = text, fontWeight = if (unseen) FontWeight.Bold else FontWeight.Normal)
+    }
 }
 
 private fun pillText(symbol: String, short: String, useSymbols: Boolean): String =
@@ -456,6 +479,7 @@ private fun TypesTabContent(
             ) {
                 Text(if (type.expanded) "▾" else "▸", fontSize = 14.sp)
                 Spacer(Modifier.width(8.dp))
+                if (type.hasUnseen) UnreadDot(Modifier.padding(end = 8.dp))
                 AttendancePill(
                     pillText(type.type.typeSymbol, type.type.typeShort, useSymbols),
                     colorForType(type.type),
