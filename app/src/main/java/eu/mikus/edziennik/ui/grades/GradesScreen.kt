@@ -42,6 +42,7 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Grade
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
+import eu.mikus.edziennik.ui.compose.UnreadDot
 
 @Composable
 fun GradesScreen(
@@ -126,7 +127,7 @@ private fun SubjectHeader(
 ) {
     Column(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (subject.hasUnseen) UnreadDot()
+            if (subject.hasUnseen) UnreadDot(Modifier.padding(end = 8.dp))
             Text(
                 if (subject.isUnknown) stringResource(R.string.grades_subject_unknown) else subject.name,
                 style = MaterialTheme.typography.titleMedium,
@@ -180,7 +181,7 @@ private fun SemesterHeader(
         Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(start = 24.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (semester.hasUnseen) UnreadDot()
+        if (semester.hasUnseen) UnreadDot(Modifier.padding(end = 8.dp))
         Text(stringResource(R.string.grades_semester_format, semester.number),
             style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         formatters.averageText(semester.averages)?.let {
@@ -208,7 +209,7 @@ private fun GradeRow(
         Modifier.fillMaxWidth().clickable { onGradeClick(grade) }.padding(start = 32.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (grade.showAsUnseen) UnreadDot()
+        if (grade.showAsUnseen) UnreadDot(Modifier.padding(end = 8.dp))
         GradePill(grade, formatters.gradeColor(grade), big = true)
         val texts = gradeRowTexts(grade.description, grade.category, grade.isImprovement)
         val category = if (texts.categoryIsImprovement)
@@ -336,13 +337,6 @@ private fun StatValueRow(label: String, value: String, notice: String?) {
             Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
         }
         notice?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-    }
-}
-
-@Composable
-private fun UnreadDot() {
-    Box(Modifier.padding(end = 8.dp).size(8.dp)) {
-        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { drawCircle(Color(0xFFF44336)) }
     }
 }
 

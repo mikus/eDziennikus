@@ -5,8 +5,6 @@
 package eu.mikus.edziennik.ui.messages.list
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
@@ -37,6 +34,7 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.full.MessageFull
 import eu.mikus.edziennik.ext.resolveAttr
 import eu.mikus.edziennik.ui.compose.IconicsIcon
+import eu.mikus.edziennik.ui.compose.UnreadDot
 import eu.mikus.edziennik.ui.compose.withSearchHighlight
 import eu.mikus.edziennik.ui.messages.MessagesUtils
 import eu.mikus.edziennik.utils.models.Date
@@ -78,13 +76,8 @@ fun MessageRow(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Always occupies its slot, transparent when read, so both kinds of row stay aligned.
-            Box(
-                Modifier.size(8.dp).background(
-                    color = if (read) Color.Transparent else MaterialTheme.colorScheme.primary,
-                    shape = CircleShape,
-                )
-            )
+            // Always occupies its slot, empty when read, so both kinds of row stay aligned.
+            UnreadDot(visible = !read)
             Spacer(Modifier.width(8.dp))
             info.profileImage?.let { bmp ->
                 Image(bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp))
