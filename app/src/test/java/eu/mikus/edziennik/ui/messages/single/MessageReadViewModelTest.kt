@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
@@ -136,6 +137,20 @@ class MessageReadViewModelTest {
         assertEquals(MessageReadUiState.Loading, model.uiState.value)
         assertTrue(markedSeen.isEmpty())
         assertTrue(model.canMarkSeen.value)
+        job.cancel()
+    }
+
+    @Test
+    fun `the manual mark-as-read is withheld until the fetch looks stuck`() = runTest(dispatcher) {
+        // An ordinary open resolves in well under a second, so the escape hatch must not flash up on
+        // every message - it appears only once the fetch has been pending long enough to look stuck.
+        val model = vm(message(body = null, seen = false))
+        val job = launch { model.uiState.collect {} }
+        runCurrent()
+        assertEquals(MessageReadUiState.Loading, model.uiState.value)
+        assertFalse(model.canMarkSeen.value, "offered before the stuck window elapsed")
+        advanceUntilIdle()
+        assertTrue(model.canMarkSeen.value, "not offered after the stuck window elapsed")
         job.cancel()
     }
 

@@ -28,8 +28,16 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * How long a body fetch may be pending before the manual "mark as read" escape hatch appears.
+ * Long enough that an ordinary open never shows it, short enough that a stuck message is recoverable
+ * without the user wondering whether anything is wrong.
+ */
+private const val STUCK_AFTER_MS = 5_000L
 
 class MessageReadViewModel(
     messageId: Long,
@@ -42,9 +50,22 @@ class MessageReadViewModel(
     private val onStar: suspend (MessageFull, Boolean) -> Unit,
     private val onDelete: suspend (MessageFull) -> Unit,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val stuckAfterMs: Long = STUCK_AFTER_MS,
 ) : ViewModel() {
 
     private var fetched = false
+
+    /**
+     * Set [stuckAfterMs] after the fetch is fired. Gating the manual escape hatch on it keeps the
+     * button out of an ordinary open, where the body lands in well under a second and the automatic
+     * seen-write follows: offering "mark as read" there would be noise on every message.
+     *
+     * A timer rather than a failure signal on purpose. The screen has no error channel by design -
+     * its migration to Compose dropped EventBus - and a timer also covers the case an error signal
+     * cannot: a fetch that never comes back at all.
+     */
+    @Volatile
+    private var fetchStale = false
 
     // markedSeen and current are written from the flow's dispatcher and read from the UI thread in markSeen().
     @Volatile
@@ -116,12 +137,17 @@ class MessageReadViewModel(
         if (!fetched && needsFetch(message)) {
             fetched = true
             fetchMessage(message)
+            viewModelScope.launch(dispatcher) {
+                delay(stuckAfterMs)
+                fetchStale = true
+                current?.let { _canMarkSeen.value = !markedSeen && !it.seen }
+            }
         }
         if (!markedSeen && message.body != null && !message.seen) {
             markedSeen = true
             onMarkSeen(message)
         }
-        _canMarkSeen.value = !markedSeen && !message.seen
+        _canMarkSeen.value = fetchStale && !markedSeen && !message.seen
     }
 
     class Factory(
