@@ -660,6 +660,7 @@
     <string name="messages_delete_confirmation_text">This will move the message to the \"Deleted\" tab in the app. The changes will not affect the e-journal message (it will not be deleted ).</string>
     <string name="messages_download_error">Message downloading error</string>
     <string name="messages_draft_title">Draft</string>
+    <string name="messages_mark_as_read">Mark as read</string>
     <string name="messages_no_data">You don\'t have any messages</string>
     <string name="messages_recipient_list_download_error">Error getting the recipient list</string>
     <string name="messages_recipients_list_read_format"><![CDATA[<li>&nbsp;%s, read: %s, %s</li>]]></string>

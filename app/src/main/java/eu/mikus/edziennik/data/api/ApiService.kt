@@ -96,6 +96,8 @@ class ApiService : Service() {
             d(TAG, "Task $taskRunningId threw an error - $apiError")
             apiError.profileId = taskProfileId
 
+            markSeenIfMessageGone(apiError)
+
             EventBus.getDefault().postSticky(ApiTaskErrorEvent(apiError))
             errorList.add(apiError)
             apiError.throwable?.printStackTrace()
@@ -131,6 +133,31 @@ class ApiService : Service() {
             EventBus.getDefault().post(ApiTaskProgressEvent(taskProfileId, taskProgress, taskProgressText))
             notification.setProgressText(taskProgressText).post()
         }
+    }
+
+    /**
+     * Clears the unread badge of a message the server no longer has.
+     *
+     * A body fetch that fails with [ERROR_LIBRUS_MESSAGES_NOT_FOUND] can never succeed - the message
+     * was deleted server-side - so its body stays null forever and the body-gated seen-write in
+     * MessageReadViewModel/MessageManager never fires, leaving an unread badge the user cannot clear.
+     *
+     * Only that one code qualifies. Transient failures (timeouts, request failures, expired sessions)
+     * must leave the message unread so a later retry can still deliver the body.
+     *
+     * This runs upstream of the [ApiTaskErrorEvent] post on purpose: the failing task itself still
+     * knows which message was requested, so the fix needs no error subscription in the (deliberately
+     * EventBus-free) Compose message screen, and no UI has to be alive for it to take effect.
+     */
+    private fun markSeenIfMessageGone(apiError: ApiError) {
+        if (apiError.errorCode != ERROR_LIBRUS_MESSAGES_NOT_FOUND)
+            return
+        val request = (taskRunning as? EdziennikTask)?.request as? EdziennikTask.MessageGetRequest ?: return
+        val message = request.message
+        if (message.seen)
+            return
+        d(TAG, "Message ${message.id} is gone from the server - marking it as read")
+        app.db.metadataDao().setSeen(message.profileId, message, true)
     }
 
     /*    _______        _                               _   _

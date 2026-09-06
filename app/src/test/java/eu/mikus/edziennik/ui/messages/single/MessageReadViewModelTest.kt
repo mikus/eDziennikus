@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -121,6 +122,49 @@ class MessageReadViewModelTest {
         val job = launch { model.uiState.collect {} }
         advanceUntilIdle()
         assertEquals(1, markedSeen.size)
+        job.cancel()
+    }
+
+    @Test
+    fun `a body-less unread message offers the manual mark-as-read`() = runTest(dispatcher) {
+        // The stuck case: the server dropped the message, so its body can never arrive and the
+        // body-gated automatic seen-write can never fire. Loading is the only state it ever reaches.
+        val markedSeen = mutableListOf<MessageFull>()
+        val model = vm(message(body = null, seen = false), markedSeen = markedSeen)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(MessageReadUiState.Loading, model.uiState.value)
+        assertTrue(markedSeen.isEmpty())
+        assertTrue(model.canMarkSeen.value)
+        job.cancel()
+    }
+
+    @Test
+    fun `markSeen writes seen once for a body-less message`() = runTest(dispatcher) {
+        val markedSeen = mutableListOf<MessageFull>()
+        val model = vm(message(body = null, seen = false), markedSeen = markedSeen)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+
+        model.markSeen()
+        advanceUntilIdle()
+        assertEquals(1, markedSeen.size)
+        assertFalse(model.canMarkSeen.value)
+
+        model.markSeen()   // the source never re-emits (setSeen writes metadata, not messages)
+        advanceUntilIdle()
+        assertEquals(1, markedSeen.size)
+        job.cancel()
+    }
+
+    @Test
+    fun `an automatically seen message does not offer the manual mark-as-read`() = runTest(dispatcher) {
+        val markedSeen = mutableListOf<MessageFull>()
+        val model = vm(message(body = "hi", seen = false), markedSeen = markedSeen)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(1, markedSeen.size)
+        assertFalse(model.canMarkSeen.value)
         job.cancel()
     }
 

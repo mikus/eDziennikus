@@ -69,11 +69,13 @@ class MessageFragment : Fragment() {
 
         b.messageCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            val canMarkSeen by viewModel.canMarkSeen.collectAsStateWithLifecycle()
             // Side effects (navigateUp / FAB arm / pageSelection) run in the EFFECT phase, keyed to state —
             // never in the composition body (the HomeworkFragment precedent does no side effects there).
             LaunchedEffect(state) { onState(state) }
             MessageReadScreen(
                 state = state,
+                canMarkSeen = canMarkSeen,
                 onClose = { activity.navigateUp() },
                 onStarClick = { msg -> viewModel.setStarred(msg, !msg.isStarred) },
                 onReply = ::reply,
@@ -83,6 +85,7 @@ class MessageFragment : Fragment() {
                 onNotes = { msg ->
                     NoteListDialog(activity = activity, owner = msg, onShowListener = null, onDismissListener = null).show()
                 },
+                onMarkSeen = viewModel::markSeen,
             )
         }
     }

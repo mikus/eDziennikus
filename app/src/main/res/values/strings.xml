@@ -732,6 +732,7 @@
     <string name="messages_delete_confirmation_text">Spowoduje to przeniesienie wiadomości do zakładki \"Usunięte\" w aplikacji. Zmiany nie wpłyną na wiadomość w e-dzienniku (nie zostanie ona tam usunięta).</string>
     <string name="messages_download_error">Błąd pobierania wiadomości</string>
     <string name="messages_draft_title">Wersja robocza</string>
+    <string name="messages_mark_as_read">Oznacz jako przeczytaną</string>
     <string name="messages_no_data">Nie masz żadnych wiadomości.</string>
     <string name="messages_recipient_list_download_error">Błąd pobierania listy odbiorców</string>
     <string name="messages_recipients_list_read_format"><![CDATA[<li>&nbsp;%s, przeczytano: %s, %s</li>]]></string>

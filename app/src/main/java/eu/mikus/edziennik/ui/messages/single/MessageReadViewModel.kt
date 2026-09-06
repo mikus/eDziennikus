@@ -18,8 +18,10 @@ import eu.mikus.edziennik.ui.messages.MessageEnrich
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -43,14 +45,37 @@ class MessageReadViewModel(
 ) : ViewModel() {
 
     private var fetched = false
+
+    // markedSeen and current are written from the flow's dispatcher and read from the UI thread in markSeen().
+    @Volatile
     private var markedSeen = false
+    @Volatile
+    private var current: MessageFull? = null
+
+    private val _canMarkSeen = MutableStateFlow(false)
+
+    /**
+     * Whether offering a manual "mark as read" is meaningful: the message exists, is still unread and
+     * the automatic seen-write has not fired. It is the only way out for a message whose body can never
+     * arrive (deleted server-side), because [MessageReadUiState.Loading] never turns into Content there.
+     */
+    val canMarkSeen: StateFlow<Boolean> = _canMarkSeen.asStateFlow()
 
     val uiState: StateFlow<MessageReadUiState> =
         combine(source(messageId), teachers()) { msg, ts -> msg?.also { enrich(it, ts) } }
-            .onEach { msg -> if (msg != null) runSideEffects(msg) }
+            .onEach { msg -> runSideEffects(msg) }
             .map { msg -> classify(msg) }
             .flowOn(dispatcher)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MessageReadUiState.Loading)
+
+    /** Manual escape hatch for a message stuck unread - see [canMarkSeen]. */
+    fun markSeen() {
+        val message = current ?: return
+        if (markedSeen || message.seen) return
+        markedSeen = true
+        _canMarkSeen.value = false
+        viewModelScope.launch(dispatcher) { onMarkSeen(message) }
+    }
 
     fun setStarred(message: MessageFull, starred: Boolean) {
         viewModelScope.launch(dispatcher) { onStar(message, starred) }
@@ -82,7 +107,12 @@ class MessageReadViewModel(
             (!needsReadStatus() && !message.readByEveryone)
 
     /** Side effects hoisted out of [classify]: fire the network fetch once, and the local seen-write once. */
-    private fun runSideEffects(message: MessageFull) {
+    private fun runSideEffects(message: MessageFull?) {
+        current = message
+        if (message == null) {
+            _canMarkSeen.value = false
+            return
+        }
         if (!fetched && needsFetch(message)) {
             fetched = true
             fetchMessage(message)
@@ -91,6 +121,7 @@ class MessageReadViewModel(
             markedSeen = true
             onMarkSeen(message)
         }
+        _canMarkSeen.value = !markedSeen && !message.seen
     }
 
     class Factory(

@@ -23,6 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -49,6 +50,7 @@ import eu.mikus.edziennik.utils.models.Time
 @Composable
 fun MessageReadScreen(
     state: MessageReadUiState,
+    canMarkSeen: Boolean,
     onClose: () -> Unit,
     onStarClick: (MessageFull) -> Unit,
     onReply: (MessageFull) -> Unit,
@@ -56,12 +58,28 @@ fun MessageReadScreen(
     onDelete: (MessageFull) -> Unit,
     onDownload: (MessageFull) -> Unit,
     onNotes: (MessageFull) -> Unit,
+    onMarkSeen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
         MessageReadUiState.Loading, MessageReadUiState.NotFound ->
+            // The manual seen-write lives HERE, not in the Content action row: a message the server no
+            // longer has never leaves Loading (its body can never arrive), so an affordance rendered
+            // only in Content could never reach the one case that actually needs it.
             Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (state == MessageReadUiState.Loading) CircularProgressIndicator()
+                if (state == MessageReadUiState.Loading) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        if (canMarkSeen) {
+                            Spacer(Modifier.size(16.dp))
+                            TextButton(onClick = onMarkSeen) {
+                                IconicsIcon(CommunityMaterial.Icon.cmd_eye_check_outline, contentDescription = null, sizeDp = 20)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.messages_mark_as_read))
+                            }
+                        }
+                    }
+                }
             }
         is MessageReadUiState.Content ->
             MessageContent(
