@@ -47,7 +47,7 @@ def node(want, exact=True):
     for m in re.finditer(r'<node[^>]*>', dump()):
         n = m.group(0)
         t = re.search(r'text="([^"]*)"', n); b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
-        if t and b and ((t.group(1) == want) if exact else (want in t.group(1))):
+        if t and b and ((t.group(1).lower() == want.lower()) if exact else (want.lower() in t.group(1).lower())):
             x1, y1, x2, y2 = map(int, b.groups())
             return (x1 + x2) // 2, (y1 + y2) // 2
     return None
@@ -90,7 +90,7 @@ def go(row):
 def shot(name, expect, expect_surface=None):
     t = texts()
     for e in expect:
-        if not any(e in x for x in t):
+        if not any(e.lower() in x.lower() for x in t):
             die(f"state {name}: expected {e!r} not present")
     for bad in ("Brak internetu", "nie znaleziono", "Gotowe"):
         if any(bad in x for x in t):
