@@ -50,6 +50,9 @@ fun solveForLuminance(surface: Color, ink: Color, t: Float): Color {
         else -> Color.Black
     }
     val lp = pole.luminance()
+    // A zero offset means "this role IS the surface" - DarkRamp.dim and LightRamp.bright both use
+    // it. Without this the strict crossing test below converges one 8-bit step past the surface.
+    if (abs(target - ls) < EPSILON) return surface
     if (abs(lp - ls) < EPSILON) return surface
 
     var lo = 0f
