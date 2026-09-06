@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 33b (N5b): tertiary text follows the generated M3 role rather than
+     m3_default_color_secondary_text, which is a hard-coded neutral-variant literal. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="?attr/colorOnSurfaceVariant"/>
+</selector>

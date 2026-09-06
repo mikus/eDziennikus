@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Phase 33b (N5b): the text-selection highlight, kept in the brand hue.
+     Mirrors the platform's own @android:color/highlighted_text_material, which is
+     0.4 alpha over ?attr/colorAccent; M3 would substitute a hard-coded #6750a4. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:alpha="0.6" android:color="?attr/colorPrimary"/>
+</selector>

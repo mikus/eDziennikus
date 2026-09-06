@@ -132,7 +132,7 @@
     <style name="AppText.Large" parent="TextAppearance.AppCompat.Large" />
 
     <!-- Base application theme. -->
-    <style name="AppTheme.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="AppTheme.Light" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">#2196f3</item>
         <item name="colorPrimaryDark">#1976d2</item>
         <item name="colorPrimaryVariant">#2196f3</item>
@@ -151,7 +151,6 @@
         <item name="colorOnSecondary">#ffffff</item>
         <item name="colorOnBackground">?android:textColorPrimary</item>
         <item name="colorOnSurface">?android:textColorPrimary</item>
-        <item name="elevationOverlayColor">#ffffff</item>
         <item name="boxBackgroundColor" tools:ignore="PrivateResource">@color/mtrl_filled_background_color</item>
         <item name="android:textViewStyle">@style/AppTextView</item>
 
@@ -183,6 +182,14 @@
              filled box with no fill. -->
         <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.FilledBox</item>
 
+        <!-- Phase 33b (N5b): both are set today, so the reparent would move them, not fill a gap.
+             M3 would swap the highlight for a hard-coded m3_highlighted_text (#6750a4/#d0bcff) and
+             tertiary text for the m3_default_color_secondary_text literal; these keep both in the
+             app's own palette. Tertiary text reaches 27 production sites through
+             Base.TextAppearance.AppCompat.Small. -->
+        <item name="android:textColorHighlight">@color/text_highlight</item>
+        <item name="android:textColorTertiary">@color/text_tertiary</item>
+
         <item name="colorIcon">#8a000000</item>
 
         <item name="timetable_lesson_bg">@drawable/timetable_lesson_bg_light</item>
@@ -193,7 +200,7 @@
 
         <item name="materialAlertDialogTheme">@style/AppTheme.MaterialAlertDialog</item>
     </style>
-    <style name="AppTheme.Dark" parent="Theme.MaterialComponents.NoActionBar">
+    <style name="AppTheme.Dark" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">#64b5f6</item>
         <item name="colorPrimaryDark">#1976d2</item>
         <item name="colorPrimaryVariant">#2196f3</item>
@@ -201,13 +208,14 @@
 
         <!-- Inherited from navlib's NavView.Dark, made explicit ahead of the reparent
              (Phase 32 / N5a). Values are navlib's verbatim - this block is a no-op today.
-             elevationOverlayColor is deliberately absent: NavView.Dark did not set it either, and
-             Dark inherits ?attr/colorOnSurface from Base.V14.Theme.MaterialComponents.Bridge, which
-             the Phase 32 reparent onto Theme.MaterialComponents.NoActionBar preserved.
-             WARNING for N5b: that is NOT true of a Theme.Material3.* reparent, which sets
+             elevationOverlayColor is deliberately absent, now for a different reason than in
+             Phase 32: NavView.Dark did not set it, and under the MaterialComponents parents Dark
+             inherited ?attr/colorOnSurface from Base.V14.Theme.MaterialComponents.Bridge. The
+             Phase 33b reparent onto Theme.Material3.Dark.NoActionBar changes that - M3 sets
              elevationOverlayColor to ?attr/colorPrimary (#64b5f6 here) and enables overlays in
-             light too - so every elevated dark surface would gain a blue wash. Pin
-             elevationOverlayColor = ?attr/colorOnSurface here BEFORE flipping the parent. -->
+             light too, so elevated surfaces gain the brand tint instead of a neutral wash. That
+             is M3's surface-tint model and §8.7 accepted it deliberately; the pin back to
+             ?attr/colorOnSurface was considered and NOT made. -->
         <item name="colorSecondary">?colorAccent</item>
         <item name="colorSecondaryVariant">?colorAccent</item>
         <item name="android:windowBackground">?android:colorBackground</item>
@@ -249,6 +257,14 @@
              message-composer field would end up in filled mode with boxBackgroundColor="@null" - a
              filled box with no fill. -->
         <item name="textInputStyle">@style/Widget.MaterialComponents.TextInputLayout.FilledBox</item>
+
+        <!-- Phase 33b (N5b): both are set today, so the reparent would move them, not fill a gap.
+             M3 would swap the highlight for a hard-coded m3_highlighted_text (#6750a4/#d0bcff) and
+             tertiary text for the m3_default_color_secondary_text literal; these keep both in the
+             app's own palette. Tertiary text reaches 27 production sites through
+             Base.TextAppearance.AppCompat.Small. -->
+        <item name="android:textColorHighlight">@color/text_highlight</item>
+        <item name="android:textColorTertiary">@color/text_tertiary</item>
 
         <item name="colorIcon">#b4ffffff</item>
 

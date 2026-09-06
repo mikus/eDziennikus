@@ -226,9 +226,10 @@ fun AppSheet(
  * under the dynamic colour `ui/compose/theme/Theme.kt:41` applies on API >= 31.
  *
  * Note that navlib calls `compositeOverlay`, not `compositeOverlayIfNeeded`, so the overlay is
- * applied in the light themes too - where `elevationOverlayColor` is `#ffffff` (navlib
- * `values.xml:105`) over a white-ish `colorSurface`, hence no visible lift. Reproducing the *call*
- * keeps that true for whatever a palette sets.
+ * applied in the light themes too. That used to be invisible - navlib's `elevationOverlayColor` was
+ * `#ffffff` over a white-ish `colorSurface` - but Phase 33b dropped that pin, so the light themes
+ * now take M3's `?attr/colorPrimary` and the light sheet carries a faint brand tint like the dark
+ * one. Reproducing the *call* keeps the sheet in step with whatever a palette sets.
  */
 @Composable
 private fun sheetContainerColor(): Color {
