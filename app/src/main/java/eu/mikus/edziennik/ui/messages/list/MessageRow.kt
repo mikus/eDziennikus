@@ -91,7 +91,7 @@ fun MessageRow(
                         Spacer(Modifier.width(4.dp))
                     }
                     Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = weight, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    Text(date, style = MaterialTheme.typography.labelSmall, fontWeight = weight, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(date, style = MaterialTheme.typography.labelSmall, fontWeight = weight, color = titleColor)
                 }
                 Text(subject, style = MaterialTheme.typography.bodyMedium, fontWeight = weight, color = titleColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (preview.isNotEmpty()) {
