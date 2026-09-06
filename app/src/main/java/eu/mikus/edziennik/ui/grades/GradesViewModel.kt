@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -43,11 +44,24 @@ class GradesViewModel(
     private val expandedSemesters = MutableStateFlow<Set<Pair<Long, Int>>>(emptySet())
 
     val uiState: StateFlow<GradesUiState> =
-        combine(source(), expandedSubjects, expandedSemesters) { grades, subs, sems ->
+        combine(source().map { applyNoteFilter(it) }, expandedSubjects, expandedSemesters) { grades, subs, sems ->
             withExpanded(GradesTreeBuilder.build(grades, config, math), subs, sems)
         }
             .flowOn(dispatcher)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GradesUiState.Loading)
+
+    /**
+     * Side-effecting step (named to reflect it, as in AnnouncementsViewModel): GradeFull's Room relation
+     * joins on the row id alone, so a grade can arrive carrying notes owned by another profile or another
+     * owner type; filterNotes() strips those in place. Sits on the source flow, not inside the combine, so
+     * it runs once per DB emission rather than on every expand/collapse — and because it is the single
+     * mutation site, everything downstream (the pure tree builder, the row's note glyph and substitute
+     * text, and the GradeFull handed to GradeDetailsDialog) sees the same filtered list.
+     */
+    private fun applyNoteFilter(grades: List<GradeFull>): List<GradeFull> {
+        grades.forEach { it.filterNotes() }
+        return grades
+    }
 
     init {
         // deep-link: open the target subject (subject + its first semester) once the tree is built,

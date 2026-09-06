@@ -4,6 +4,7 @@
 
 package eu.mikus.edziennik.ui.grades
 
+import android.text.Spanned
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -29,10 +30,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +46,7 @@ import eu.mikus.edziennik.data.db.entity.Grade
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
 import eu.mikus.edziennik.ui.compose.UnreadDot
+import eu.mikus.edziennik.ui.compose.toAnnotatedString
 
 @Composable
 fun GradesScreen(
@@ -211,13 +215,22 @@ private fun GradeRow(
     ) {
         if (grade.showAsUnseen) UnreadDot(Modifier.padding(end = 8.dp))
         GradePill(grade, formatters.gradeColor(grade), big = true)
-        val texts = gradeRowTexts(grade.description, grade.category, grade.isImprovement)
+        // Legacy GradesListFragment ran on the GradesAdapter default showNotes = true; there is no toggle here.
+        val texts = gradeRowTexts(grade.description, grade.category, grade.isImprovement, grade.getNoteSubstituteText(showNotes = true))
+        val topText = remember(texts.topText) {
+            (texts.topText as? Spanned)?.toAnnotatedString() ?: AnnotatedString(texts.topText.toString())
+        }
         val category = if (texts.categoryIsImprovement)
             stringResource(R.string.grades_improvement_category_format, texts.categoryText)
         else texts.categoryText
         Column(Modifier.padding(start = 12.dp).weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(texts.topText, style = MaterialTheme.typography.bodyMedium, maxLines = 1,
+                if (grade.hasNotes()) {
+                    val noteIcon = if (grade.hasReplacingNotes()) CommunityMaterial.Icon3.cmd_swap_horizontal else CommunityMaterial.Icon3.cmd_playlist_edit
+                    IconicsIcon(noteIcon, contentDescription = null, sizeDp = 16, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(topText, style = MaterialTheme.typography.bodyMedium, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 formatters.gradeDateText(grade)?.let {
                     Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
