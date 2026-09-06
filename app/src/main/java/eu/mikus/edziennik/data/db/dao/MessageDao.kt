@@ -34,9 +34,9 @@ abstract class MessageDao : BaseDao<Message, MessageFull> {
 
     private val selective by lazy { MessageDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [Message::class])
+    @RawQuery(observedEntities = [Message::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<MessageFull>>
-    @RawQuery(observedEntities = [Message::class])
+    @RawQuery(observedEntities = [Message::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<MessageFull?>
 
     // SELECTIVE UPDATE

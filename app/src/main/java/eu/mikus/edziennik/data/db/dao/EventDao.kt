@@ -46,9 +46,9 @@ abstract class EventDao : BaseDao<Event, EventFull> {
 
     private val selective by lazy { EventDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [Event::class])
+    @RawQuery(observedEntities = [Event::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<EventFull>>
-    @RawQuery(observedEntities = [Event::class])
+    @RawQuery(observedEntities = [Event::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<EventFull?>
 
     // SELECTIVE UPDATE

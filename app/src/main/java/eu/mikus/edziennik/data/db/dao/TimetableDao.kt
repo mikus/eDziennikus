@@ -47,9 +47,9 @@ abstract class TimetableDao : BaseDao<Lesson, LessonFull> {
 
     private val selective by lazy { TimetableDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [Lesson::class])
+    @RawQuery(observedEntities = [Lesson::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<LessonFull>>
-    @RawQuery(observedEntities = [Lesson::class])
+    @RawQuery(observedEntities = [Lesson::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<LessonFull?>
 
     // SELECTIVE UPDATE

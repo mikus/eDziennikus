@@ -36,9 +36,9 @@ abstract class AttendanceDao : BaseDao<Attendance, AttendanceFull> {
 
     private val selective by lazy { AttendanceDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [Attendance::class])
+    @RawQuery(observedEntities = [Attendance::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<AttendanceFull>>
-    @RawQuery(observedEntities = [Attendance::class])
+    @RawQuery(observedEntities = [Attendance::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<AttendanceFull?>
 
     // SELECTIVE UPDATE

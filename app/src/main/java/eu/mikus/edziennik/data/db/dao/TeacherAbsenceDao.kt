@@ -35,9 +35,9 @@ abstract class TeacherAbsenceDao : BaseDao<TeacherAbsence, TeacherAbsenceFull> {
 
     private val selective by lazy { TeacherAbsenceDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [TeacherAbsence::class])
+    @RawQuery(observedEntities = [TeacherAbsence::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<TeacherAbsenceFull>>
-    @RawQuery(observedEntities = [TeacherAbsence::class])
+    @RawQuery(observedEntities = [TeacherAbsence::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<TeacherAbsenceFull?>
 
     // SELECTIVE UPDATE

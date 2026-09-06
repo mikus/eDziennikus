@@ -34,9 +34,9 @@ abstract class NoticeDao : BaseDao<Notice, NoticeFull> {
 
     private val selective by lazy { NoticeDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [Notice::class])
+    @RawQuery(observedEntities = [Notice::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<NoticeFull>>
-    @RawQuery(observedEntities = [Notice::class])
+    @RawQuery(observedEntities = [Notice::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<NoticeFull?>
 
     // SELECTIVE UPDATE

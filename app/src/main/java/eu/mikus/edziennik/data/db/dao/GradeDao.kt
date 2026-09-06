@@ -41,9 +41,9 @@ abstract class GradeDao : BaseDao<Grade, GradeFull> {
 
     private val selective by lazy { GradeDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [Grade::class])
+    @RawQuery(observedEntities = [Grade::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<GradeFull>>
-    @RawQuery(observedEntities = [Grade::class])
+    @RawQuery(observedEntities = [Grade::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<GradeFull?>
 
     // SELECTIVE UPDATE

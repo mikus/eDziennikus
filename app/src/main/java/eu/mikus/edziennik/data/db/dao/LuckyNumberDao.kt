@@ -33,9 +33,9 @@ abstract class LuckyNumberDao : BaseDao<LuckyNumber, LuckyNumberFull> {
 
     private val selective by lazy { LuckyNumberDaoSelective(App.db) }
 
-    @RawQuery(observedEntities = [LuckyNumber::class])
+    @RawQuery(observedEntities = [LuckyNumber::class, Metadata::class])
     abstract override fun getRaw(query: SupportSQLiteQuery): LiveData<List<LuckyNumberFull>>
-    @RawQuery(observedEntities = [LuckyNumber::class])
+    @RawQuery(observedEntities = [LuckyNumber::class, Metadata::class])
     abstract override fun getOne(query: SupportSQLiteQuery): LiveData<LuckyNumberFull?>
 
     // SELECTIVE UPDATE
