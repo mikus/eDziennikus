@@ -38,10 +38,10 @@ import kotlinx.coroutines.flow.first
 /**
  * `?colorFab` and `?colorOnFab` (`styles.xml:111,113` light, `:130,132` dark), inlined app-side on
  * purpose. Both attrs are **declared by navlib**, so reading them through the theme would leave the
- * FAB depending on the AAR a later phase removes; and `ui/compose/theme/Theme.kt:41` applies dynamic
- * colour on API >= 31, so an unforced M3 FAB would take a wallpaper-derived tint instead of the
- * app's green. A one-off `Color` constant is this repo's pattern (`ui/settings/SettingsScreen.kt:51`),
- * so nothing is added to `colors.xml`.
+ * FAB depending on the AAR a later phase removes; and an unforced M3 FAB would take its container
+ * from the scheme, where `appColorScheme` (`ui/compose/theme/Theme.kt`) keeps the brand Blue
+ * `primaryContainer` on every theme instead of the app's green. A one-off `Color` constant is
+ * this repo's pattern (`ui/settings/SettingsScreen.kt:51`), so nothing is added to `colors.xml`.
  *
  * Deliberately **not** `?colorFabIcon` (`#c8e6c9`) for the foreground: navlib does write it onto the
  * `IconicsDrawable`, but Material 1.6.1's `iconTint` (`?colorOnSecondary`) overrides it, so today's
@@ -67,8 +67,8 @@ private val BarContentColor = Color(0xFFFFFFFF)
 /**
  * navlib's `BadgeDrawable` hardcodes both: `mBadgePaint.setColor(-49920)` = `#FF3D00` and
  * `mTextPaint.setColor(-1)` = `#FFFFFF`, neither of them themed. M3's `Badge` would default to
- * `colorScheme.error`, which is wallpaper-derived under the dynamic colour `Theme.kt:41` applies, so
- * the badge is pinned for the same reason the FAB is: no palette change inside the shell swap.
+ * `colorScheme.error`, which `appColorScheme` keeps at the brand Blue value on every theme, so the
+ * badge is pinned for the same reason the FAB is: no palette change inside the shell swap.
  */
 private val BadgeContainerColor = Color(0xFFFF3D00)
 private val BadgeContentColor = Color(0xFFFFFFFF)

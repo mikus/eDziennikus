@@ -69,8 +69,8 @@ private val ContentPadding = 8.dp
  * That colour is **MaterialDrawer's**, `#1F000000` (`materialdrawer-8.3.3` `values.xml:3`), with no
  * `values-night` variant - so navlib's separator is 12 % *black* in the dark themes too, where it is
  * all but invisible. Reproduced as the literal it is rather than mapped to `colorScheme.outline`
- * (or `HorizontalDivider`'s `outlineVariant` default): both are wallpaper-derived under the dynamic
- * colour `ui/compose/theme/Theme.kt:41` applies on API >= 31, and a shell swap must not repaint.
+ * (or `HorizontalDivider`'s `outlineVariant` default): `appColorScheme` keeps both at the brand Blue
+ * values on every theme, neither of which is 12 % black, and a shell swap must not repaint.
  */
 private val SeparatorBlockHeight = 17.dp
 private val SeparatorThickness = 1.dp
@@ -78,8 +78,8 @@ private val SeparatorColor = Color(0x1F000000)
 
 /**
  * `bs_scrim`'s `android:background="#99000000"` (`nav_bottom_sheet.xml`) - 60 % black. M3's default
- * is `BottomSheetDefaults.ScrimColor`, i.e. `colorScheme.scrim` at 32 %, so it is both a different
- * opacity and a dynamic colour; pinned for the same reason as [SeparatorColor].
+ * is `BottomSheetDefaults.ScrimColor`, i.e. `colorScheme.scrim` at 32 %; `appColorScheme` keeps that
+ * role black on every theme, so only the opacity differs. Pinned as [SeparatorColor] is.
  */
 private val ScrimColor = Color(0x99000000)
 
@@ -222,8 +222,8 @@ fun AppSheet(
  * same overlay and would be 1/255 of alpha off *and* disappear with the AAR.
  *
  * Not `colorScheme.surfaceContainerLow`, [ModalBottomSheet]'s default: `colorSurface` is overridden
- * by every one of the 20-odd palette themes (`styles.xml:147+`), and the M3 role is wallpaper-derived
- * under the dynamic colour `ui/compose/theme/Theme.kt:41` applies on API >= 31.
+ * by every one of the 20-odd palette themes (`styles.xml:147+`), and the M3 role has no equal here -
+ * `appColorScheme` derives it off `surface` along a luminance ramp, not from navlib's overlay blend.
  *
  * Note that navlib calls `compositeOverlay`, not `compositeOverlayIfNeeded`, so the overlay is
  * applied in the light themes too. That used to be invisible - navlib's `elevationOverlayColor` was

@@ -227,8 +227,8 @@ fun AppRail(
  *
  * **Not** reproduced: the mini item's `FrameLayout` has no background whatsoever (no `themeDrawerItem`,
  * no `getSelectableBackground`), so navlib's rail gives no touch feedback at all. [NavigationRailItem]'s
- * ripple is kept - it is drawn from the rail's `contentColor`, not a palette role, so it cannot drift under
- * `ui/compose/theme/Theme.kt:41`'s dynamic colour, and an icon-only rail with no press feedback is not
+ * ripple is kept - it is drawn from the rail's `contentColor`, i.e. the `?android:textColorSecondary`
+ * resolved above, not a scheme role, so it cannot drift; an icon-only rail with no press feedback is not
  * worth reproducing. M3's `Arrangement.spacedBy(4 dp)` between items and its 4 dp of container padding
  * are also kept: navlib's items are flush, and neither is a [NavigationRail] parameter.
  */
@@ -293,8 +293,8 @@ private fun RailBadge(text: String) {
 
 /**
  * One theme attr as a [Color], resolved once per context - the same reader `AppDrawer`, `AppSheet` and
- * `AppBottomBar` use, and for the same reason: `ui/compose/theme/Theme.kt:41` enables dynamic colour on
- * API >= 31, so an M3 role would drift to a wallpaper-derived value inside an atomic shell swap.
+ * `AppBottomBar` use. The container is resolved from the XML theme rather than the Compose scheme;
+ * since Phase 34 the two agree on `surface`, so that read is belt-and-braces rather than load-bearing.
  *
  * `?colorSurface` is where the rail's container colour actually comes from:
  * `MiniDrawerSliderView`'s constructor reads `materialDrawerBackground` out of

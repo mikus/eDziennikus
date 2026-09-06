@@ -103,8 +103,8 @@ class MainSnackbar(val activity: AppCompatActivity) {
  * screen, and it belongs to the task that owns that file, not to this one.
  *
  * All three colours are stated rather than inherited from [Snackbar]'s M3 defaults, which are
- * `inverseSurface`/`inverseOnSurface`/`inversePrimary` - wallpaper-derived under the dynamic colour
- * `ui/compose/theme/Theme.kt:41` applies on API >= 31, and unrelated to what ships today.
+ * `inverseSurface`/`inverseOnSurface`/`inversePrimary` - roles `appColorScheme` keeps at their brand
+ * Blue values on every theme, and unrelated to what ships today.
  */
 @Composable
 fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {

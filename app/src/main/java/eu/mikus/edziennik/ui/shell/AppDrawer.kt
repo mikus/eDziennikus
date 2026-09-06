@@ -131,8 +131,8 @@ private val DividerThickness = 1.dp
  * `ProfileDrawerItem` (`withBadgeStyle`, offset 330) and `MainActivity.kt:1079` to every badgeable row.
  *
  * Hardcoded there, so hardcoded here: M3's [androidx.compose.material3.Badge] would default to
- * `colorScheme.error`, which is wallpaper-derived under the dynamic colour `ui/compose/theme/Theme.kt:41`
- * applies on API >= 31. Note this is a *different* red from `AppBottomBar`'s `#FF3D00`: that one is
+ * `colorScheme.error`, which `appColorScheme` keeps at the brand Blue value on every theme, so the
+ * pin still holds. Note this is a *different* red from `AppBottomBar`'s `#FF3D00`: that one is
  * navlib's `BadgeDrawable`, a separate hardcode for the hamburger only.
  *
  * The chip itself is `drawable/material_drawer_badge.xml` (a `5dp`-radius rect) plus `BadgeStyle`'s own
@@ -481,8 +481,8 @@ private fun Divider() {
         modifier = Modifier.padding(vertical = DrawerPadding),
         thickness = DividerThickness,
         // `UtilsKt.getDividerColor` = `materialDrawerDividerColor` = `?android:textColorHint`
-        // (`Widget.MaterialDrawerStyle`). `HorizontalDivider`'s own default is `outlineVariant`, which
-        // is wallpaper-derived under `Theme.kt:41`'s dynamic colour.
+        // (`Widget.MaterialDrawerStyle`), resolved from the XML theme: `HorizontalDivider`'s own
+        // default, `outlineVariant`, has no equal role in `appColorScheme`.
         color = colorAttr(android.R.attr.textColorHint),
     )
 }
@@ -891,8 +891,9 @@ private fun DrawerBadge(text: String, textSize: TextUnit) {
  * One theme attr as a [Color], resolved once per context - a theme change goes through the
  * Activity-recreate path (see `ui/compose/theme/Theme.kt`'s `appColorScheme` KDoc), so a new theme
  * always brings a new context. Same pattern as `AppSheet`'s and `AppBottomBar`'s colour readers, and
- * the reason every colour above is an attr rather than an M3 role: `Theme.kt:41` enables dynamic colour
- * on API >= 31, so a role would drift to a wallpaper-derived value inside a shell swap.
+ * the reason every colour above is an attr rather than an M3 role: `?android:textColor*` and
+ * `?colorPrimary` have no equal role in `appColorScheme`, which bridges `background`/`surface` and
+ * derives the ink. Only the container's `?colorSurface` has an equal, and there the two agree.
  */
 @Composable
 private fun colorAttr(attr: Int): Color {
