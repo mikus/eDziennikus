@@ -6,6 +6,7 @@ package eu.mikus.edziennik.ui.timetable
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.text.Spanned
 import android.widget.ImageView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,13 +41,18 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.data.db.full.LessonFull
+import eu.mikus.edziennik.ext.resolveAttr
+import eu.mikus.edziennik.ui.compose.IconicsIcon
+import eu.mikus.edziennik.ui.compose.toAnnotatedString
 import eu.mikus.edziennik.utils.Colors
 
 private val BlockShape = RoundedCornerShape(6.dp)
+private val AnnotationShape = RoundedCornerShape(4.dp)
 
 /**
  * Full-parity Compose port of the legacy `timetable_lesson` view (TimetableDayFragment.buildLessonViews):
@@ -93,11 +99,22 @@ fun LessonBlock(
         Column(Modifier.fillMaxSize()) {
             // Top row: subject (grows) + unread dot + attendance check + big lesson number
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                if (lesson.hasNotes()) {
+                    val noteIcon = if (lesson.hasReplacingNotes())
+                        CommunityMaterial.Icon3.cmd_swap_horizontal
+                    else
+                        CommunityMaterial.Icon3.cmd_playlist_edit
+                    IconicsIcon(noteIcon, contentDescription = null, sizeDp = 16, tint = onSubjectSecondary)
+                    Spacer(Modifier.width(4.dp))
+                }
                 Text(
-                    text = subjectText(lesson.displaySubjectName ?: "", struck),
+                    text = subjectText(
+                        lesson.getNoteSubstituteText(showNotes = true) ?: lesson.displaySubjectName ?: "",
+                        struck,
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = onSubject,
+                    color = if (struck) onSubjectSecondary else onSubject,
                     maxLines = if (annotation != null) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -134,10 +151,14 @@ fun LessonBlock(
                     text = annotation,
                     style = MaterialTheme.typography.labelSmall,
                     fontStyle = FontStyle.Italic,
-                    color = onSubjectSecondary,
+                    color = Color(0xFF000000),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clip(AnnotationShape)
+                        .background(annotationColor(block.annotation))
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
                 )
             }
 
@@ -186,8 +207,28 @@ fun LessonBlock(
     }
 }
 
-private fun subjectText(name: String, struck: Boolean): AnnotatedString = buildAnnotatedString {
-    if (struck) withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(name) } else append(name)
+/** The subject line — or the replacing note that stands in for it — struck through when cancelled/shifted away. */
+private fun subjectText(name: CharSequence, struck: Boolean): AnnotatedString = buildAnnotatedString {
+    val text = (name as? Spanned)?.toAnnotatedString() ?: AnnotatedString(name.toString())
+    if (struck) withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(text) } else append(text)
+}
+
+/**
+ * The legacy annotation chip's fill, which TimetableManager.getAnnotation picked per change type from the
+ * four `timetable_lesson_*_color` theme attrs. Keeping it is what lets a cancellation be told from a
+ * substitution at a glance, and keeps the grid agreeing with the still-live LessonChangesAdapter.
+ */
+@Composable
+private fun annotationColor(annotation: LessonAnnotation): Color {
+    val attr = when (annotation) {
+        LessonAnnotation.None -> return Color.Transparent
+        LessonAnnotation.Cancelled -> R.attr.timetable_lesson_cancelled_color
+        is LessonAnnotation.Changed -> R.attr.timetable_lesson_change_color
+        is LessonAnnotation.Shifted ->
+            if (annotation.isSource) R.attr.timetable_lesson_shifted_source_color
+            else R.attr.timetable_lesson_shifted_target_color
+    }
+    return Color(attr.resolveAttr(LocalContext.current))
 }
 
 /** "H:MM - H:MM" from the lesson's display times, plus the classroom (old→new when changed). */
