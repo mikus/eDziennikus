@@ -85,7 +85,13 @@ private fun AnnouncementCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            // The XML row tinted a chip behind the subject when unseen - the only coloured element
+            // in it. Announcements are never auto-marked seen, so that colour dimension carries
+            // real weight; NoticeRow re-expressed the same chip as a whole-card tint, and this
+            // follows it rather than inventing a second idiom.
+            containerColor =
+                if (unseen) MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.surfaceContainerHigh,
         ),
     ) {
         Row(
@@ -118,6 +124,7 @@ private fun AnnouncementCard(
                 Text(
                     item.teacherName ?: "",
                     style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (unseen) FontWeight.Bold else FontWeight.Normal,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
