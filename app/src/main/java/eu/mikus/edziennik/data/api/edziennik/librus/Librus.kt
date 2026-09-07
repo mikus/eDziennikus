@@ -9,7 +9,6 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.data.api.*
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusData
 import eu.mikus.edziennik.data.api.edziennik.librus.data.api.LibrusApiAnnouncementMarkAsRead
-import eu.mikus.edziennik.data.api.edziennik.librus.data.messages.LibrusMessagesGetAttachment
 import eu.mikus.edziennik.data.api.edziennik.librus.data.messages.LibrusMessagesGetMessage
 import eu.mikus.edziennik.data.api.edziennik.librus.data.messages.LibrusMessagesGetRecipientList
 import eu.mikus.edziennik.data.api.edziennik.librus.data.messages.LibrusMessagesSendMessage
@@ -128,7 +127,21 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
         when (owner) {
             is Message -> {
                 login(LoginMethod.LIBRUS_SYNERGIA) {
-                    if (data.messagesLoginSuccessful) LibrusMessagesGetAttachment(data, owner, attachmentId, attachmentName) { completed() }
+                    // Synergia only. This used to read `if (data.messagesLoginSuccessful)
+                    // LibrusMessagesGetAttachment(...)` followed - with no `else` - by the Synergia
+                    // call, so BOTH downloaders ran on every tap: messagesLoginSuccessful defaults
+                    // to true (DataLibrus:255) and is only ever cleared by LibrusLoginMessages,
+                    // which a SYNERGIA login never runs. Two Librus round trips per attachment, and
+                    // the loser's late completed() posted ApiTaskFinishedEvent carrying a
+                    // taskProfileId that clearTask() had already reset to -1 - which MainActivity
+                    // ignores, stranding the toolbar subtitle at "Syncing…" until the next sync.
+                    //
+                    // Adding the missing `else` would be wrong: this block logs in with
+                    // LIBRUS_SYNERGIA, whereas LibrusMessagesGetAttachment calls the Messages
+                    // endpoint (LibrusMessages.messagesGet) that only LoginMethod.LIBRUS_MESSAGES
+                    // authenticates - cf. getMessage() above, which pairs them correctly. The
+                    // messages branch was never reachable-and-correct here; the Synergia call is the
+                    // one that has always actually run and worked, so it is the one that stays.
                     LibrusSynergiaGetAttachment(data, owner, attachmentId, attachmentName) { completed() }
                 }
             }
