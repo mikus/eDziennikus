@@ -600,8 +600,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             swipeRefreshLayout?.isRefreshing = true
         // The subtitle protocol (§7.1) is explicit state now; nulling navlib's two format resources
         // is what used to suppress the steady-state subtitle for the duration of a sync.
-        if (event.profileId == App.profileId)
-            state.subtitle = SyncSubtitle.Syncing(progress = -1f, text = null)
+        state.subtitle = nextSubtitle(state.subtitle, SyncSignal.Started(event.profileId), App.profileId)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -615,8 +614,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskProgressEvent(event: ApiTaskProgressEvent) {
         // subtitleOf() owns both cases: a negative progress renders the bare text, as this did.
-        if (event.profileId == App.profileId)
-            state.subtitle = SyncSubtitle.Syncing(event.progress, event.progressText)
+        state.subtitle = nextSubtitle(
+            state.subtitle,
+            SyncSignal.Progress(event.profileId, event.progress, event.progressText),
+            App.profileId,
+        )
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
@@ -624,8 +626,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         EventBus.getDefault().removeStickyEvent(event)
         // AppTopBar gives Done its ~2 s lifetime and then falls back to Idle, which is what
         // restoring navlib's two format resources used to do.
-        if (event.profileId == App.profileId)
-            state.subtitle = SyncSubtitle.Done
+        state.subtitle = nextSubtitle(state.subtitle, SyncSignal.Finished(event.profileId), App.profileId)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)
@@ -639,7 +640,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         EventBus.getDefault().removeStickyEvent(event)
         // A failed sync ends the subtitle the same way a finished one does - this path showed
         // "Gotowe" too - and the failure itself is reported by the error snackbar below.
-        state.subtitle = SyncSubtitle.Done
+        state.subtitle = nextSubtitle(state.subtitle, SyncSignal.Failed, App.profileId)
         mainSnackbar.dismiss()
         errorSnackbar.addError(event.error).show()
     }
@@ -943,7 +944,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             // that profile's id, and onApiTaskFinishedEvent drops it because it no longer matches
             // App.profileId - so without this reset the subtitle stays on "Syncing…" indefinitely.
             // The new profile's own sync, if one starts, sets it again straight away.
-            state.subtitle = SyncSubtitle.Idle
+            state.subtitle = nextSubtitle(state.subtitle, SyncSignal.ProfileChanged, App.profileId)
             // set new drawer items for this profile
             setDrawerItems()
             // Rebuilds the rendered profile list for the new profile - which is both halves of what

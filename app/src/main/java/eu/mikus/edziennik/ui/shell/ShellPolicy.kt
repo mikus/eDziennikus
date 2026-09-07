@@ -103,6 +103,49 @@ sealed interface SyncSubtitle {
 }
 
 /**
+ * What moves the toolbar's sync subtitle. One signal per `ApiService` event the shell reacts to,
+ * plus [ProfileChanged], which exists because of a bug: the three per-profile signals are ignored
+ * when they name a profile other than the active one, so a sync in flight when the user switches
+ * profile posts its [Finished] against the *old* id and is dropped - leaving the subtitle on
+ * "Syncing…" with nothing able to clear it.
+ */
+sealed interface SyncSignal {
+    data class Started(val profileId: Int) : SyncSignal
+    data class Progress(val profileId: Int, val progress: Float, val text: String?) : SyncSignal
+    data class Finished(val profileId: Int) : SyncSignal
+    /** A failed sync ends the subtitle exactly as a finished one does, whatever profile it was for. */
+    data object Failed : SyncSignal
+    data object ProfileChanged : SyncSignal
+}
+
+/**
+ * The subtitle's transition half, next to [subtitleOf], which is its rendering half. Pure, so
+ * `ShellPolicyTest` can cover a protocol whose call sites live in `MainActivity` and are therefore
+ * unreachable from the JVM suite.
+ *
+ * Signals naming a non-active profile leave [current] alone - that is deliberate, so a background
+ * sync of another profile does not hijack the toolbar - and it is exactly why [SyncSignal.ProfileChanged]
+ * has to reset explicitly.
+ */
+fun nextSubtitle(current: SyncSubtitle, signal: SyncSignal, activeProfileId: Int): SyncSubtitle =
+    when (signal) {
+        is SyncSignal.Started ->
+            if (signal.profileId == activeProfileId) SyncSubtitle.Syncing(progress = -1f, text = null)
+            else current
+
+        is SyncSignal.Progress ->
+            if (signal.profileId == activeProfileId) SyncSubtitle.Syncing(signal.progress, signal.text)
+            else current
+
+        is SyncSignal.Finished ->
+            if (signal.profileId == activeProfileId) SyncSubtitle.Done else current
+
+        SyncSignal.Failed -> SyncSubtitle.Done
+
+        SyncSignal.ProfileChanged -> SyncSubtitle.Idle
+    }
+
+/**
  * A resource descriptor, not a `String` - the house pattern for testable text
  * (`ui/home/LuckyNumberMessage.kt:17-19`). [quantity] non-null means [res] is a plural, resolved
  * with `pluralStringResource`.

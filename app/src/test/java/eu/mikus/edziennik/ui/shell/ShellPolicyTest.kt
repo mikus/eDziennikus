@@ -590,4 +590,109 @@ class ShellPolicyTest {
         assertEquals(99, rows[0].descriptionRes)
         assertNull(rows[1].descriptionRes)
     }
+
+    // ---- nextSubtitle: the subtitle's transition half ----
+
+    @Test
+    fun `a sync starting on the active profile shows the indeterminate subtitle`() {
+        assertEquals(
+            SyncSubtitle.Syncing(progress = -1f, text = null),
+            nextSubtitle(SyncSubtitle.Idle, SyncSignal.Started(profileId = 3), activeProfileId = 3),
+        )
+    }
+
+    @Test
+    fun `progress on the active profile carries its values`() {
+        assertEquals(
+            SyncSubtitle.Syncing(50f, "Syncing timetable…"),
+            nextSubtitle(
+                SyncSubtitle.Syncing(progress = -1f, text = null),
+                SyncSignal.Progress(profileId = 3, progress = 50f, text = "Syncing timetable…"),
+                activeProfileId = 3,
+            ),
+        )
+    }
+
+    @Test
+    fun `a sync finishing on the active profile ends the subtitle`() {
+        assertEquals(
+            SyncSubtitle.Done,
+            nextSubtitle(
+                SyncSubtitle.Syncing(progress = -1f, text = null),
+                SyncSignal.Finished(profileId = 3),
+                activeProfileId = 3,
+            ),
+        )
+    }
+
+    @Test
+    fun `another profile's sync does not hijack the toolbar`() {
+        // Deliberate: a background sync of a non-active profile leaves the subtitle alone.
+        assertEquals(
+            SyncSubtitle.Idle,
+            nextSubtitle(SyncSubtitle.Idle, SyncSignal.Started(profileId = 2), activeProfileId = 3),
+        )
+        assertEquals(
+            SyncSubtitle.Idle,
+            nextSubtitle(
+                SyncSubtitle.Idle,
+                SyncSignal.Progress(profileId = 2, progress = 40f, text = "x"),
+                activeProfileId = 3,
+            ),
+        )
+    }
+
+    @Test
+    fun `another profile's finish cannot end the subtitle`() {
+        // The drop that caused the stuck-"Syncing…" bug. Kept, because clearing on any profile's
+        // finish would end a sync the toolbar is legitimately reporting; ProfileChanged is the
+        // recovery instead - see the next test.
+        val syncing = SyncSubtitle.Syncing(progress = -1f, text = null)
+        assertEquals(syncing, nextSubtitle(syncing, SyncSignal.Finished(profileId = 2), activeProfileId = 3))
+    }
+
+    /**
+     * The regression test. A pull-to-refresh on profile 3 followed by a switch to profile 1 left
+     * `Finished(3)` arriving against an active id of 1, where it is dropped - so before the fix the
+     * subtitle stayed on "Syncing…" for ever, with no other writer able to clear it.
+     */
+    @Test
+    fun `switching profile mid-sync clears a subtitle its own finish can no longer clear`() {
+        var subtitle: SyncSubtitle = SyncSubtitle.Idle
+
+        subtitle = nextSubtitle(subtitle, SyncSignal.Started(profileId = 3), activeProfileId = 3)
+        assertEquals(SyncSubtitle.Syncing(progress = -1f, text = null), subtitle)
+
+        // the user switches to profile 1; App.profileId is 1 from here on
+        subtitle = nextSubtitle(subtitle, SyncSignal.ProfileChanged, activeProfileId = 1)
+        assertEquals(SyncSubtitle.Idle, subtitle)
+
+        // the old profile's sync lands late and is still ignored - and must not resurrect Syncing
+        subtitle = nextSubtitle(subtitle, SyncSignal.Finished(profileId = 3), activeProfileId = 1)
+        assertEquals(SyncSubtitle.Idle, subtitle)
+    }
+
+    @Test
+    fun `a profile change resets the subtitle from every state`() {
+        for (state in listOf(
+            SyncSubtitle.Idle,
+            SyncSubtitle.Syncing(progress = -1f, text = null),
+            SyncSubtitle.Syncing(72f, "Syncing grades…"),
+            SyncSubtitle.Done,
+        )) {
+            assertEquals(
+                SyncSubtitle.Idle,
+                nextSubtitle(state, SyncSignal.ProfileChanged, activeProfileId = 1),
+                "from $state",
+            )
+        }
+    }
+
+    @Test
+    fun `a failure ends the subtitle whatever profile it was for`() {
+        // onApiTaskErrorEvent is not profile-gated, and the error snackbar reports the failure.
+        val syncing = SyncSubtitle.Syncing(progress = -1f, text = null)
+        assertEquals(SyncSubtitle.Done, nextSubtitle(syncing, SyncSignal.Failed, activeProfileId = 3))
+        assertEquals(SyncSubtitle.Done, nextSubtitle(syncing, SyncSignal.Failed, activeProfileId = 99))
+    }
 }
