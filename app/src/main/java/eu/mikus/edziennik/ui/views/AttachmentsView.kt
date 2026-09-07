@@ -51,22 +51,35 @@ class AttachmentsView @JvmOverloads constructor(
         val attachmentSizes = arguments.getLongArray("attachmentSizes")
 
         val adapter = AttachmentAdapter(context, onAttachmentClick = { item ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Q (29), not 33: from API 29 the public copy goes through MediaStore, which needs
+            // no permission. Below that PublicDownloads copies by path, which does - but only
+            // for the convenience copy, so the request is optional and a denial still downloads.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 downloadAttachment(item)
                 return@AttachmentAdapter
             }
-            app.permissionManager.requestStoragePermission(activity, R.string.permissions_attachment) {
+            app.permissionManager.requestStoragePermission(
+                activity,
+                R.string.permissions_attachment,
+                isRequired = false,
+            ) {
                 downloadAttachment(item)
             }
         }, onAttachmentLongClick = { chip, item ->
             val popupMenu = PopupMenu(chip.context, chip)
             popupMenu.menu.add(0, 1, 0, R.string.messages_attachment_download_again)
             popupMenu.setOnMenuItemClickListener {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    downloadAttachment(item)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    // forceDownload, which this arm has always omitted: without it "download
+                    // again" just reopens the cached file.
+                    downloadAttachment(item, forceDownload = true)
                     return@setOnMenuItemClickListener true
                 }
-                app.permissionManager.requestStoragePermission(activity, R.string.permissions_attachment) {
+                app.permissionManager.requestStoragePermission(
+                    activity,
+                    R.string.permissions_attachment,
+                    isRequired = false,
+                ) {
                     downloadAttachment(item, forceDownload = true)
                 }
                 true
