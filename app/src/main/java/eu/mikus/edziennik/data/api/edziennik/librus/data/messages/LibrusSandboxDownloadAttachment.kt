@@ -9,6 +9,7 @@ import eu.mikus.edziennik.data.api.events.AttachmentGetEvent
 import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.ext.get
 import eu.mikus.edziennik.ext.getString
+import eu.mikus.edziennik.utils.PublicDownloads
 import eu.mikus.edziennik.utils.Utils
 import java.io.File
 import kotlin.coroutines.CoroutineContext
@@ -99,6 +100,11 @@ class LibrusSandboxDownloadAttachment(override val data: DataLibrus,
             Utils.writeStringToFile(attachmentDataFile, event.fileName)
 
             EventBus.getDefault().postSticky(event)
+
+            // Best-effort user-visible copy. PublicDownloads contains its own failures, which
+            // matters here: this lambda runs inside sandboxGetFile's catch-all, where an escaping
+            // throwable would surface as a download error.
+            PublicDownloads.publish(data.app, file, attachmentName)
 
             onSuccess()
 
