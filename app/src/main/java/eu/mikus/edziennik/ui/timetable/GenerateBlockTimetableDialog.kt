@@ -35,6 +35,7 @@ import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.databinding.DialogGenerateBlockTimetableBinding
 import eu.mikus.edziennik.ext.*
+import eu.mikus.edziennik.utils.PublicFolder
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.models.Week
@@ -333,7 +334,7 @@ class GenerateBlockTimetableDialog(
             }
 
             val footerTextPaintCenter = ((textPaint.descent() + textPaint.ascent()) / 2).roundToInt()
-            canvas.drawText("Wygenerowano w aplikacji Szkolny.eu", imageWidth - 10f, imageHeight - footerTextPaintCenter - 10f, textPaint)
+            canvas.drawText("Wygenerowano w aplikacji eDziennikus", imageWidth - 10f, imageHeight - footerTextPaintCenter - 10f, textPaint)
 
             textPaint.apply {
                 setARGB(255, 127, 127, 127)
@@ -378,9 +379,9 @@ class GenerateBlockTimetableDialog(
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, File(Environment.DIRECTORY_PICTURES, "Szkolny.eu").path)
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, PublicFolder.relativePath(Environment.DIRECTORY_PICTURES))
             } else {
-                val picturesDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "Szkolny.eu")
+                val picturesDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), PublicFolder.NAME)
                 picturesDirectory.mkdirs()
                 values.put(MediaStore.MediaColumns.DATA, File(picturesDirectory, filename).path)
             }
