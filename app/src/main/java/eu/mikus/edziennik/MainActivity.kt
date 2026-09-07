@@ -939,6 +939,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             if (App.profileId != profile.id)
                 app.profileLoad(profile)
             MessagesFragment.pageSelection = -1
+            // A sync already in flight for the OLD profile posts its ApiTaskFinishedEvent carrying
+            // that profile's id, and onApiTaskFinishedEvent drops it because it no longer matches
+            // App.profileId - so without this reset the subtitle stays on "Syncing…" indefinitely.
+            // The new profile's own sync, if one starts, sets it again straight away.
+            state.subtitle = SyncSubtitle.Idle
             // set new drawer items for this profile
             setDrawerItems()
             // Rebuilds the rendered profile list for the new profile - which is both halves of what
