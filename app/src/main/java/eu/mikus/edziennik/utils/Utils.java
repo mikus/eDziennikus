@@ -12,7 +12,6 @@ import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
@@ -711,20 +710,70 @@ public class Utils {
     }
 
     private static File storageDir = null;
+
     public static File getStorageDir() {
+        // mkdirs() on every read, not only at init: the directory can be removed under us (an empty
+        // one is deletable by the updater's sweep) while storageDir stays memoized.
+        if (storageDir != null && !storageDir.isDirectory())
+            storageDir.mkdirs();
         return storageDir;
     }
 
     public static void initializeStorageDir(Context context) {
         if (storageDir != null)
             return;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            storageDir = context.getExternalFilesDir(null);
-        } else {
-            storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            storageDir = new File(storageDir, "Szkolny.eu");
-        }
+        // Private, so it is writable on every API level - the previous public-Downloads branch was
+        // unwritable from API 29 (scoped storage) and its mkdirs() failure was ignored. A
+        // *subdirectory*, because UpdateDownloaderService sweeps getExternalFilesDir(null) itself.
+        File external = context.getExternalFilesDir(null);
+        File parent = external != null ? external : context.getFilesDir();
+        storageDir = new File(parent, "attachments");
         storageDir.mkdirs();
+        migrateLooseAttachments(parent, storageDir);
+    }
+
+    /**
+     * Moves attachments downloaded before the store gained its own subdirectory, and re-points their
+     * sidecars.
+     *
+     * On API 33+ the old code stored them directly in getExternalFilesDir(null), so without this an
+     * upgrading Android 13+ user - the one platform where the feature currently works - would find
+     * every previously downloaded attachment reported as not-downloaded, and the files left orphaned
+     * forever (the update sweep only removes *.apk). Skips .apk so an in-flight update download is
+     * left alone.
+     *
+     * Moving a sidecar is NOT enough on its own: it stores the payload's *absolute path*
+     * (LibrusSandboxDownloadAttachment writes file.getAbsolutePath(); AttachmentsView.checkAttachment
+     * stats it back), so a moved sidecar still names the old location and isDownloaded stays false.
+     * The second pass rewrites them. Runs on every cold start, which is harmless - both passes are
+     * no-ops once the parent holds nothing but the APK.
+     */
+    private static void migrateLooseAttachments(File from, File to) {
+        File[] loose = from.listFiles();
+        if (loose == null)
+            return;
+        for (File f : loose) {
+            if (!f.isFile() || f.getName().toLowerCase(Locale.ROOT).endsWith(".apk"))
+                continue;
+            File moved = new File(to, f.getName());
+            if (!moved.exists() && !f.renameTo(moved))
+                d(TAG, "could not move " + f.getName() + " into the attachment store");
+        }
+        File[] settled = to.listFiles();
+        if (settled == null)
+            return;
+        for (File f : settled) {
+            if (!f.getName().startsWith("."))
+                continue;
+            try {
+                File named = new File(getStringFromFile(f));
+                File here = new File(to, named.getName());
+                if (!named.exists() && here.exists())
+                    writeStringToFile(f, here.getAbsolutePath());
+            } catch (Exception e) {
+                d(TAG, "could not re-point sidecar " + f.getName() + ": " + e);
+            }
+        }
     }
 
     public static void writeStringToFile(File file, String data) throws IOException {

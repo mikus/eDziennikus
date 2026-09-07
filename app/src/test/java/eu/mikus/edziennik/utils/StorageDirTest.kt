@@ -7,6 +7,7 @@ package eu.mikus.edziennik.utils
 import android.app.Application
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.junit.Before
@@ -68,5 +69,46 @@ class StorageDirTest {
         val ctx = RuntimeEnvironment.getApplication()
         Utils.initializeStorageDir(ctx)
         assertTrue(Utils.getStorageDir().isDirectory)
+    }
+
+    @Test
+    fun `attachments downloaded before the subdirectory existed are moved into it`() {
+        val ctx = RuntimeEnvironment.getApplication()
+        val parent = ctx.getExternalFilesDir(null)!!.apply { mkdirs() }
+        val oldPayload = File(parent, "homework.pdf").apply { writeText("x") }
+        val oldSidecar = File(parent, ".4_1_2928135043028").apply { writeText("homework.pdf") }
+        val apk = File(parent, "2026.05.0.apk").apply { writeText("x") }
+
+        Utils.initializeStorageDir(ctx)
+
+        val store = Utils.getStorageDir()
+        assertTrue(File(store, "homework.pdf").exists(), "the payload should have moved")
+        assertTrue(File(store, ".4_1_2928135043028").exists(), "the sidecar should have moved")
+        assertFalse(oldPayload.exists(), "the old copy should be gone, not duplicated")
+        assertFalse(oldSidecar.exists())
+        assertTrue(apk.exists(), "an in-flight update download must be left alone")
+    }
+
+    /**
+     * The assertion that would have caught the first version of the migration: it moved the sidecar
+     * but not its *contents*, which are the payload's absolute path - so isDownloaded stayed false
+     * and the upgrading user re-downloaded everything, the exact outcome the migration exists to
+     * prevent.
+     */
+    @Test
+    fun `a moved sidecar is re-pointed at the payload's new location`() {
+        val ctx = RuntimeEnvironment.getApplication()
+        val parent = ctx.getExternalFilesDir(null)!!.apply { mkdirs() }
+        val oldPayload = File(parent, "homework.pdf").apply { writeText("x") }
+        File(parent, ".4_1_2928135043028").writeText(oldPayload.absolutePath)
+
+        Utils.initializeStorageDir(ctx)
+
+        val store = Utils.getStorageDir()
+        val sidecar = File(store, ".4_1_2928135043028")
+        assertTrue(sidecar.exists(), "the sidecar should have moved")
+        val pointsAt = File(sidecar.readText())
+        assertEquals(File(store, "homework.pdf"), pointsAt, "the sidecar must name the new location")
+        assertTrue(pointsAt.exists(), "and that location must hold the payload")
     }
 }
