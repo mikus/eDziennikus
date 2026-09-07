@@ -28,6 +28,23 @@ class UpdateDownloaderService : IntentService(UpdateDownloaderService::class.jav
         private const val TAG = "UpdateDownloaderService"
         private var downloadId = 0L
         private var downloadFilename = ""
+
+        /**
+         * Deletes only previously downloaded APKs from [dir].
+         *
+         * Was an unfiltered sweep of every file in [dir], which also deleted every
+         * downloaded attachment and every `.{profileId}_{ownerId}_{id}` sidecar -
+         * `Utils.getStorageDir()` resolves inside this same directory. `File.delete()` does not
+         * remove a non-empty directory, so `attachments/` survived by luck; it does not survive being
+         * momentarily empty, hence the filter rather than reliance on that.
+         */
+        @JvmStatic
+        fun deleteStaleApks(dir: File) {
+            if (!dir.isDirectory) return
+            dir.listFiles()?.forEach {
+                if (it.isFile && it.name.endsWith(".apk", ignoreCase = true)) it.delete()
+            }
+        }
     }
 
     private fun tryUpdateWithGooglePlay(update: Update): Boolean {
@@ -101,12 +118,7 @@ class UpdateDownloaderService : IntentService(UpdateDownloaderService::class.jav
 
         app.getSystemService<NotificationManager>()?.cancel(app.notificationChannelsManager.updates.id)
 
-        val dir: File? = app.getExternalFilesDir(null)
-        if (dir?.isDirectory == true) {
-            dir.listFiles()?.forEach {
-                it.delete()
-            }
-        }
+        app.getExternalFilesDir(null)?.let { deleteStaleApks(it) }
 
         val uri = Uri.parse(update.downloadUrl)
         downloadFilename = "${update.versionName}.apk"
