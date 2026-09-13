@@ -7,6 +7,7 @@ package eu.mikus.edziennik.ui.home
 import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.ext.compareTo
+import eu.mikus.edziennik.ui.timetable.missingWeekStart
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.models.Week
@@ -34,15 +35,21 @@ object TimetableHomeBuilder {
                     !it.isCancelled
             }) && checkedDays < 7
         ) {
+            // A day with no rows is not an undownloaded week: rows exist only for dates the Librus
+            // response carried, so an omitted Tuesday looks identical to a missing sync. Breaking
+            // here reported "not downloaded" with real lessons two days later, and no amount of
+            // syncing could clear it.
             cursor.stepForward(0, 0, 1)
-            day = lessons.filter { it.displayDate == cursor }.dropWhile { it.isCancelled }
-            if (day.isEmpty()) break
             checkedDays++
+            day = lessons.filter { it.displayDate == cursor }.dropWhile { it.isCancelled }
         }
 
-        if (day.isEmpty() && checkedDays < 7) return TimetableHomeUiState.NoTimetable(cursor.weekStart.stringY_m_d)
+        // `checkedDays < 7` used to stand in for "the walk gave up early", which was only true while
+        // the break existed. Now the walk always runs its course, so ask the question directly.
         if (day.none { !it.isCancelled } || (day.size == 1 && day[0].type == Lesson.TYPE_NO_LESSONS))
-            return TimetableHomeUiState.NoLessons
+            return missingWeekStart(lessons, today)
+                ?.let { TimetableHomeUiState.NoTimetable(it) }
+                ?: TimetableHomeUiState.NoLessons
 
         val actual = day.filter { it.type != Lesson.TYPE_NO_LESSONS }
         val firstLesson = actual.first { !it.isCancelled }

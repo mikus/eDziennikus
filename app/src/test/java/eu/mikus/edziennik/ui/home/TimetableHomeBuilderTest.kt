@@ -101,4 +101,47 @@ class TimetableHomeBuilderTest {
         val c = TimetableHomeBuilder.build(listOf(c1, tmr), now = Time(7, 0, 0), today = today) as TimetableHomeUiState.Content
         assertEquals(tmr, c.firstLesson)
     }
+
+    @Test
+    fun `a gap day does not end the walk`() {
+        // The reported defect, as data: today Sunday, Mon-Wed missing from the Librus response
+        // entirely, Thursday carrying real lessons. Unfixed this returns NoTimetable("2026-09-14")
+        // because the walk stops at the first day with no rows. This is the only one of the three
+        // that reproduces the bug.
+        val sunday = Date(2026, 9, 13)
+        val thursday = lesson(date = Date(2026, 9, 17), start = Time(8, 0, 0), end = Time(8, 45, 0))
+        val c = TimetableHomeBuilder.build(listOf(thursday), now = Time(7, 0, 0), today = sunday)
+            as TimetableHomeUiState.Content
+        assertEquals(thursday, c.firstLesson)
+    }
+
+    @Test
+    fun `a gap after markers reports the week of the gap`() {
+        // Friday evening: today's lessons are over, the weekend carries NO_LESSONS markers, next week
+        // was never fetched. Pins the rule - NOT a reproducer: the unfixed code returns the same
+        // string here, because the day it breaks on is also the first gap. What this rejects is
+        // reporting today's week, or treating the weekend markers as proof the week is downloaded.
+        val friday = Date(2026, 6, 5)
+        val markers = listOf(
+            lesson(date = Date(2026, 6, 6), type = Lesson.TYPE_NO_LESSONS),
+            lesson(date = Date(2026, 6, 7), type = Lesson.TYPE_NO_LESSONS),
+        )
+        val past = lesson(date = friday, start = Time(8, 0, 0), end = Time(8, 45, 0))
+        val s = assertIs<TimetableHomeUiState.NoTimetable>(
+            TimetableHomeBuilder.build(listOf(past) + markers, now = Time(18, 0, 0), today = friday),
+        )
+        assertEquals("2026-06-08", s.weekStart)
+    }
+
+    @Test
+    fun `an empty window on a Sunday offers next week, not the one that just ended`() {
+        // Also a pin, not a reproducer. Rejects reporting today.weekStart, which on a Sunday is a
+        // week that ended today and whose sync cannot populate the card - a Sync button that never
+        // clears, which is the defect this phase exists to remove.
+        val sunday = Date(2026, 6, 7)
+        val s = assertIs<TimetableHomeUiState.NoTimetable>(
+            TimetableHomeBuilder.build(emptyList(), now = Time(7, 0, 0), today = sunday),
+        )
+        assertEquals("2026-06-08", s.weekStart)
+    }
 }
