@@ -714,18 +714,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                     UpdateAvailableDialog(this, app.config.update).show()
                     true
                 }
-                "userActionRequired" -> {
-                    val event = UserActionRequiredEvent(
-                        profileId = extras.getInt("profileId"),
-                        type = extras.getEnum<UserActionRequiredEvent.Type>("type") ?: return,
-                        params = extras.getBundle("params") ?: return,
-                        errorText = 0,
-                    )
-                    app.userActionManager.execute(this,
-                        event,
-                        UserActionManager.UserActionCallback())
-                    true
-                }
+                "userActionRequired" ->
+                    app.userActionManager.executePending(this, extras.getIntOrNull("profileId"))
                 "createManualEvent" -> {
                     val date = extras.getString("eventDate")
                         ?.let { Date.fromY_m_d(it) }

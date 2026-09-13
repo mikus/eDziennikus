@@ -8,6 +8,7 @@ import com.google.gson.JsonObject
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.config.utils.*
+import eu.mikus.edziennik.data.api.models.PendingUserAction
 import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.data.db.AppDb
 
@@ -30,6 +31,7 @@ class Config(db: AppDb) : BaseConfig(db) {
     var lastProfileId by config<Int>(0)
     var loginFinished by config<Boolean>(false)
     var privacyPolicyAccepted by config<Boolean>(false)
+    var pendingUserAction by config<PendingUserAction?>(null)
     var update by config<Update?>(null)
     var updatesChannel by config<String>("release")
 
