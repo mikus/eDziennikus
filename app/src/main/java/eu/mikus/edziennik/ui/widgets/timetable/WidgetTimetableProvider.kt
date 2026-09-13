@@ -38,6 +38,7 @@ import eu.mikus.edziennik.ext.pendingIntentFlag
 import eu.mikus.edziennik.ext.pendingIntentMutable
 import eu.mikus.edziennik.ext.putExtras
 import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.timetable.missingWeekStart
 import eu.mikus.edziennik.ui.widgets.LessonDialogActivity
 import eu.mikus.edziennik.ui.widgets.WidgetConfig
 import eu.mikus.edziennik.utils.models.Date
@@ -215,9 +216,9 @@ class WidgetTimetableProvider : AppWidgetProvider() {
             // search for lessons to display
             val timetableDate = Date.getToday()
             var checkedDays = 0
-            var lessons = lessonList.filter {
-                it.profileId == profile.id
-                        && it.displayDate == timetableDate
+            val profileLessons = lessonList.filter { it.profileId == profile.id }
+            var lessons = profileLessons.filter {
+                it.displayDate == timetableDate
                         /*&& it.displayEndTime > now*/
                         && !(it.isCancelled && ignoreCancelled)
             }
@@ -230,21 +231,18 @@ class WidgetTimetableProvider : AppWidgetProvider() {
                                 && !it.isCancelled
                     }) && checkedDays < 7) {
 
+                // Same defect as the Home card: a day with no rows is not an undownloaded week, so
+                // stopping here condemned the whole week with real lessons further along.
                 timetableDate.stepForward(0, 0, 1)
-                lessons = lessonList.filter {
-                    it.profileId == profile.id
-                            && it.displayDate == timetableDate
-                }
-
-                if (lessons.isEmpty())
-                    break
+                checkedDays++
+                lessons = profileLessons.filter { it.displayDate == timetableDate }
 
                 /*lessons = lessons.filterNot {
                     it.isCancelled && ignoreCancelled
                 }*/
-
-                checkedDays++
             }
+
+            val dayState = widgetDayState(lessons, missingWeekStart(profileLessons, today))
 
             // add a profile separator with its name
             if (unified) {
@@ -268,17 +266,17 @@ class WidgetTimetableProvider : AppWidgetProvider() {
                 if (lessons.isNotEmpty())
                     displayingDate = timetableDate
                 profileId = profile.id
-                if (lessons.isEmpty() && checkedDays < 7) {
+                if (dayState == WidgetDayState.NOT_DOWNLOADED) {
                     views.setViewVisibility(R.id.widgetTimetableListView, View.GONE)
                     views.setViewVisibility(R.id.widgetTimetableNoTimetable, View.VISIBLE)
                 }
-                else if (lessons.none { !it.isCancelled } || lessons.size == 1 && lessons[0].type == Lesson.TYPE_NO_LESSONS) {
+                else if (dayState == WidgetDayState.NO_LESSONS) {
                     views.setViewVisibility(R.id.widgetTimetableListView, View.GONE)
                     views.setViewVisibility(R.id.widgetTimetableNoLessons, View.VISIBLE)
                 }
             }
             else {
-                if (lessons.isEmpty() && checkedDays < 7) {
+                if (dayState == WidgetDayState.NOT_DOWNLOADED) {
                     val separator = ItemWidgetTimetableModel()
                     separator.profileId = profile.id
                     separator.bigStyle = widgetConfig.bigStyle
@@ -286,7 +284,7 @@ class WidgetTimetableProvider : AppWidgetProvider() {
                     separator.isNoTimetableItem = true
                     models.add(separator)
                 }
-                if (lessons.none { !it.isCancelled } || lessons.size == 1 && lessons[0].type == Lesson.TYPE_NO_LESSONS) {
+                else if (dayState == WidgetDayState.NO_LESSONS) {
                     val separator = ItemWidgetTimetableModel()
                     separator.profileId = profile.id
                     separator.bigStyle = widgetConfig.bigStyle
