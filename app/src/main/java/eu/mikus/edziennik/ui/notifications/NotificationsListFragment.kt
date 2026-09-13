@@ -70,7 +70,7 @@ class NotificationsListFragment : Fragment() {
     }
 
     private fun onNotificationClick(notification: Notification) {
-        val intent = Intent("android.intent.action.MAIN")
+        val intent = Intent("android.intent.action.MAIN").setPackage(app.packageName)
         notification.fillIntent(intent)
         if (notification.profileId != null && notification.profileId != -1 && notification.profileId != app.profile.id && context is Activity) {
             Toast.makeText(app, app.getString(R.string.toast_changing_profile), Toast.LENGTH_LONG).show()

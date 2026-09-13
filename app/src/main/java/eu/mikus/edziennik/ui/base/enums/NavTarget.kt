@@ -225,5 +225,22 @@ enum class NavTarget(
         id = 504,
         fragmentClass = MessagesComposeFragment::class.java,
         nameRes = R.string.menu_message_compose,
-    )
+    );
+
+    /**
+     * Whether dev mode permits *reaching* this target. The `featureType` axis is separate - see
+     * `ShellPolicy.hasUIFeature`, which sits right below the dev-mode check at `ShellPolicy.kt:269`.
+     *
+     * The route has to refuse a dev-only target even though the drawer already hides it
+     * (`ShellPolicy.kt:267`): LAB renders the stored credentials as an editable tree and offers
+     * one-tap destructive DB actions, and DEBUG runs arbitrary commands
+     * (`DebugFragment.java:156`).
+     *
+     * The three `asNavTargetOrNull` decoders - the notifications widget, the v3 config migration and
+     * the Room converter - must keep resolving dev targets, or a dev-mode user's saved state stops
+     * round-tripping, so they do not call this. The drawer, sheet and mini-menu filters still spell
+     * the rule inline (`ShellPolicy.kt:267`, `MainActivity.kt:426`, `MiniMenuConfigDialog.kt:40`)
+     * and should converge here.
+     */
+    fun isAvailable(devMode: Boolean) = !devModeOnly || devMode
 }

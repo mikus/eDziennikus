@@ -70,7 +70,7 @@ class ProfileArchiver(val app: App, val profile: Profile) {
             val intent = Intent(
                     Intent.ACTION_MAIN,
                     "profileId" to newId
-            )
+            ).setPackage(app.packageName)
             app.sendBroadcast(intent)
         }
     }

@@ -67,7 +67,7 @@ class TeachersListFragment : Fragment() {
             Intent.ACTION_MAIN,
             "fragmentId" to NavTarget.MESSAGE_COMPOSE,
             "messageRecipientId" to teacher.id,
-        )
+        ).setPackage(activity.packageName)
         activity.sendBroadcast(intent)
     }
 

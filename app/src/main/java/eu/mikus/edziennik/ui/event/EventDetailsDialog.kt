@@ -136,7 +136,8 @@ class EventDetailsDialog(
         val intent = when {
             activity is MainActivity && activity.navTarget == NavTarget.TIMETABLE ->
                 Intent(TimetableFragment.ACTION_SCROLL_TO_DATE)
-            activity is MainActivity -> Intent("android.intent.action.MAIN")
+            activity is MainActivity ->
+                Intent("android.intent.action.MAIN").setPackage(activity.packageName)
             else -> Intent(activity, MainActivity::class.java)
         }
         intent.putExtras(

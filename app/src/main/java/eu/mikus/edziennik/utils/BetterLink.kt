@@ -95,11 +95,15 @@ object BetterLink {
             4,
             "Utwórz wydarzenie"
         ).setOnMenuItemClickListener {
+            // An implicit action reaches every app with a matching receiver, so `setPackage` is
+            // what keeps these extras inside the app - the receiver's own RECEIVER_NOT_EXPORTED
+            // (MainActivity.onResume) governs who may send TO it, not where this goes. Both are
+            // needed; do not drop either.
             val intent = Intent(
                 Intent.ACTION_MAIN,
                 "action" to "createManualEvent",
                 "eventDate" to date.stringY_m_d
-            )
+            ).setPackage(context.packageName)
             context.sendBroadcast(intent)
             true
         }
@@ -119,7 +123,7 @@ object BetterLink {
                 Intent.ACTION_MAIN,
                 "fragmentId" to NavTarget.MESSAGE_COMPOSE,
                 "messageRecipientId" to teacherId
-            )
+            ).setPackage(context.packageName)
             context.sendBroadcast(intent)
             true
         }

@@ -704,7 +704,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         d(TAG, "}")
 
         val intentProfileId = extras.getIntOrNull("profileId").takePositive()
-        var intentNavTarget = extras.getIntOrNull("fragmentId").asNavTargetOrNull()
+        var intentNavTarget = extras.getIntOrNull("fragmentId")
+            .asNavTargetOrNull()
+            ?.takeIf { it.isAvailable(App.devMode) }
 
         if (extras?.containsKey("action") == true) {
             val handled = when (extras.getString("action")) {
@@ -831,7 +833,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             this,
             intentReceiver,
             filter,
-            ContextCompat.RECEIVER_EXPORTED,
+            ContextCompat.RECEIVER_NOT_EXPORTED,
         )
         EventBus.getDefault().register(this)
         super.onResume()
