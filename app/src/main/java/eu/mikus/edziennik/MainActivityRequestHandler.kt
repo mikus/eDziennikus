@@ -138,7 +138,11 @@ class MainActivityRequestHandler(val activity: MainActivity) {
                 if (!app.config.loginFinished)
                     activity.finish()
                 else {
-                    activity.handleIntent(data?.extras)
+                    // Trusted: this is onActivityResult for an explicit-component LoginActivity
+                    // the app itself started, so no third party can deliver it. Passing it
+                    // explicitly rather than relying on the result carrying no `action` extra,
+                    // which is safety by accident.
+                    activity.handleIntent(data?.extras, trustedOrigin = true)
                 }
             }
             REQUEST_FILE_HEADER_BACKGROUND -> {

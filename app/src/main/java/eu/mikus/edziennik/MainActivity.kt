@@ -692,11 +692,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
          |_____|_| |_|\__\___|_| |_|\__|__*/
     private val intentReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            handleIntent(intent?.extras)
+            handleIntent(intent?.extras, trustedOrigin = true)
         }
     }
 
-    fun handleIntent(extras: Bundle?) {
+    fun handleIntent(extras: Bundle?, trustedOrigin: Boolean = false) {
         d(TAG, "handleIntent() {")
         extras?.keySet()?.forEach { key ->
             d(TAG, "    \"$key\": " + extras.get(key))
@@ -709,7 +709,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             ?.takeIf { it.isAvailable(App.devMode) }
 
         if (extras?.containsKey("action") == true) {
-            val handled = when (extras.getString("action")) {
+            val action = extras.getString("action")
+            val handled = if (!trustedOrigin && !actionAllowedFromLaunch(action)) {
+                // Not silent: a refusal falls through to the ordinary navigation below, so without
+                // this the symptom reads as "the notification opened the wrong screen" rather than
+                // as access control. Adding an arm to the `when` below means deciding here too.
+                d(TAG, "Refused \"$action\" from an untrusted origin - see IntentPolicy.kt")
+                false
+            } else when (action) {
                 "updateRequest" -> {
                     UpdateAvailableDialog(this, app.config.update).show()
                     true
