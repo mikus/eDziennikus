@@ -5,9 +5,11 @@
 package eu.mikus.edziennik.data.api.edziennik.librus.data.messages
 
 import org.greenrobot.eventbus.EventBus
+import eu.mikus.edziennik.data.api.ERROR_MESSAGE_NOT_SENT_SERVER_REFUSED
 import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusMessages
 import eu.mikus.edziennik.data.api.events.MessageSentEvent
+import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.db.entity.Message
 import eu.mikus.edziennik.data.db.entity.Teacher
 import eu.mikus.edziennik.ext.base64Encode
@@ -41,8 +43,20 @@ class LibrusMessagesSendMessage(override val data: DataLibrus,
             val id = response.getLong("data")
 
             if (response.getString("status") != "ok" || id == null) {
-                // val message = response.getString("message")
-                // TODO error
+                // Not a bare `return@messagesGetJson`: neither an error nor `onSuccess()` ran, so no
+                // EdziennikCallback fired and ApiService never cleared the task - the send hung with
+                // the notification, the spinner and the subtitle stuck, and the dataSync foreground
+                // service never stopped. Code 11, not ERROR_MESSAGE_NOT_SENT: that one's reason
+                // string says the message was sent but not found in the sent list, which is what
+                // MessagesComposeFragment reports. Here the send was never confirmed - a non-`ok`
+                // status means it was refused, and an unreadable `data` id means a response we
+                // cannot interpret either way. Attaching the response is a devMode breadcrumb for
+                // ApiError.toString(); nothing renders it to the user.
+                //
+                // Deliberately no `onSuccess()` alongside it, unlike some siblings here: that would
+                // call completed() after clearTask() had already reset taskProfileId, posting a
+                // second terminal event against a stale profile.
+                data.error(ApiError(TAG, ERROR_MESSAGE_NOT_SENT_SERVER_REFUSED).withApiResponse(json))
                 return@messagesGetJson
             }
 

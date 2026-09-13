@@ -35,6 +35,7 @@ const val ERROR_APP_CRASH                                   = 1
 const val ERROR_EXCEPTION                                   = 2
 const val ERROR_API_EXCEPTION                               = 3
 const val ERROR_MESSAGE_NOT_SENT                            = 10
+const val ERROR_MESSAGE_NOT_SENT_SERVER_REFUSED             = 11
 
 const val ERROR_REQUEST_FAILURE                             = 50
 const val ERROR_REQUEST_HTTP_400                            = 51
