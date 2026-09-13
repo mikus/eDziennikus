@@ -68,7 +68,6 @@ import eu.mikus.edziennik.ui.base.nav.decideNavigation
 import eu.mikus.edziennik.ui.compose.setAppThemeContent
 import eu.mikus.edziennik.ui.dialogs.ChangelogDialog
 import eu.mikus.edziennik.ui.dialogs.settings.ProfileConfigDialog
-import eu.mikus.edziennik.ui.dialogs.sync.ServerMessageDialog
 import eu.mikus.edziennik.ui.dialogs.sync.SyncViewListDialog
 import eu.mikus.edziennik.ui.dialogs.sync.UpdateAvailableDialog
 import eu.mikus.edziennik.ui.dialogs.sync.UpdateProgressDialog
@@ -713,14 +712,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             val handled = when (extras.getString("action")) {
                 "updateRequest" -> {
                     UpdateAvailableDialog(this, app.config.update).show()
-                    true
-                }
-                "serverMessage" -> {
-                    ServerMessageDialog(
-                        this,
-                        extras.getString("serverMessageTitle") ?: getString(R.string.app_name),
-                        extras.getString("serverMessageText") ?: ""
-                    ).show()
                     true
                 }
                 "userActionRequired" -> {
