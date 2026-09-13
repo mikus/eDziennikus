@@ -695,4 +695,45 @@ class ShellPolicyTest {
         assertEquals(SyncSubtitle.Done, nextSubtitle(syncing, SyncSignal.Failed, activeProfileId = 3))
         assertEquals(SyncSubtitle.Done, nextSubtitle(syncing, SyncSignal.Failed, activeProfileId = 99))
     }
+
+    @Test
+    fun `a drained queue clears a sync nothing else can end`() {
+        // Three cancels on the sync notification: checkIfTaskFrozen fires on taskCancelTries >= 3
+        // and calls allCompleted(), which posts AllFinished and neither Finished nor Error.
+        var subtitle: SyncSubtitle = SyncSubtitle.Idle
+        subtitle = nextSubtitle(subtitle, SyncSignal.Started(profileId = 3), activeProfileId = 3)
+        subtitle = nextSubtitle(
+            subtitle,
+            SyncSignal.Progress(profileId = 3, progress = 47f, text = null),
+            activeProfileId = 3,
+        )
+        assertEquals(SyncSubtitle.Syncing(progress = 47f, text = null), subtitle)
+        subtitle = nextSubtitle(subtitle, SyncSignal.AllFinished, activeProfileId = 3)
+        assertEquals(SyncSubtitle.Idle, subtitle)
+        // Names no profile, so it must clear whatever id is active - the same property
+        // `a failure ends the subtitle whatever profile it was for` pins for Failed. Without this a
+        // regression that profile-gated the arm would pass every other assertion here.
+        val syncing = SyncSubtitle.Syncing(progress = 47f, text = null)
+        assertEquals(SyncSubtitle.Idle, nextSubtitle(syncing, SyncSignal.AllFinished, activeProfileId = 99))
+    }
+
+    @Test
+    fun `a drained queue does not clobber Gotowe`() {
+        // The healthy sync also drains, one trailing SzkolnyTask later, so an unguarded reset would
+        // kill "Gotowe" inside AppTopBar's 2 s window every single time. This is the anti-vacuity
+        // leg and the only test the plausible wrong implementation fails.
+        assertEquals(
+            SyncSubtitle.Done,
+            nextSubtitle(SyncSubtitle.Done, SyncSignal.AllFinished, activeProfileId = 3),
+        )
+    }
+
+    @Test
+    fun `a drained queue leaves an idle subtitle idle`() {
+        // Documents the no-op case. Carries no mutation of its own - the first test subsumes it.
+        assertEquals(
+            SyncSubtitle.Idle,
+            nextSubtitle(SyncSubtitle.Idle, SyncSignal.AllFinished, activeProfileId = 3),
+        )
+    }
 }

@@ -633,6 +633,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     fun onApiTaskAllFinishedEvent(event: ApiTaskAllFinishedEvent) {
         EventBus.getDefault().removeStickyEvent(event)
         swipeRefreshLayout?.isRefreshing = false
+        state.subtitle = nextSubtitle(state.subtitle, SyncSignal.AllFinished, App.profileId)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN, sticky = true)

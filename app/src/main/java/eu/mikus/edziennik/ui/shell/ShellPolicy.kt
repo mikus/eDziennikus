@@ -116,6 +116,24 @@ sealed interface SyncSignal {
     /** A failed sync ends the subtitle exactly as a finished one does, whatever profile it was for. */
     data object Failed : SyncSignal
     data object ProfileChanged : SyncSignal
+
+    /**
+     * The task queue drained. Like [Failed] and [ProfileChanged], and unlike the three per-profile
+     * signals, this names no profile - `ApiTaskAllFinishedEvent` carries none. That is what lets it
+     * cover every route reaching `ApiService.allCompleted()` rather than being a fourth special case:
+     * `Syncing` is only ever set by the *active* profile's own [Started]/[Progress], so an empty
+     * queue makes any `Syncing` stale by definition. `SyncStatus.onAllFinished` already treats this
+     * event as terminal for "a sync is in progress".
+     *
+     * It is not a catch-all for *every* way a sync can end. Two routes post no terminal event at all,
+     * so no arm here can see them: one or two `TaskCancelRequest`s against a task hung inside an HTTP
+     * call (`checkIfTaskFrozen` is only re-armed by `runTask`, so below 3 tries and 30 s nothing
+     * fires), and `ApiService.onDestroy`. The refresh spinner and `SyncStatus.isRefreshing` hang on
+     * exactly those two as well, which is the argument for fixing them together or not at all.
+     *
+     * Not to be confused with [Finished], which is one task ending; this is the whole queue.
+     */
+    data object AllFinished : SyncSignal
 }
 
 /**
@@ -143,6 +161,14 @@ fun nextSubtitle(current: SyncSubtitle, signal: SyncSignal, activeProfileId: Int
         SyncSignal.Failed -> SyncSubtitle.Done
 
         SyncSignal.ProfileChanged -> SyncSubtitle.Idle
+
+        // Only a *stale* sync ends here. On a healthy sync `allCompleted()` still runs after
+        // `Finished` set `Done` - `runTask()` first executes the trailing `SzkolnyTask` (profile -1,
+        // local work, tens of ms), whose own signals are dropped as non-active - so clearing
+        // unconditionally would destroy "Gotowe" inside `AppTopBar.SyncDoneTimeoutMs`. The guard also
+        // makes the arm order-independent, which matters when EventBus redelivers the stickies on
+        // `register()` after MainActivity was paused through the sync.
+        SyncSignal.AllFinished -> if (current is SyncSubtitle.Syncing) SyncSubtitle.Idle else current
     }
 
 /**
