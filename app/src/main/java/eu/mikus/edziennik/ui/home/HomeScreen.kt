@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -96,7 +97,18 @@ fun HomeScreen(
         onReorder(from.key as Int, to.key as Int)
     }
 
-    LazyColumn(state = listState, modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        // The list sits between the top app bar and the bottom bar, and without this the first and
+        // last cards butt straight into them - the last one reads as clipped by the bar rather than
+        // as the end of a list. The value matches `verticalArrangement` below, NOT the cards' 8.dp
+        // horizontal inset: the eye reads the gap above the first card as the same rhythm as the gap
+        // between cards, so 8.dp there looked like a double gap. Measured at densityDpi 420: every
+        // gap is now 11 px.
+        contentPadding = PaddingValues(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         items(content.cards, key = { it.cardId }) { card ->
             ReorderableItem(reorderState, key = card.cardId) { _ ->
                 val draggable = !card.pinned && !content.locked
