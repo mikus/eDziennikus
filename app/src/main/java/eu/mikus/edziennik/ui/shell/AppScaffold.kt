@@ -11,27 +11,39 @@ import android.view.View
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
-import eu.mikus.edziennik.ui.base.AppSnackbarHost
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.compat.getColorFromAttr
+import eu.mikus.edziennik.ui.base.AppSnackbarHost
 import eu.mikus.edziennik.utils.SwipeRefreshLayoutNoTouch
 import kotlinx.coroutines.launch
 
@@ -158,6 +170,8 @@ fun AppScaffold(
     onSheetDismissed: () -> Unit,
     onContainerReady: () -> Unit,
     onRefreshLayoutReady: (SwipeRefreshLayoutNoTouch) -> Unit,
+    versionBadge: String?,
+    versionBadgeColor: Int,
 ) {
     val configuration = LocalConfiguration.current
     val mode = drawerMode(
@@ -234,6 +248,10 @@ fun AppScaffold(
                     )
             },
         ) {
+            // A Box, so the version badge can overlay the shell. It belongs INSIDE
+            // `ModalNavigationDrawer`'s content: that is the subtree the drawer's scrim and panel
+            // cover, which is the whole point - see [VersionBadge].
+            Box(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxSize()) {
                 if (mode == DrawerMode.Permanent)
                     AppDrawer(
@@ -303,6 +321,10 @@ fun AppScaffold(
                     }
                 }
             }
+
+            if (versionBadge != null)
+                VersionBadge(versionBadge, versionBadgeColor)
+            }
         }
 
 
@@ -337,6 +359,55 @@ fun AppScaffold(
  * `MainActivity.kt:328-332`; it discards every touch event it is not given explicitly, so there is no
  * gesture and no `OnRefreshListener` to port.
  */
+/**
+ * The debug/nightly version badge, ported off the one `View` that used to live outside the
+ * `ComposeView`.
+ *
+ * It was a `TextView` declared AFTER the `ComposeView` in `activity_szkolny.xml`, and a `FrameLayout`
+ * paints children in declaration order - so it drew on top of everything Compose rendered. The drawer
+ * panel never reached it (panel left, badge `bottom|end`), but both the modal drawer and the bottom
+ * sheet draw a full-screen scrim, and the badge floated over that: the one thing still lit while the
+ * rest of the app was dimmed. Hiding it whenever an overlay opened was tried first and was wrong in
+ * the other direction - it vanished rather than being covered.
+ *
+ * Rendering it here instead puts it in the subtree the scrim and panel cover, so it dims and occludes
+ * like any other content, with no visibility rule to maintain.
+ *
+ * Styling is a literal port of the old view (`bg_rounded_4dp` at 4 dp, 4 dp padding, 12 sp bold,
+ * all-caps, centred, 48 dp horizontal and 8 dp vertical margins). The ink reads
+ * `?android:textColorPrimary` through the theme exactly as an unstyled `TextView` did, which is why
+ * it is white on dark themes and near-black on light ones - a fixed colour would break one or the
+ * other. The navigation-bar inset is applied here rather than by a `rootFrame` insets listener,
+ * which is what that listener existed for.
+ */
+@Composable
+private fun BoxScope.VersionBadge(text: String, containerColor: Int) {
+    val context = LocalContext.current
+    val ink = remember(context) { Color(getColorFromAttr(context, android.R.attr.textColorPrimary)) }
+    Text(
+        text = text.uppercase(),
+        color = ink,
+        fontSize = 12.sp,
+        // Explicit, because Compose's default line height for a 12 sp Text is far looser than a
+        // TextView's: the two-line badge measured 148 px tall against the old view's 103 px. 15 sp
+        // restores it to ~100 px.
+        lineHeight = 15.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(horizontal = 48.dp, vertical = 8.dp)
+            // `compositeOver(White)`, not the raw colour. `versionBadgeColor` is 63%-alpha
+            // (`0xa0ffa000` for debug builds), and the old view tinted `bg_rounded_4dp`, whose solid
+            // is opaque `#ffffff` - so the tint landed on white and the badge came out opaque
+            // `#ffc35f`. Passing the colour straight to `background()` composites it over whatever is
+            // behind instead, which on the dark bar renders `#b57915`. Measured both.
+            .background(Color(containerColor).compositeOver(Color.White), RoundedCornerShape(4.dp))
+            .padding(4.dp),
+    )
+}
+
 @Composable
 private fun FragmentContainer(
     onContainerReady: () -> Unit,

@@ -7,8 +7,9 @@
     <!--
       ~ Reduced to app-owned views only: the shell (drawer, toolbar, bottom bar, FAB, sheet, the
       ~ refresh indicator and the @id/fragment container) now lives inside the ComposeView.
-      ~ rootFrame and nightlyText survive because the app background (setAppBackground), the version
-      ~ badge and the seasonal snowfall/eggfall overlays hang off them and keep working unchanged.
+      ~ rootFrame survives because the app background (setAppBackground) and the seasonal
+      ~ snowfall/eggfall overlays hang off it. The version badge moved into the ComposeView, so
+      ~ that the drawer scrim and the bottom sheet cover it like any other content.
       -->
     <FrameLayout
         android:id="@+id/rootFrame"
@@ -20,22 +21,6 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <TextView
-            android:id="@+id/nightlyText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginHorizontal="48dp"
-            android:layout_marginVertical="8dp"
-            android:background="@drawable/bg_rounded_4dp"
-            android:fontFamily="sans-serif-light"
-            android:gravity="center"
-            android:padding="4dp"
-            android:textAllCaps="true"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            tools:backgroundTint="#a0ff0000"
-            tools:text="Nightly\n20200503" />
-    </FrameLayout>
+</FrameLayout>
 
 </layout>

@@ -14,7 +14,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
@@ -29,10 +28,6 @@ import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
 import com.danimahardhika.cafebar.CafeBar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jetradarmobile.snowfall.SnowfallView
@@ -40,11 +35,6 @@ import com.mikepenz.iconics.IconicsDrawable
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import com.mikepenz.iconics.utils.colorInt
 import com.mikepenz.iconics.utils.sizeDp
-import kotlinx.coroutines.*
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
-import pl.droidsonroids.gif.GifDrawable
 import eu.mikus.edziennik.compat.getColorFromAttr
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.*
@@ -85,6 +75,12 @@ import eu.mikus.edziennik.utils.models.UnreadCounter
 import java.io.IOException
 import java.util.*
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.launch
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
+import pl.droidsonroids.gif.GifDrawable
 
 class MainActivity : AppCompatActivity(), CoroutineScope {
     companion object {
@@ -99,8 +95,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         get() = job + Dispatchers.Main
 
     // Private since N2.4: nothing outside this file may reach the app shell, so a shell swap is a
-    // shell-only diff. `b` is now the reduced layout of §5 - rootFrame, the ComposeView and
-    // nightlyText - and holds no chrome at all; the chrome reads [state].
+    // shell-only diff. `b` is now the reduced layout of §5 - rootFrame and the ComposeView -
+    // and holds no chrome at all; the chrome reads [state].
     private val b: ActivitySzkolnyBinding by lazy { ActivitySzkolnyBinding.inflate(layoutInflater) }
 
     /** Every piece of chrome state the M3 shell renders. The public seam methods write these. */
@@ -208,31 +204,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         setContentView(b.root)
 
-        // Only the nightlyText leg survives: it is the one view left outside the ComposeView. The
-        // Scaffold owns its own insets, so padding rootFrame as well would double-pad the shell.
-        //
-        // No longer gated on API 35: that gate matched a window which only targetSdk 35 forced
-        // edge-to-edge, and `enableEdgeToEdge` above now does it on every API - so below 35 the
-        // badge would sit under the navigation bar.
-        ViewCompat.setOnApplyWindowInsetsListener(b.rootFrame) { _: View, insets: WindowInsetsCompat ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            b.nightlyText.updateLayoutParams<FrameLayout.LayoutParams> {
-                this.bottomMargin = 8.dp + bars.bottom
-            }
-            insets
-        }
-
         // The ONE SnackbarHostState the Scaffold renders (§7.11). Handing either class its own
         // compiles fine and leaves that host permanently invisible.
         mainSnackbar.setHostState(state.snackbarHostState)
         errorSnackbar.setHostState(state.snackbarHostState)
-
-        val versionBadge = app.buildManager.versionBadge
-        b.nightlyText.isVisible = versionBadge != null
-        b.nightlyText.text = versionBadge
-        if (versionBadge != null) {
-            b.nightlyText.background.setTintColor(app.buildManager.versionBadgeColor)
-        }
 
         navLoading = true
 
@@ -278,6 +253,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 },
                 onContainerReady = ::onContainerReady,
                 onRefreshLayoutReady = { swipeRefreshLayout = it },
+                versionBadge = app.buildManager.versionBadge,
+                versionBadgeColor = app.buildManager.versionBadgeColor,
             )
 
             // Registered AFTER AppScaffold on purpose. ModalNavigationDrawer installs its own
