@@ -46,6 +46,9 @@ import eu.mikus.edziennik.ui.compose.IconicsIcon
 import eu.mikus.edziennik.utils.models.Time
 import kotlinx.coroutines.delay
 
+/** Width of the lesson-time column in characters: "10:10". Single-digit hours are figure-padded. */
+private const val TimeColumnChars = 5
+
 @Composable
 fun TimetableHomeCard(
     card: HomeCardUi.Timetable,
@@ -187,8 +190,21 @@ private fun TimetableContent(
         Text(stringResource(R.string.home_timetable_later_no_lessons), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else state.nextLessons.forEach { next ->
         Row(verticalAlignment = Alignment.CenterVertically) {
-            next.startHM?.let { hm ->
-                Text(hm, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            next.startHM?.takeIf { it.isNotBlank() }?.let { hm ->
+                // Padded with U+2007 FIGURE SPACE, which is defined as exactly one digit wide, so a
+                // single-digit hour occupies the same width as a two-digit one: the colons line up
+                // and every row's minutes end the same distance from the text. `getStringHM()`
+                // zero-pads minutes but not hours (`Time.java:177-183` - "8:20", "10:10"), so the
+                // hour is the only column that varies and one pad character covers it.
+                //
+                // A fixed-width column with `TextAlign.End` would do the same at the default font
+                // size and come apart under a large accessibility font, where "10:10" outgrows the
+                // box. The figure space scales with the text because it *is* text.
+                Text(
+                    hm.padStart(TimeColumnChars, '\u2007'),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(Modifier.size(8.dp))
             }
             Text(lessonSubject(next.lesson), style = MaterialTheme.typography.bodyMedium)
