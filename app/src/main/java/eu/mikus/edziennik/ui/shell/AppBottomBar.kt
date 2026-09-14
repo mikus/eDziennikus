@@ -25,15 +25,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.core.content.ContextCompat
 import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.compat.blendColors
-import eu.mikus.edziennik.compat.getColorFromAttr
 import eu.mikus.edziennik.ui.compose.IconicsIcon
-import eu.mikus.edziennik.utils.Themes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
@@ -51,17 +46,6 @@ import kotlinx.coroutines.flow.first
  */
 private val FabContainerColor = Color(0xFF4CAF50)
 private val FabContentColor = Color(0xFFFFFFFF)
-
-/**
- * The **dark** bar's ink, and only the dark bar's since Phase 38.
- *
- * `#FFFFFF` on the dark arm's near-black blend, kept because the phase ratified byte-identical dark
- * bars - it is white on a surface blend, not white on primary. The light arm takes `onSurface` from
- * the scheme instead (see [lightBarColors]); reading `?attr/colorOnPrimary` back was never an option
- * for either arm, because Material's own dark default for it is `#000000` and the app sets it to
- * `#ffffff` in only two places (`styles.xml:150`, `:226`).
- */
-private val DarkBarContentColor = Color(0xFFFFFFFF)
 
 /**
  * navlib's `BadgeDrawable` hardcodes both: `mBadgePaint.setColor(-49920)` = `#FF3D00` and
@@ -137,65 +121,37 @@ fun AppBottomBar(
  *
  * They are produced together because [BottomAppBar] takes them as two independent arguments, and
  * moving only the container compiles, passes lint, passes every existing test and leaves
- * `theme-attrs-golden.txt` byte-identical while shipping white icons at 1.11-1.53:1 on a light
- * container. Grouping them is a hint, not a gate - nothing stops a caller naming
- * [DarkBarContentColor] on the light path - so the gate is `AppBottomBarColorsTest`, not the compiler.
- * Both constructions below use named arguments, since the two fields are the same type and a
- * positional transposition inside [BarColors] would otherwise compile; the call site carries the
- * same hazard and only the emulator pixel catches it.
+ * `theme-attrs-golden.txt` byte-identical while shipping ink the user cannot see. Grouping them is a
+ * hint, not a gate, so the gate is `AppBottomBarColorsTest`. Both fields are the same type, so the
+ * constructions below use named arguments - a positional transposition would otherwise compile.
  */
 internal data class BarColors(val container: Color, val content: Color)
 
 /**
- * The light arm, as a pure function of the scheme so `AppBottomBarColorsTest` can assert it.
+ * The bar's colours, as a pure function of the scheme so `AppBottomBarColorsTest` can assert them.
  * [barColors] is its only caller.
  *
  * `surfaceContainer` is M3 1.4.0's own token for this component
  * (`BottomAppBarTokens.ContainerColor`), and since Phase 34 the scheme tracks the selected XML theme,
- * so unlike the `?attr/colorPrimary` this replaced it actually moves with the palette: that attr is
- * declared only at `styles.xml:136` and `:204` and no descendant theme overrides it, so all 7 light
- * themes rendered the identical `#2196f3`.
+ * so the bar moves with the palette on all 18.
  *
- * The ink is passed explicitly rather than left to `contentColorFor`: that would be correct here
- * (`surfaceContainer` -> `onSurface`) and **silently wrong** on the dark arm, whose container is a
- * derived blend rather than a scheme role, so `contentColorFor` returns `Color.Unspecified` and
- * `Surface` falls through to the ambient `LocalContentColor` with no error.
+ * **All 18, since the dark arm was retired.** Phase 38 moved only the 7 light themes and left the
+ * other 11 on navlib's `blend(?colorSurface, colorSurface_4dp)`. That blend rendered `#454545` on the
+ * Dark theme while Home cards render on `surfaceContainerHighest` `#454646` - **1.0125:1**, so the
+ * card's bottom edge was invisible and the bar read as though it were covering content. Reported from
+ * the field. On `surfaceContainer` `#383939` the same pair measures 1.2235:1. Retiring the branch also
+ * fixes theme 13 ("Red"), which is flagged `isDark` but renders light: it took the dark arm and got
+ * white ink on a pale red bar at 2.76:1, and now takes `onSurface` like everything else.
+ *
+ * The ink is passed explicitly rather than left to `contentColorFor`: it would be correct for a scheme
+ * role, but returns `Color.Unspecified` for anything derived, and `Surface` then falls through to the
+ * ambient `LocalContentColor` with no error. Passing it keeps that failure mode unreachable.
  */
-internal fun lightBarColors(scheme: ColorScheme) =
+internal fun barColorsFor(scheme: ColorScheme) =
     BarColors(container = scheme.surfaceContainer, content = scheme.onSurface)
 
-/**
- * Light themes take the scheme (see [lightBarColors]); dark themes keep the blend they have had
- * since navlib - `?attr/colorSurface` lifted by `R.color.colorSurface_4dp` (`colors.xml:80`), which
- * *is* the 4 dp elevation overlay, so M3's `tonalElevation` has nothing left to add and would be
- * inert against an explicit container colour anyway.
- *
- * The dark half is unchanged on purpose: this phase ratified byte-identical dark bars, and they are
- * the control for its before/after capture. One consequence worth knowing - theme id 13 ("Red") is
- * flagged `isDark = true` but renders light, so it takes this arm and keeps white-on-`#FF6C6C` at
- * 2.76:1. That is pre-existing, not introduced here, and fixing it means moving this arm.
- */
 @Composable
-private fun barColors(): BarColors {
-    if (!Themes.isDark) return lightBarColors(MaterialTheme.colorScheme)
-
-    val context = LocalContext.current
-    // Resolved once per context: a theme change goes through the Activity-recreate path (see
-    // `ui/compose/theme/Theme.kt`'s `appColorScheme` KDoc), so a new theme always brings a new one.
-    // The light arm needs neither - `ColorScheme` is `@Immutable` with all-`val` parameters, so a
-    // `remember` keyed on it could not observe a change, and it reads no `Context` at all.
-    return remember(context) {
-        BarColors(
-            container = Color(
-                blendColors(
-                    getColorFromAttr(context, R.attr.colorSurface),
-                    ContextCompat.getColor(context, R.color.colorSurface_4dp),
-                )
-            ),
-            content = DarkBarContentColor,
-        )
-    }
-}
+private fun barColors(): BarColors = barColorsFor(MaterialTheme.colorScheme)
 
 /**
  * `gainAttentionFAB()`, moved off the view. The original is three uncancelled `postDelayed` calls on

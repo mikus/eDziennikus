@@ -4,8 +4,10 @@
 
 package eu.mikus.edziennik.ui.shell
 
+import eu.mikus.edziennik.ui.compose.theme.contrastRatio
 import eu.mikus.edziennik.ui.compose.theme.schemeFor
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
@@ -22,16 +24,29 @@ import org.junit.jupiter.api.Test
  */
 class AppBottomBarColorsTest {
 
-    /** `Themes.kt`: the 7 entries with `isDark = false`. */
-    private val lightThemeIds = listOf(0, 5, 8, 11, 14, 16, 17)
-
     @Test
-    fun `the light bar takes its container and ink from the scheme`() {
-        for (id in lightThemeIds) {
+    fun `every theme takes the bar's container and ink from the scheme`() {
+        // All 18, not just the 7 light ones. The dark arm used to keep navlib's
+        // blend(?colorSurface, colorSurface_4dp), which rendered #454545 against a #454646 Home card
+        // - 1.0125:1, so the card's bottom edge was invisible and the bar looked like it was
+        // covering content. Reported from the field.
+        for (id in 0..17) {
             val scheme = schemeFor(id)
-            val colors = lightBarColors(scheme)
+            val colors = barColorsFor(scheme)
             assertEquals(scheme.surfaceContainer, colors.container, "theme $id container")
             assertEquals(scheme.onSurface, colors.content, "theme $id ink")
+        }
+    }
+
+    @Test
+    fun `the bar is always distinguishable from the card it sits under`() {
+        // Home cards render on surfaceContainerHighest; the bar on surfaceContainer. One ramp step
+        // apart is the whole point - a bar the user cannot find the edge of reads as a bar that is
+        // covering things. The old dark blend measured 1.0125:1 against that card.
+        for (id in 0..17) {
+            val s = schemeFor(id)
+            val ratio = barColorsFor(s).container.contrastRatio(s.surfaceContainerHighest)
+            assertTrue(ratio >= 1.09f, "theme $id bar/card separation was $ratio")
         }
     }
 }
