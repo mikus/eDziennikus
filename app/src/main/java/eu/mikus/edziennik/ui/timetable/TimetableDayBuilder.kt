@@ -32,6 +32,7 @@ object TimetableDayBuilder {
         events: List<EventFull>,
         attendance: List<AttendanceFull>,
         config: Config,
+        stillShowUnseen: Set<Long> = emptySet(),
     ): TimetableDayUiState {
         if (lessons.isEmpty()) return TimetableDayUiState.NoTimetable(date.weekStart.stringY_m_d)
 
@@ -79,7 +80,8 @@ object TimetableDayBuilder {
                     attendance.firstOrNull { it.startTime?.value == lesson.startTime?.value }
                 else null,
                 annotation = classify(lesson),
-                unseen = lesson.type != Lesson.TYPE_NORMAL && !lesson.seen,
+                unseen = lesson.type != Lesson.TYPE_NORMAL &&
+                        (!lesson.seen || lesson.id in stillShowUnseen),
             )
         }
 

@@ -54,7 +54,13 @@ class TimetableViewModel(
     fun dayFlow(date: Date): Flow<TimetableDayUiState> =
         lessonsSource(date)
             .map { lessons ->
-                TimetableDayBuilder.build(date, lessons, eventsFetch(date), attendanceFetch(date), config)
+                TimetableDayBuilder.build(
+                    date, lessons, eventsFetch(date), attendanceFetch(date), config,
+                    // Lessons this session marked keep their dot until the screen is left: marking
+                    // flips `seen`, the DAO re-emits, and without this every dot would disappear the
+                    // moment the user arrived on the day.
+                    stillShowUnseen = seenIds.toSet(),
+                )
             }
             .flowOn(dispatcher)
 

@@ -32,6 +32,9 @@ class TimetableDayBuilderTest {
     )
 
     private fun lesson(
+        // Explicit because the helper is a relaxed mock: unstubbed, every instance returns id 0, so
+        // any test keyed on identity silently matches every lesson at once.
+        id: Long = 0L,
         type: Int = Lesson.TYPE_NORMAL,
         start: Time? = Time(8, 0, 0),
         end: Time? = Time(8, 45, 0),
@@ -43,6 +46,7 @@ class TimetableDayBuilderTest {
         oldSubjectName: String? = "Old", oldTeacherName: String? = "OldT",
         lessonDate: Date? = date, oldDate: Date? = date,
     ): LessonFull = mockk(relaxed = true) {
+        every { this@mockk.id } returns id
         every { this@mockk.type } returns type
         every { displayStartTime } returns start
         every { displayEndTime } returns end
@@ -155,6 +159,35 @@ class TimetableDayBuilderTest {
         assertFalse(c.blocks.first { it.lesson === normalUnseen }.unseen)
         assertTrue(c.blocks.first { it.lesson === changeUnseen }.unseen)
         assertFalse(c.blocks.first { it.lesson === changeSeen }.unseen)
+    }
+
+    @Test
+    fun `a lesson this session marked keeps showing its dot`() {
+        // The page marks its own changes seen on arrival, which flips `seen` and makes the DAO
+        // re-emit. Without `stillShowUnseen` every red dot would vanish the instant the user landed
+        // on the day - so they would never learn WHICH lessons changed, which is the whole point of
+        // the cue. The legacy view solved this with `Lesson.showAsUnseen`, snapshotted before
+        // marking (`TimetableDayFragment.kt:257` at 98a85c41^).
+        val justMarked = lesson(id = 1L, type = Lesson.TYPE_CANCELLED, seen = true)
+        val longSinceSeen = lesson(id = 2L, type = Lesson.TYPE_CANCELLED, seen = true, start = Time(9, 0, 0), end = Time(9, 45, 0))
+        val c = TimetableDayBuilder.build(
+            date, listOf(justMarked, longSinceSeen), emptyList(), emptyList(), cfg,
+            stillShowUnseen = setOf(justMarked.id),
+        ) as TimetableDayUiState.Content
+        assertTrue(c.blocks.first { it.lesson === justMarked }.unseen)
+        assertFalse(c.blocks.first { it.lesson === longSinceSeen }.unseen)
+    }
+
+    @Test
+    fun `stillShowUnseen never promotes a normal lesson`() {
+        // The set is only a display override for the dot; a TYPE_NORMAL lesson has no change to
+        // report and must stay dotless even if its id is in the set.
+        val normal = lesson(id = 1L, type = Lesson.TYPE_NORMAL, seen = true)
+        val c = TimetableDayBuilder.build(
+            date, listOf(normal), emptyList(), emptyList(), cfg,
+            stillShowUnseen = setOf(normal.id),
+        ) as TimetableDayUiState.Content
+        assertFalse(c.blocks[0].unseen)
     }
 
     @Test

@@ -206,6 +206,7 @@ class TimetableFragment : Fragment() {
                             vm.markSeen(pl.lesson)
                             LessonDetailsDialog(activity, pl.lesson, pl.attendance).show()
                         },
+                        onItemSeen = vm::markSeen,
                         onSyncClick = { weekStart -> syncWeek(weekStart) },
                         attendanceIconFactory = attendanceIconFactory,
                     )

@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.full.AttendanceFull
+import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Week
 
@@ -52,6 +53,7 @@ fun TimetableScreen(
     onPageChanged: (Date) -> Unit,
     dayFlow: (Date) -> kotlinx.coroutines.flow.Flow<TimetableDayUiState>,
     onLessonClick: (PositionedLesson) -> Unit,
+    onItemSeen: (LessonFull) -> Unit,
     onSyncClick: (weekStart: String) -> Unit,
     attendanceIconFactory: (android.content.Context, AttendanceFull) -> Drawable?,
 ) {
@@ -85,6 +87,13 @@ fun TimetableScreen(
             val date = days[page]
             val state by remember(date.value) { dayFlow(date) }
                 .collectAsStateWithLifecycle(TimetableDayUiState.Loading)
+            // Gated on `settledPage`, not `currentPage`: the pager composes neighbouring pages
+            // ahead of time (no `beyondViewportPageCount` is set, so the default prefetch applies),
+            // and marking on composition would clear tomorrow's changes while the user sits on
+            // today. `settledPage` only moves once a swipe has come to rest.
+            if (pagerState.settledPage == page)
+                MarkDaySeenEffect(state, onItemSeen)
+
             TimetableDayPage(
                 date = date,
                 state = state,
@@ -95,6 +104,28 @@ fun TimetableScreen(
                 attendanceIconFactory = attendanceIconFactory,
             )
         }
+    }
+}
+
+/**
+ * Marks the settled day's changes read, restoring what the legacy view did on every bind
+ * (`TimetableDayFragment.kt:409-411` at `98a85c41^`: `if (!lesson.seen) manager.markAsSeen(lesson)`).
+ * The Compose port kept the red dot and the tap path but dropped this, which left every
+ * `LESSON_CHANGE` permanently unread unless the user opened each lesson one at a time - the
+ * hamburger badge then never cleared.
+ *
+ * Keyed on the day's full lesson-id list, which does NOT change as lessons are marked - deliberately,
+ * and this is load-bearing. Keying on the *unseen* ids instead makes the effect re-enter its own
+ * output: marking flips `seen`, the DAO re-emits, the unseen list shrinks, the key changes and the
+ * effect restarts. `TimetableViewModel.markSeen` is idempotent per id so either key converges, but
+ * the stable one does it in a single pass per day and cannot churn against its own output.
+ */
+@Composable
+private fun MarkDaySeenEffect(state: TimetableDayUiState, onItemSeen: (LessonFull) -> Unit) {
+    val content = state as? TimetableDayUiState.Content ?: return
+    val dayIds = content.blocks.map { it.lesson.id }
+    LaunchedEffect(dayIds) {
+        content.blocks.forEach { if (it.unseen) onItemSeen(it.lesson) }
     }
 }
 
