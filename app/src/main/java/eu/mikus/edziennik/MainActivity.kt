@@ -399,7 +399,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         NavTarget.values().mapNotNull { target ->
             if (target.location != NavTargetLocation.BOTTOM_SHEET)
                 return@mapNotNull null
-            if (target.devModeOnly && !App.devMode)
+            if (!target.isAvailable(App.devMode))
                 return@mapNotNull null
             val icon = target.icon ?: return@mapNotNull null
             SheetRow(

@@ -290,7 +290,7 @@ fun buildDrawerEntries(
     )
 
     for (target in targets) {
-        if (target.devModeOnly && !devMode)
+        if (!target.isAvailable(devMode))
             continue
         if (target.featureType != null && !hasUIFeature(target.featureType, profileFeatures))
             continue

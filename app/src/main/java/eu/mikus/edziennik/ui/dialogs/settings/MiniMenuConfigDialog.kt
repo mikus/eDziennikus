@@ -37,7 +37,7 @@ class MiniMenuConfigDialog(
     override fun getNegativeButtonText() = R.string.cancel
 
     private val eligible = NavTarget.values().filter {
-        (!it.devModeOnly || App.devMode) && it.location in listOf(
+        it.isAvailable(App.devMode) && it.location in listOf(
             NavTargetLocation.DRAWER,
             NavTargetLocation.DRAWER_BOTTOM,
         )
