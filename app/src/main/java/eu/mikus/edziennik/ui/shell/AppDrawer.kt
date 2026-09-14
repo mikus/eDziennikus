@@ -890,8 +890,8 @@ private fun DrawerBadge(text: String, textSize: TextUnit) {
 /**
  * One theme attr as a [Color], resolved once per context - a theme change goes through the
  * Activity-recreate path (see `ui/compose/theme/Theme.kt`'s `appColorScheme` KDoc), so a new theme
- * always brings a new context. Same pattern as `AppSheet`'s and `AppBottomBar`'s colour readers, and
- * the reason every colour above is an attr rather than an M3 role: `?android:textColor*` and
+ * always brings a new context. Same pattern as `AppSheet`'s colour reader and `AppBottomBar`'s dark
+ * arm, and the reason every colour above is an attr rather than an M3 role: `?android:textColor*` and
  * `?colorPrimary` have no equal role in `appColorScheme`, which bridges `background`/`surface` and
  * derives the ink. Only the container's `?colorSurface` has an equal, and there the two agree.
  */

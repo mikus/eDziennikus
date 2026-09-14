@@ -215,7 +215,7 @@ fun AppSheet(
  * `SRC_ATOP` filter replaces it and keeps only its rounded-rect alpha.
  *
  * Calling Material's provider rather than blending by hand, unlike `AppBottomBar`'s
- * `barContainerColor()`: there the *app* writes the blend (`MainActivity.kt:237-240`), so the app's
+ * `barColors()` (its dark arm, since Phase 38): there the *app* writes the blend, so the app's
  * own expression was the faithful one. Here navlib does, and this is its literal code path - so it
  * cannot drift, and `com.google.android.material:material:1.6.1` is a direct app dependency that
  * outlives the AAR. `R.color.colorSurface_8dp` (`#1fffffff`) is navlib's tabulated stand-in for the
@@ -234,7 +234,7 @@ fun AppSheet(
 @Composable
 private fun sheetContainerColor(): Color {
     val context = LocalContext.current
-    // Resolved once per context, as `barContainerColor()` is: a theme change goes through the
+    // Resolved once per context, as `barColors()` is: a theme change goes through the
     // Activity-recreate path, so a new theme always brings a new context.
     return remember(context) {
         val provider = ElevationOverlayProvider(context)

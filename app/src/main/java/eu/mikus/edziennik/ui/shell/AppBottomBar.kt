@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,18 +53,15 @@ private val FabContainerColor = Color(0xFF4CAF50)
 private val FabContentColor = Color(0xFFFFFFFF)
 
 /**
- * The bar's icons are white today in **every** theme. navlib tints both of them - the hamburger
- * (`nav_menu`) and the sheet opener (`nav_dots_vertical`) - as `IconicsDrawable.colorAttr(context,
- * R.attr.colorOnPrimary)` (`NavBottomBar$create$3` and `create$$inlined$apply$lambda$1`), and that
- * attr measures `#ffffff` in both `NavView.Light` (navlib `values.xml:98`) and `NavView.Dark`
- * (`:53`), neither of which any app theme overrides.
+ * The **dark** bar's ink, and only the dark bar's since Phase 38.
  *
- * Inlined rather than read back through `?attr/colorOnPrimary`, because the **app never sets that
- * attr** - navlib's themes do, and Material's own dark default for it is `#000000`. Reading it would
- * flip the dark bar's icons to black the moment the AAR's themes go. Same value as [FabContentColor],
- * different provenance (`?colorOnFab`), so deliberately not one constant.
+ * `#FFFFFF` on the dark arm's near-black blend, kept because the phase ratified byte-identical dark
+ * bars - it is white on a surface blend, not white on primary. The light arm takes `onSurface` from
+ * the scheme instead (see [lightBarColors]); reading `?attr/colorOnPrimary` back was never an option
+ * for either arm, because Material's own dark default for it is `#000000` and the app sets it to
+ * `#ffffff` in only two places (`styles.xml:150`, `:226`).
  */
-private val BarContentColor = Color(0xFFFFFFFF)
+private val DarkBarContentColor = Color(0xFFFFFFFF)
 
 /**
  * navlib's `BadgeDrawable` hardcodes both: `mBadgePaint.setColor(-49920)` = `#FF3D00` and
@@ -118,10 +117,12 @@ fun AppBottomBar(
 ) {
     FabAttentionEffect(state)
 
+    val colors = barColors()
+
     BottomAppBar(
         modifier = modifier,
-        containerColor = barContainerColor(),
-        contentColor = BarContentColor,
+        containerColor = colors.container,
+        contentColor = colors.content,
     ) {
         MenuButton(total = state.badges.total, onClick = onMenuClick)
         Spacer(Modifier.weight(1f))
@@ -132,39 +133,67 @@ fun AppBottomBar(
 }
 
 /**
- * Today's bar background, kept as-is in both themes, branching on the same `Themes.isDark` the app
- * branches on at `MainActivity.kt:236` so the two agree by construction:
+ * The bar's container and its ink as one value.
  *
- * - **light** - `?attr/colorPrimary`, which is what `Widget.MaterialComponents.BottomAppBar.Colored`
- *   (`nav_view.xml:111`) resolves its `backgroundTint` to. That attr is the app's own
- *   (`styles.xml:106` light, `:125` dark) and every palette theme sets it, so it is read, not inlined.
- * - **dark** - `blendColors(?attr/colorSurface, R.color.colorSurface_4dp)`, the override at
- *   `MainActivity.kt:237-240`, resolved the same way for the same reason (`colorSurface` differs per
- *   palette: `#333333`, `#121212` black, and one per colour theme).
+ * They are produced together because [BottomAppBar] takes them as two independent arguments, and
+ * moving only the container compiles, passes lint, passes every existing test and leaves
+ * `theme-attrs-golden.txt` byte-identical while shipping white icons at 1.11-1.53:1 on a light
+ * container. Grouping them is a hint, not a gate - nothing stops a caller naming
+ * [DarkBarContentColor] on the light path - so the gate is `AppBottomBarColorsTest`, not the compiler.
+ * Both constructions below use named arguments, since the two fields are the same type and a
+ * positional transposition inside [BarColors] would otherwise compile; the call site carries the
+ * same hazard and only the emulator pixel catches it.
+ */
+internal data class BarColors(val container: Color, val content: Color)
+
+/**
+ * The light arm, as a pure function of the scheme so `AppBottomBarColorsTest` can assert it.
+ * [barColors] is its only caller.
  *
- * The 4 dp elevation at `MainActivity.kt:241` has no knob to port: M3's [BottomAppBar] exposes only
- * `tonalElevation`, a colour lift that `Surface` applies **only** when the container colour is
- * `colorScheme.surface`, so it would be inert against an explicit colour. Nothing is lost -
- * `colorSurface_4dp` *is* the elevation overlay for 4 dp, so the blend already carries that lift.
+ * `surfaceContainer` is M3 1.4.0's own token for this component
+ * (`BottomAppBarTokens.ContainerColor`), and since Phase 34 the scheme tracks the selected XML theme,
+ * so unlike the `?attr/colorPrimary` this replaced it actually moves with the palette: that attr is
+ * declared only at `styles.xml:136` and `:204` and no descendant theme overrides it, so all 7 light
+ * themes rendered the identical `#2196f3`.
  *
- * NOTE for the AAR-removal phase: `R.color.colorSurface_1dp ... _24dp` are **navlib's own**
- * resources, not the app's. This is now their second app-side reader, after `MainActivity.kt:239`.
+ * The ink is passed explicitly rather than left to `contentColorFor`: that would be correct here
+ * (`surfaceContainer` -> `onSurface`) and **silently wrong** on the dark arm, whose container is a
+ * derived blend rather than a scheme role, so `contentColorFor` returns `Color.Unspecified` and
+ * `Surface` falls through to the ambient `LocalContentColor` with no error.
+ */
+internal fun lightBarColors(scheme: ColorScheme) =
+    BarColors(container = scheme.surfaceContainer, content = scheme.onSurface)
+
+/**
+ * Light themes take the scheme (see [lightBarColors]); dark themes keep the blend they have had
+ * since navlib - `?attr/colorSurface` lifted by `R.color.colorSurface_4dp` (`colors.xml:80`), which
+ * *is* the 4 dp elevation overlay, so M3's `tonalElevation` has nothing left to add and would be
+ * inert against an explicit container colour anyway.
+ *
+ * The dark half is unchanged on purpose: this phase ratified byte-identical dark bars, and they are
+ * the control for its before/after capture. One consequence worth knowing - theme id 13 ("Red") is
+ * flagged `isDark = true` but renders light, so it takes this arm and keeps white-on-`#FF6C6C` at
+ * 2.76:1. That is pre-existing, not introduced here, and fixing it means moving this arm.
  */
 @Composable
-private fun barContainerColor(): Color {
+private fun barColors(): BarColors {
+    if (!Themes.isDark) return lightBarColors(MaterialTheme.colorScheme)
+
     val context = LocalContext.current
     // Resolved once per context: a theme change goes through the Activity-recreate path (see
     // `ui/compose/theme/Theme.kt`'s `appColorScheme` KDoc), so a new theme always brings a new one.
+    // The light arm needs neither - `ColorScheme` is `@Immutable` with all-`val` parameters, so a
+    // `remember` keyed on it could not observe a change, and it reads no `Context` at all.
     return remember(context) {
-        if (Themes.isDark)
-            Color(
+        BarColors(
+            container = Color(
                 blendColors(
                     getColorFromAttr(context, R.attr.colorSurface),
                     ContextCompat.getColor(context, R.color.colorSurface_4dp),
                 )
-            )
-        else
-            Color(getColorFromAttr(context, R.attr.colorPrimary))
+            ),
+            content = DarkBarContentColor,
+        )
     }
 }
 

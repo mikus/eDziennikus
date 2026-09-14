@@ -293,8 +293,9 @@ private fun RailBadge(text: String) {
 
 /**
  * One theme attr as a [Color], resolved once per context - the same reader `AppDrawer`, `AppSheet` and
- * `AppBottomBar` use. The container is resolved from the XML theme rather than the Compose scheme;
- * since Phase 34 the two agree on `surface`, so that read is belt-and-braces rather than load-bearing.
+ * `AppBottomBar` use. The container is resolved from the XML theme rather than the Compose scheme -
+ * on dark themes; `AppBottomBar`'s light arm takes the scheme directly since Phase 38. Since Phase 34
+ * the two agree on `surface`, so that read is belt-and-braces rather than load-bearing.
  *
  * `?colorSurface` is where the rail's container colour actually comes from:
  * `MiniDrawerSliderView`'s constructor reads `materialDrawerBackground` out of

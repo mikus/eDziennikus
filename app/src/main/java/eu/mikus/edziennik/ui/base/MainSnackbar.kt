@@ -109,7 +109,7 @@ class MainSnackbar(val activity: AppCompatActivity) {
 @Composable
 fun AppSnackbarHost(hostState: SnackbarHostState, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    // Resolved once per context, as `AppBottomBar.barContainerColor()` is: a theme change goes
+    // Resolved once per context, as `AppBottomBar.barColors()` is: a theme change goes
     // through the Activity-recreate path, so a new theme always brings a new context.
     val (container, message, action) = remember(context) {
         val surface = getColorFromAttr(context, R.attr.colorSurface)
