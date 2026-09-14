@@ -225,23 +225,43 @@ private fun FabAttentionEffect(state: ShellState) {
     }
 }
 
-/** The hamburger, badged with the unread total. */
+/**
+ * The hamburger, badged with the unread total.
+ *
+ * [BadgedBox] wraps the [IconButton] rather than sitting inside it, and that nesting is the whole
+ * point of this shape. `BadgedBox` reports its own size as exactly the anchor's
+ * (`Badge.kt:95-96`, `totalHeight = anchorPlaceable.height`) and then places the badge at a
+ * *negative* offset - `badgeY = -badgeHeight + 14.dp`, `badgeX = anchorWidth - 12.dp`
+ * (`Badge.kt:107-126`) - so the badge is designed to overflow its anchor. `IconButtonImpl` wraps its
+ * content in `.clip(shape)` (`IconButton.kt`), and that shape is `CornerFull` over a 40 dp container
+ * (`SmallIconButtonTokens.ContainerHeight = 40.dp`, `IconSize = 24.dp` + 2x`DefaultLeadingSpace`
+ * 8 dp). With the badge inside, its anchor was the 24 dp icon, which put the badge's top-right
+ * corner about 24.4 dp from the circle's 20 dp-radius centre - outside it, so the arc sliced the
+ * corner off and the "1" of a two-digit count sat flush against the cut.
+ *
+ * Anchoring to the 40 dp button instead puts the badge at the button's corner with nothing clipping
+ * it: neither the `Row` nor `BottomAppBar` clips, and the badge clears the bar's bounds by 18 dp.
+ *
+ * Passing `shape = RectangleShape` to [IconButton] would also stop the clipping, and was rejected:
+ * the badge would then end exactly on the container's edge with no margin, and the ripple would turn
+ * from a circle into a square - a visible regression to fix an invisible one.
+ */
 @Composable
 private fun MenuButton(total: Int, onClick: () -> Unit) {
     // `totalBadgeText` and not `badgeText`: the hamburger total is the one badge navlib does NOT
     // clamp to "99+" - it passes `String.valueOf(total)` to its `BadgeDrawable` (§7.9).
     val badge = totalBadgeText(total)
 
-    IconButton(onClick = onClick) {
-        BadgedBox(
-            badge = {
-                if (badge != null)
-                    Badge(
-                        containerColor = BadgeContainerColor,
-                        contentColor = BadgeContentColor,
-                    ) { Text(badge) }
-            },
-        ) {
+    BadgedBox(
+        badge = {
+            if (badge != null)
+                Badge(
+                    containerColor = BadgeContainerColor,
+                    contentColor = BadgeContentColor,
+                ) { Text(badge) }
+        },
+    ) {
+        IconButton(onClick = onClick) {
             // No content description: navlib's bar calls `setNavigationIcon(Drawable)` and never
             // `setNavigationContentDescription`, so this button is unlabelled today as well, and the
             // app owns no string that fits. Adding one means touching `strings.xml`, which is outside
