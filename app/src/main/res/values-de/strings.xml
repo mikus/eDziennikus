@@ -255,7 +255,6 @@
     <string name="downloading_file_exists_overwrite">Überschreiben</string>
     <string name="drawer_add_new_profile_desc">Ein neues Profil hinzufügen</string>
     <string name="drawer_export_data">Anwendungsdaten exportieren</string>
-    <string name="drawer_manage_profiles_desc">Hinzufügen oder Entfernen von Schülerprofilen</string>
     <string name="dropdown_date_no_more_lessons">Es gibt keine Lektionen mehr für dieses Schulfach. Laden Sie den Stundenplan herunter und versuchen Sie es erneut</string>
     <string name="dropdown_subject_custom">Eigenes Schulfach</string>
     <string name="edziennik_notification_api_cancel">Abbrechen</string>
@@ -450,7 +449,6 @@
     <string name="grades_year_average_percent_format">Ende des Jahres": %s%%</string>
     <string name="grades_year_average_point_format">Ende des Jahres": %s Punkte</string>
     <string name="grades_year_summary_format">Ganzes Jahr: %s • %s</string>
-    <string name="hello_blank_fragment">Hallo leeres Fragment</string>
     <string name="help">Hilfe</string>
     <string name="help_register_agreement">Die Registrierung läuft automatisch beim ersten Login.\n\nEs werden einige Daten an den App-Server gesendet:\n- Ihre Schul-ID und Klassen-ID\n- Ihr Benutzername für die E-Klassenbuch\n- Ihr Vor- und Nachname\n\nDie einzigen Daten, die für andere Personen in Ihrer Klasse sichtbar sind, ist Ihr Name (beim Teilen von Ereignisse). Private Daten (wie Passwort, Noten usw.) werden nirgendwo versendet. Weitere Informationen finden Sie in den Datenschutz-Bestimmungen.</string>
     <string name="hint_download_again">Erneut herunterladen</string>
@@ -611,7 +609,6 @@
     <string name="menu_home_page">Startseite</string>
     <string name="menu_homework">Hausaufgaben</string>
     <string name="menu_lab">Labor</string>
-    <string name="menu_manage_profiles">Profile verwalten</string>
     <string name="menu_mark_as_read">Als gelesen markieren</string>
     <string name="menu_mark_everything_as_read">Alles als gelesen markieren</string>
     <string name="menu_message">Nachricht</string>
@@ -1138,7 +1135,6 @@
     <string name="title_messages_inbox_single">Empfangene Nachrichten</string>
     <string name="title_messages_sent_single">Gesendeten Nachrichten</string>
     <string name="title_messages_trash">Müll</string>
-    <string name="title_profile_manager">Profilmanager</string>
     <string name="title_semester">Wechseln Sie das Semester</string>
     <string name="toast_changing_profile">Profil ändern…</string>
     <string name="today">Heute</string>

@@ -27,7 +27,6 @@ import eu.mikus.edziennik.ui.messages.list.MessagesFragment
 import eu.mikus.edziennik.ui.messages.single.MessageFragment
 import eu.mikus.edziennik.ui.notes.NotesFragment
 import eu.mikus.edziennik.ui.notifications.NotificationsListFragment
-import eu.mikus.edziennik.ui.settings.ProfileManagerFragment
 import eu.mikus.edziennik.ui.settings.SettingsFragment
 import eu.mikus.edziennik.ui.teachers.TeachersListFragment
 import eu.mikus.edziennik.ui.timetable.TimetableFragment
@@ -178,15 +177,6 @@ enum class NavTarget(
         nameRes = R.string.menu_add_new_profile,
         descriptionRes = R.string.drawer_add_new_profile_desc,
         icon = CommunityMaterial.Icon3.cmd_plus,
-    ),
-    PROFILE_MANAGER(
-        id = 203,
-        fragmentClass = ProfileManagerFragment::class.java,
-        location = NavTargetLocation.NOWHERE,
-        nameRes = R.string.menu_manage_profiles,
-        titleRes = R.string.title_profile_manager,
-        descriptionRes = R.string.drawer_manage_profiles_desc,
-        icon = CommunityMaterial.Icon.cmd_account_group,
     ),
     PROFILE_MARK_AS_READ(
         id = 204,
