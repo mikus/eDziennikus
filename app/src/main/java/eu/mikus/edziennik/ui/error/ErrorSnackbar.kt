@@ -21,8 +21,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * and the `R.string.more` action here is the only route to [ErrorDetailsDialog] from that screen.
  *
  * Shown through the single `SnackbarHostState` that `ShellState` owns, rather than through navlib's
- * `CoordinatorLayout` (design §7.11). `MainActivity.error()` and `LabProfileFragment`'s and
- * `MessagesComposeFragment`'s calls into it are untouched.
+ * `CoordinatorLayout` (design §7.11). `MainActivity.error()` and `MessagesComposeFragment`'s calls
+ * into it are untouched. (Lab used to call it too; since Phase 40 it reports edit failures itself.)
  *
  * There is no `anchorView` equivalent and none is needed: the old instance was anchored above
  * `navView.bottomBar`, and `Scaffold`'s `snackbarHost` slot already sits above its `bottomBar`.

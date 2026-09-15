@@ -73,12 +73,10 @@
          unchanged: an app resource shadows the library's, so these are inert while navlib is still
          on the classpath and become the only definition when it goes.
          Elevation overlays. Live consumers: _4dp - drawable/timetable_lesson_bg_dark.xml and
-         ui/shell/AppBottomBar.kt; _6dp - layout/template_fragment.xml (the ref in lab_fragment.xml
-         sits inside a comment); _16dp - ext/DialogExtensions.kt. Material's ElevationOverlayProvider
-         is the real expert here (ui/shell/AppSheet.kt uses it) - see the design doc's
-         out-of-scope note. -->
+         ui/shell/AppBottomBar.kt; _16dp - ext/DialogExtensions.kt. (_6dp went with
+         layout/template_fragment.xml in Phase 40.) Material's ElevationOverlayProvider is the real
+         expert here (ui/shell/AppSheet.kt uses it) - see the design doc's out-of-scope note. -->
     <color name="colorSurface_4dp">#17ffffff</color>
-    <color name="colorSurface_6dp">#1cffffff</color>
     <color name="colorSurface_16dp">#26ffffff</color>
 
     <!-- Window backgrounds. No direct references anywhere: both are reached only through

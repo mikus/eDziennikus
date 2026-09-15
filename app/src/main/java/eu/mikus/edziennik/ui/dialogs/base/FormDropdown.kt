@@ -41,7 +41,8 @@ data class FormDropdownItem(
 )
 
 /**
- * M3 replacement for the legacy [TextInputDropDown]: a read-only [OutlinedTextField] inside an
+ * M3 replacement for the legacy `TextInputDropDown` (deleted in Phase 40, once Lab stopped being its
+ * last consumer): a read-only [OutlinedTextField] inside an
  * [ExposedDropdownMenuBox] that pops a menu of [items]. The current selection is derived from
  * [selectedId]; picking a row fires [onSelect] with the chosen [FormDropdownItem] (the caller reads
  * `item.tag` / `item.id`, exactly as it read `dropdown.selected` before). [isError] +

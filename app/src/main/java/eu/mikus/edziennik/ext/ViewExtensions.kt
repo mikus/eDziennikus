@@ -14,7 +14,6 @@ import android.widget.*
 import androidx.annotation.StringRes
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import androidx.viewpager.widget.ViewPager
 import com.google.android.material.button.MaterialButton
 
 fun TextView.setText(@StringRes resid: Int, vararg formatArgs: Any) {
@@ -145,12 +144,6 @@ fun TextView.getTextPosition(range: IntRange): Rect {
 
     return parentTextViewRect
 }
-
-inline fun ViewPager.addOnPageSelectedListener(crossinline block: (position: Int) -> Unit) = addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
-    override fun onPageScrollStateChanged(state: Int) {}
-    override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {}
-    override fun onPageSelected(position: Int) { block(position) }
-})
 
 val SwipeRefreshLayout.onScrollListener: RecyclerView.OnScrollListener
     get() = object : RecyclerView.OnScrollListener() {

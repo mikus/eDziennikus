@@ -15,7 +15,6 @@ import android.text.style.CharacterStyle
 import android.text.style.ForegroundColorSpan
 import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
-import android.text.style.UnderlineSpan
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import java.net.URLDecoder
@@ -158,11 +157,6 @@ fun CharSequence?.asItalicSpannable(): Spannable {
 fun CharSequence?.asBoldSpannable(): Spannable {
     val spannable = SpannableString(this)
     spannable.setSpan(StyleSpan(Typeface.BOLD), 0, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-    return spannable
-}
-fun CharSequence?.asUnderlineSpannable(): Spannable {
-    val spannable = SpannableString(this)
-    spannable.setSpan(UnderlineSpan(), 0, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
     return spannable
 }
 fun CharSequence.asSpannable(
