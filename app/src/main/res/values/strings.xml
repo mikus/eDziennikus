@@ -165,7 +165,6 @@
     <string name="day_other_format" translatable="false">%s, %s</string>
     <string name="day_today_format">dzisiaj (%s)</string>
     <string name="day_tomorrow_format">jutro (%s)</string>
-    <string name="debug_notice">Generalnie nie przejmuj się tym co tu widzisz.</string>
     <string name="dev_mode_enable_warning">Te ustawienia nie są przeznaczone dla zwykłych użytkowników, wyłącznie dla twórcy tej aplikacji.\n\nNie są nawet w żaden sposób opisane, nie wiadomo co robią, więc możesz nawet nie wiedzieć kiedy coś zepsujesz.\n\nWłączenie tych opcji może spowodować utratę danych w aplikacji, uszkodzenie twojego systemu lub nawet uruchomienie wirusa na baterii.\n\nLepiej uważaj.</string>
     <string name="developer_mode">Developer mode</string>
     <string name="dialog_averages_expected_format">Przewidywana średnia na semestr %d:\n%#.2f\n</string>
@@ -662,7 +661,6 @@
     <string name="menu_announcements">Tablica ogłoszeń</string>
     <string name="menu_attendance">Frekwencja</string>
     <string name="menu_attendance_config">Ustawienia frekwencji</string>
-    <string name="menu_debug">Debugowanie</string>
     <string name="menu_feedback">Pomoc i opinie</string>
     <string name="menu_generate_block_timetable">Zapisz plan lekcji jako obraz</string>
     <string name="menu_generate_block_timetable_desc">Generuje plan lekcji na cały tydzień</string>

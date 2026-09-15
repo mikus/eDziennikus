@@ -136,7 +136,6 @@
     <string name="crash_title">E-register:\nAn unexpected error occurred.\nSorry for inconvenience.</string>
     <string name="day_today_format">today (%s)</string>
     <string name="day_tomorrow_format">tomorrow (%s)</string>
-    <string name="debug_notice">You shouldn\'t really care about what you see here.</string>
     <string name="dev_mode_enable_warning">These settings are intended for this app\'s developers, not for normal users.\n\nThey are not described in any way, so using them may lead to breaking some functions in the app, damaging your system, losing data or even installing a virus on the battery.\n\nBe careful and use them wisely.</string>
     <string name="developer_mode">Developer mode</string>
     <string name="dialog_averages_expected_format">Predicted semester %d average:\n%#.2f\n</string>
@@ -597,7 +596,6 @@
     <string name="menu_agenda_change_view">Change Agenda view</string>
     <string name="menu_announcements">Notice board</string>
     <string name="menu_attendance">Attendance</string>
-    <string name="menu_debug">Debugging</string>
     <string name="menu_feedback">Help and FAQ</string>
     <string name="menu_generate_block_timetable">Save the timetable as an image</string>
     <string name="menu_generate_block_timetable_desc">Generates timetable for the whole week</string>

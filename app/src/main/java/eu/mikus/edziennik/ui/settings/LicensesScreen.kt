@@ -56,7 +56,6 @@ val LICENSES: List<LicenseEntry> = listOf(
     LicenseEntry("HyperLog Android", "2018", "HyperTrack", LicenseType.MIT, "https://github.com/hypertrack/hyperlog-android"),
     LicenseEntry("Color Picker", "2016 Jared Rummler,", "2015 Daniel Nilsson", LicenseType.APACHE_2, "https://github.com/jaredrummler/ColorPicker"),
     LicenseEntry("PowerPermission", "2020", "Qifan Yang", LicenseType.APACHE_2, "https://github.com/underwindfall/PowerPermission"),
-    LicenseEntry("JsonViewer", "2017", "smuyyh", LicenseType.APACHE_2, "https://github.com/smuyyh/JsonViewer"),
     LicenseEntry("Coil", "2021", "Coil Contributors", LicenseType.APACHE_2, "https://github.com/coil-kt/coil"),
     LicenseEntry("Barcode Scanner (ZXing)", "2014", "Dushyanth Maguluru", LicenseType.APACHE_2, "https://github.com/dm77/barcodescanner"),
     LicenseEntry("AutoFitTextView", "2014", "Grantland Chew", LicenseType.APACHE_2, "https://github.com/grantland/android-autofittextview"),

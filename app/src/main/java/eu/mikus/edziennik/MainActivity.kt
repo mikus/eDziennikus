@@ -391,9 +391,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
     /**
      * The bottom sheet's base rows: the `BOTTOM_SHEET` targets, `devModeOnly` ones filtered out.
-     * The sync row is not here - `AppSheet` renders it from `onSyncClick`, so it cannot be dropped.
-     *
-     * No description, exactly as `toBottomSheetItem()` set none.
+     * **Empty since Phase 40 deleted `DEBUG`, its last member** - kept because that filter is a
+     * contract `AppSheet` documents as the caller's; `emptyList()` would lose it. The sync row is not
+     * here - `AppSheet` renders it from `onSyncClick`. No description, as `toBottomSheetItem()` set.
      */
     private val sheetBaseRows: List<SheetRow> by lazy {
         NavTarget.values().mapNotNull { target ->

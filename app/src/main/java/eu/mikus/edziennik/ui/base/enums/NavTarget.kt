@@ -16,7 +16,6 @@ import eu.mikus.edziennik.ui.agenda.AgendaFragment
 import eu.mikus.edziennik.ui.announcements.AnnouncementsFragment
 import eu.mikus.edziennik.ui.attendance.AttendanceFragment
 import eu.mikus.edziennik.ui.behaviour.BehaviourFragment
-import eu.mikus.edziennik.ui.debug.DebugFragment
 import eu.mikus.edziennik.ui.debug.LabFragment
 import eu.mikus.edziennik.ui.grades.GradesListFragment
 import eu.mikus.edziennik.ui.grades.editor.GradesEditorFragment
@@ -192,14 +191,6 @@ enum class NavTarget(
         nameRes = R.string.menu_sync_all,
         icon = CommunityMaterial.Icon.cmd_download_outline,
     ),
-    DEBUG(
-        id = 102,
-        fragmentClass = DebugFragment::class.java,
-        location = NavTargetLocation.BOTTOM_SHEET,
-        nameRes = R.string.menu_debug,
-        icon = CommunityMaterial.Icon.cmd_android_debug_bridge,
-        devModeOnly = true,
-    ),
     GRADES_EDITOR(
         id = 501,
         fragmentClass = GradesEditorFragment::class.java,
@@ -219,12 +210,12 @@ enum class NavTarget(
 
     /**
      * Whether dev mode permits *reaching* this target. The `featureType` axis is separate - see
-     * `ShellPolicy.hasUIFeature`, which sits right below the dev-mode check at `ShellPolicy.kt:269`.
+     * `ShellPolicy.hasUIFeature`, which sits right below the dev-mode check at `ShellPolicy.kt:295`.
      *
      * The route has to refuse a dev-only target even though the drawer already hides it
-     * (`ShellPolicy.kt:267`): LAB renders the stored credentials as an editable tree and offers
-     * one-tap destructive DB actions, and DEBUG runs arbitrary commands
-     * (`DebugFragment.java:156`).
+     * (`ShellPolicy.kt:293`): LAB renders the stored credentials as an editable tree and offers
+     * one-tap destructive DB actions. Since Phase 40 deleted `DEBUG`, LAB is the only `devModeOnly`
+     * target left.
      *
      * The three `asNavTargetOrNull` decoders - the notifications widget, the v3 config migration and
      * the Room converter - must keep resolving dev targets, or a dev-mode user's saved state stops

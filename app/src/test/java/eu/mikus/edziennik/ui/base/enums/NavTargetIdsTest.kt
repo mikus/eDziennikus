@@ -13,9 +13,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 /**
- * What a *retired* `NavTarget` id decodes to. This commit removes `PROFILE_MANAGER` (203), an id that
- * can already sit in a user's Room rows and config values. (`DEBUG`, 102, is retired by the next
- * commit, which adds its rows here — the KDoc widens when the assertions do, not before.)
+ * What a *retired* `NavTarget` id decodes to. Phase 40 removed `PROFILE_MANAGER` (203) and `DEBUG`
+ * (102); either id can already sit in a user's Room rows and config values.
  *
  * Most of this pins behaviour that is already correct and closes no gap — the `OrNull` decoders were
  * always tolerant, and no decoder line changes in this phase. Say so rather than letting the file
@@ -40,6 +39,11 @@ class NavTargetIdsTest {
     }
 
     @Test
+    fun `the retired DEBUG id no longer resolves`() {
+        assertNull(102.asNavTargetOrNull())
+    }
+
+    @Test
     fun `a live id still resolves`() {
         // Anti-vacuity: a decoder that answered null for everything would satisfy the test above.
         assertEquals(NavTarget.PROFILE_MARK_AS_READ, 204.asNavTargetOrNull())
@@ -47,8 +51,9 @@ class NavTargetIdsTest {
 
     @Test
     fun `the Room converter falls back to HOME for a retired id`() {
-        // data/db/converter/ConverterEnums.kt:59 - `?: NavTarget.HOME`, so a stored 203 is non-null.
+        // data/db/converter/ConverterEnums.kt:59 - `?: NavTarget.HOME`, so a stored id is non-null.
         assertEquals(NavTarget.HOME, ConverterEnums().toNavTarget(203))
+        assertEquals(NavTarget.HOME, ConverterEnums().toNavTarget(102))
         assertEquals(NavTarget.PROFILE_MARK_AS_READ, ConverterEnums().toNavTarget(204))
     }
 
@@ -57,5 +62,6 @@ class NavTargetIdsTest {
         // ext/EnumExtensions.kt:16 - `first { }`. This is the only row here that is not pre-existing
         // tolerance: it pins the crash so a future reader sees it was chosen.
         assertFailsWith<NoSuchElementException> { 203.asNavTarget() }
+        assertFailsWith<NoSuchElementException> { 102.asNavTarget() }
     }
 }

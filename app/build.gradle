@@ -215,7 +215,6 @@ dependencies {
     implementation "com.github.antonKozyriatskyi:CircularProgressIndicator:1.2.2" // https://github.com/antonKozyriatskyi/CircularProgressIndicator
     implementation "com.github.bassaer:chatmessageview:2.0.1" // https://github.com/bassaer/ChatMessageView
     implementation "com.github.hypertrack:hyperlog-android:0.0.10" // https://github.com/hypertrack/hyperlog-android
-    implementation "com.github.smuyyh:JsonViewer:V1.0.6" // https://github.com/smuyyh/JsonViewer
     implementation "com.github.underwindfall.PowerPermission:powerpermission-coroutines:1.4.0" // https://github.com/underwindfall/PowerPermission
     implementation "com.github.underwindfall.PowerPermission:powerpermission:1.4.0" // https://github.com/underwindfall/PowerPermission
     implementation "com.jaredrummler:colorpicker:1.1.0"

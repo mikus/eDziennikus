@@ -110,14 +110,16 @@ private const val SheetElevationDp = 8f
  * mapper:
  *
  * - **contextual** rows come from [ShellState.actions] (`setScreenActions`, which 12 fragments call)
- *   and are replaced wholesale on every navigation. They render **first**, because
- *   `setScreenActions` *prepends* today (`MainActivity.kt:1179`).
- * - **base** rows are the shell's own, rebuilt on navigation because they depend on the current
- *   target: the sync row, a separator, then the `BOTTOM_SHEET` `NavTarget`s
- *   (`MainActivity.kt:432-451`).
+ *   and are replaced wholesale on every navigation - `MainActivity.kt:1134-1136` is a bare
+ *   `state.actions = actions`. They render **first** because this composable renders them first, at
+ *   the [SheetRows] call above the sync row - not because anything prepends.
+ * - **base** rows are the shell's own: the `BOTTOM_SHEET` `NavTarget`s, built once by
+ *   `MainActivity.kt:398-413`'s `by lazy` - not per navigation, and not a function of the current
+ *   target. No `NavTarget` carries that location since Phase 40, so the list is empty - see
+ *   [AppSheet]'s `baseRows` parameter.
  *
  * The **sync row is rendered here, from [onSyncClick]**, rather than arriving inside [baseRows]:
- * `MainActivity.kt:440` is the only call site of `SyncViewListDialog` in the whole app, this project
+ * `MainActivity.kt:249` is the only call site of `SyncViewListDialog` in the whole app, this project
  * has already shipped a regression on exactly that row, and a row the caller cannot forget to pass
  * cannot be dropped again. [baseRows] therefore carries only the `BOTTOM_SHEET` targets - see the
  * parameter docs for who filters them.
@@ -132,8 +134,10 @@ private const val SheetElevationDp = 8f
  *
  * @param baseRows the `BOTTOM_SHEET` `NavTarget` rows, in `NavTarget` order, `devModeOnly` ones
  *   already dropped when `!App.devMode` - the caller owns that filter, exactly as it owns
- *   `buildDrawerEntries`' inputs. Today that list is at most one row (`NavTarget.DEBUG`, dev-only),
- *   so it is empty in a release build.
+ *   `buildDrawerEntries`' inputs. **Since Phase 40 deleted `DEBUG` - its last member - no `NavTarget`
+ *   carries `BOTTOM_SHEET`, so this list is always empty** and the sheet shows only the sync row.
+ *   The location, the filter and this parameter are kept deliberately: they are the seam a future
+ *   sheet-only target plugs into, and removing them is a wider change than this one.
  * @param onSyncClick shows `SyncViewListDialog(activity, navTarget)`. The close happens here; this
  *   must not close the sheet itself.
  * @param onDismissed latches `app.config.ui.bottomSheetOpened = true` **and** clears
@@ -197,9 +201,10 @@ fun AppSheet(
                 onClick = { closeThen(onSyncClick) },
             )
 
-            // `BottomSheetSeparatorItem(false)` (`MainActivity.kt:445`), but only when something
-            // follows it. navlib appends it unconditionally, so a release build shows a stray line
-            // under the sync row today; that is the one thing here not reproduced.
+            // navlib appended `BottomSheetSeparatorItem(false)` unconditionally, so a release build
+            // showed a stray line under the sync row; this guard is the one thing here that does not
+            // reproduce it. Since Phase 40 [baseRows] is always empty, so the separator never renders
+            // at all - keep the guard, not the behaviour it corrects.
             if (baseRows.isNotEmpty())
                 Separator()
 

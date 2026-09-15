@@ -133,7 +133,6 @@
     <string name="crash_title">E-Klassenbuch:\\nEin unerwarteter Fehler ist aufgetreten.\\nEntschuldigung für das Problem</string>
     <string name="day_today_format">heute (%s)</string>
     <string name="day_tomorrow_format">morgen (%s)</string>
-    <string name="debug_notice">Sie sollten sich nicht wirklich darum kümmern, was Sie hier sehen</string>
     <string name="dev_mode_enable_warning">Diese Einstellungen sind für die Entwickler dieser App gedacht, nicht für normale Benutzer.\n\n Sie sind in keiner Weise beschrieben, daher kann ihre Verwendung dazu führen, dass einige Funktionen in der App kaputt gehen, Ihr System beschädigt wird, Daten verloren gehen oder sogar ein Virus auf dem Akku installiert wird.\n\n Seien Sie vorsichtig und verwenden Sie sie mit Bedacht</string>
     <string name="developer_mode">Developer mode</string>
     <string name="dialog_averages_expected_format">Prognostizierter Durchschnitt für das %d Semester:\n%#.2f\n</string>
@@ -593,7 +592,6 @@
     <string name="menu_agenda_change_view">Zeitplan-Ansicht ändern</string>
     <string name="menu_announcements">Schwarzes Brett</string>
     <string name="menu_attendance">Anwesenheit</string>
-    <string name="menu_debug">Fehlersuche</string>
     <string name="menu_feedback">Hilfe und FAQ</string>
     <string name="menu_generate_block_timetable">Den Stundenplan als Bild speichern</string>
     <string name="menu_generate_block_timetable_desc">Generiert Stundenplan für die ganze Woche</string>

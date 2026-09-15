@@ -10,5 +10,6 @@ enum class NavTargetLocation {
     DRAWER_MORE,
     DRAWER_BOTTOM,
     PROFILE_LIST,
+    /** Memberless since Phase 40 deleted `DEBUG`. Kept as a seam - see `AppSheet`'s `baseRows`. */
     BOTTOM_SHEET,
 }

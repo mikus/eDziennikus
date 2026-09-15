@@ -72,7 +72,7 @@ private val ContentEdgeShadowColors = listOf(Color(0x40000000), Color(0x00000000
 
 /**
  * The app shell: the drawer, the toolbar, the bottom bar with its FAB, the icon rail, the snackbar
- * host, the bottom sheet, and the `FrameLayout(R.id.fragment)` that all 19 fragment-backed
+ * host, the bottom sheet, and the `FrameLayout(R.id.fragment)` that all 17 fragment-backed
  * destinations are still committed into. Design §5 and §2.
  *
  * Hosted by `activity_szkolny.xml`'s `ComposeView` via `setAppThemeContent`, which is why the app
@@ -136,7 +136,8 @@ private val ContentEdgeShadowColors = listOf(Color(0x40000000), Color(0x00000000
  * @param profileImages resolves any profile id to its avatar, for the drawer header and the profile
  *   switcher.
  * @param sheetBaseRows [AppSheet]'s `baseRows`: the `BOTTOM_SHEET` `NavTarget` rows, dev-only ones
- *   already filtered. It is a parameter because building it needs `NavTarget` and `App.devMode`.
+ *   already filtered. Empty since Phase 40 deleted `DEBUG` - see [AppSheet]. It stays a parameter
+ *   because building it needs `NavTarget` and `App.devMode`.
  * @param sheetHintEnabled `!app.config.ui.bottomSheetOpened` - the gate `gainAttention()` applies
  *   before hinting at the sheet button.
  * @param onSyncClick shows `SyncViewListDialog(activity, navTarget)`; [AppSheet] closes itself.
