@@ -16,11 +16,11 @@ import eu.mikus.edziennik.ui.agenda.AgendaFragment
 import eu.mikus.edziennik.ui.announcements.AnnouncementsFragment
 import eu.mikus.edziennik.ui.attendance.AttendanceFragment
 import eu.mikus.edziennik.ui.behaviour.BehaviourFragment
-import eu.mikus.edziennik.ui.debug.LabFragment
 import eu.mikus.edziennik.ui.grades.GradesListFragment
 import eu.mikus.edziennik.ui.grades.editor.GradesEditorFragment
 import eu.mikus.edziennik.ui.home.HomeFragment
 import eu.mikus.edziennik.ui.homework.HomeworkFragment
+import eu.mikus.edziennik.ui.lab.LabFragment
 import eu.mikus.edziennik.ui.messages.compose.MessagesComposeFragment
 import eu.mikus.edziennik.ui.messages.list.MessagesFragment
 import eu.mikus.edziennik.ui.messages.single.MessageFragment
