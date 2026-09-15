@@ -12,8 +12,8 @@ import eu.mikus.edziennik.ext.toInt
  * How a value round-trips through the edit dialog, keyed off the same [LabTarget] the resolver chose -
  * so the arm is picked once and the two `when`s are compiler-checked against each other.
  *
- * [format] is **not** the tree's display text: it is unquoted (`LabProfileFragment.kt:90-99`), while
- * the row rendered `JsonElement.toString()` (`JsonElementViewHolder.kt:51`).
+ * [format] is **not** the tree's display text: it is unquoted (`LabProfileFragment.kt@53a07964:90-99`), while
+ * the row rendered `JsonElement.toString()` (`JsonElementViewHolder.kt@53a07964:51`).
  */
 object LabValueCodec {
 

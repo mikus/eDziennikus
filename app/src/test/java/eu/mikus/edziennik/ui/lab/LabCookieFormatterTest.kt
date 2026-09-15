@@ -32,7 +32,7 @@ class LabCookieFormatterTest {
 
     @Test
     fun `the value is percent-decoded and clipped to forty characters`() {
-        // LabPageFragment.kt:196-197 - `.decode().take(40)`.
+        // LabPageFragment.kt@53a07964:196-197 - `.decode().take(40)`.
         val long = "x".repeat(60)
         val line = LabCookieFormatter.format(listOf(cookie("a.pl", "n", "a%20b$long"))).single().lines.single()
         assertTrue(line.value.startsWith("a b"))
@@ -41,7 +41,7 @@ class LabCookieFormatterTest {
 
     @Test
     fun `the persistent flag survives, because the readout underlines those names`() {
-        // TextExtensions.kt:163 asUnderlineSpannable, sole caller LabPageFragment.kt:191. The cue is
+        // ext/TextExtensions.kt@53a07964:163 asUnderlineSpannable, sole caller LabPageFragment.kt@53a07964:191. The cue is
         // kept in Compose as SpanStyle(textDecoration = Underline) - dropping it loses a state cue.
         val groups = LabCookieFormatter.format(
             listOf(cookie("a.pl", "session", "1"), cookie("a.pl", "remember", "2", persistent = true)),

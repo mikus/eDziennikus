@@ -12,7 +12,7 @@ import eu.mikus.edziennik.config.BaseConfig
 /**
  * Walks a [LabPath] down the six roots and says what it points at.
  *
- * Replaces `LabProfileFragment.kt:66-87`, whose `when (el)` matched the root by its *display string*
+ * Replaces `LabProfileFragment.kt@53a07964:66-87`, whose `when (el)` matched the root by its *display string*
  * and then re-dispatched on the parent's runtime type - which could not tell the two config roots
  * apart, because both are the same `HashMap<String, String?>` (`BaseConfig.kt:27`).
  *
@@ -53,7 +53,7 @@ object LabPathResolver {
     }
 
     private fun classify(parent: Any, name: String, current: Any?): LabTarget = when (parent) {
-        // Reachable, not dead: LabJsonAdapter.kt:64 indexes arrays into clickable rows. Dropping this
+        // Reachable, not dead: LabJsonAdapter.kt@53a07964:64 indexes arrays into clickable rows. Dropping this
         // arm sends array parents into the reflective branch and getDeclaredField("0").
         is JsonArray -> LabTarget.Unsupported("editing array elements is not supported")
         is JsonObject ->

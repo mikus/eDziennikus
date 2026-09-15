@@ -2,8 +2,8 @@
 """capture2.py <label> — the surfaces the first 13-state set never reached.
 
 Covers: the 3 md_* colours on Behaviour, row_announcements_item on Notice board,
-md_black_1000 on the login chooser, fragment_debug's OutlinedBox TextInputLayout, plus
-Homework / Teachers / Notifications / a message detail / the profile dialog / Settings root.
+md_black_1000 on the login chooser, plus Homework / Teachers / Notifications /
+the profile dialog / Settings root.
 Same discipline as capture.py: assert the state, refuse transient snackbars, abort loudly.
 
 Writes into the SAME /tmp/n5a/<label> directory as capture.py and never clears it - capture.py
@@ -125,11 +125,6 @@ def main():
     taptext("Teachers");  shot("17-teachers", ["Teachers"])
 
     go("Notifications"); shot("18-notifications", ["Notifications"])
-
-    # Debug: reached through the bottom sheet, and it holds an OutlinedBox TextInputLayout
-    go("Home page")
-    tap(1006, 2263, 3.0)
-    taptext("Debugging", 4.0); shot("19-debug", ["Run command"])
 
     # A message detail is NOT captured: it fetches the body over the network, so with the network
     # frozen it raises an error snackbar. No renamed layout is involved either - messages_list_item

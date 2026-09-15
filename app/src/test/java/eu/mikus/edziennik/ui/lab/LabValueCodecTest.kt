@@ -46,7 +46,7 @@ class LabValueCodecTest {
 
     @Test
     fun `format renders an enum field as its id, not its name`() {
-        // LabProfileFragment.kt:97 - `objVal.toInt().toString()`.
+        // LabProfileFragment.kt@53a07964:97 - `objVal.toInt().toString()`.
         assertEquals("2", LabValueCodec.format(field(LoginType.LIBRUS)))
     }
 
@@ -117,13 +117,13 @@ class LabValueCodecTest {
 
     @Test
     fun `an empty string into a Char field fails instead of throwing`() {
-        // LabProfileFragment.kt:128 - `input.toCharArray()[0]`.
+        // LabProfileFragment.kt@53a07964:128 - `input.toCharArray()[0]`.
         assertIs<LabEditError>(LabValueCodec.parse(field('x'), "").exceptionOrNull())
     }
 
     @Test
     fun `non-numeric text into an enum field fails before toEnum is reached`() {
-        // LabProfileFragment.kt:132 has three failure modes, not two: toInt() throws first.
+        // LabProfileFragment.kt@53a07964:132 has three failure modes, not two: toInt() throws first.
         assertIs<LabEditError>(LabValueCodec.parse(field(LoginType.LIBRUS), "LIBRUS").exceptionOrNull())
     }
 

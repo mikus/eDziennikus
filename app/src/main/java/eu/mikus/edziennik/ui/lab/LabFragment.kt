@@ -40,7 +40,7 @@ class LabFragment : Fragment() {
     companion object {
         private const val TAG = "LabFragment"
 
-        /** `LabPageFragment.kt:176` polled the cookie readout every 300 ms. Same cadence. */
+        /** `LabPageFragment.kt@53a07964:176` polled the cookie readout every 300 ms. Same cadence. */
         private const val PollMs = 300L
     }
 
@@ -113,7 +113,7 @@ class LabFragment : Fragment() {
             // dropping it deletes the profile instead of clearing it.
             //
             // The id and the name arrive on the effect, so this host reads neither off App. Design D7
-            // is exactly "pass the real profile name" - LabPageFragment.kt:93 passed the literal
+            // is exactly "pass the real profile name" - LabPageFragment.kt@53a07964:93 passed the literal
             // "FAKE", which the dialog interpolated into "Zamierzasz usunac profil FAKE" while wiping
             // the profile the operator was actually on - so that value belongs where a test sees it.
             is LabEffect.ConfirmClearProfile -> ProfileRemoveDialog(
@@ -144,7 +144,7 @@ class LabFragment : Fragment() {
     }
 
     /**
-     * `LabPageFragment.kt:113-122` and `:135-144` were byte-identical; this is that dialog, once.
+     * `LabPageFragment.kt@53a07964:113-122` and `:135-144` were byte-identical; this is that dialog, once.
      *
      * The kill is genuinely required: `App.enableChucker` and `App.devMode` are read at process start
      * (`App.kt:209-210`). Do **not** replace it with a graceful restart - that is a behaviour change

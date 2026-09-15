@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -40,6 +41,8 @@ class LabViewModelTest {
     private val acted = mutableListOf<LabAction>()
     private val toggled = mutableListOf<Pair<LabToggle, Boolean>>()
     private var writeThrows = false
+    /** Flipped mid-test so a refreshed panel really differs from the one the VM started with. */
+    private var chuckerEnabled = true
 
     private val configPath = LabPath(LabRoot.CONFIG_PROFILE, listOf("theme"))
     private val tokenPath = LabPath(LabRoot.PROFILE_STUDENT_DATA, listOf("token"))
@@ -51,7 +54,7 @@ class LabViewModelTest {
         LabRoot.CONFIG_PROFILE to JsonObject().apply { addProperty("theme", "2") },
     )
 
-    private fun snapshot(chuckerEnabled: Boolean = true) = LabSnapshot(
+    private fun snapshot(chuckerEnabled: Boolean = this.chuckerEnabled) = LabSnapshot(
         profileIsZero = false, chuckerEnabled = chuckerEnabled,
         archiverEnabled = true, apiAvailabilityCheck = false,
         profiles = listOf(LabProfileEntry(4, "Ola", false)), currentProfileId = 4,
@@ -71,11 +74,22 @@ class LabViewModelTest {
         write = { resolved, value ->
             if (writeThrows) throw IllegalStateException("boom")
             writes += resolved to value
+            // Apply it for real, so the re-projection has something to show.
+            (resolved.target as? LabTarget.JsonLeaf)?.let { leaf ->
+                when (value) {
+                    is String -> leaf.parent.addProperty(leaf.name, value)
+                    is Number -> leaf.parent.addProperty(leaf.name, value)
+                    is Boolean -> leaf.parent.addProperty(leaf.name, value)
+                }
+            }
         },
         persist = { persisted += it },
         act = { acted += it },
         toggle = { t, v -> toggled += t to v },
     )
+
+    private fun LabViewModel.hasOpenChucker() =
+        panel.value.controls.any { it is LabControl.Button && it.action == LabAction.OpenChucker }
 
     private fun TestScope.collectEffects(vm: LabViewModel): MutableList<LabEffect> {
         val effects = mutableListOf<LabEffect>()
@@ -140,12 +154,17 @@ class LabViewModelTest {
     @Test
     fun `a successful write reaches the sink, persists its own root, and rebuilds the tree`() {
         val vm = vm()
+        vm.toggleNode(LabPath(LabRoot.PROFILE_STUDENT_DATA))
+        assertEquals("\"abc\"", assertIs<LabNode.Leaf>(vm.tree.value.rows.single { it.name == "token" }).displayText)
         val before = snapshotCalls
         vm.writeValue(tokenPath, "xyz")
         assertEquals(1, writes.size)
         assertEquals("xyz", writes.single().second)
         assertEquals(listOf(LabRoot.PROFILE_STUDENT_DATA), persisted)
         assertEquals(before + 1, snapshotCalls)
+        // The rebuilt nodes have to reach _tree: a writeValue that rebuilds but never re-projects
+        // leaves the row showing the pre-edit value, and every other assertion here still passes.
+        assertEquals("\"xyz\"", assertIs<LabNode.Leaf>(vm.tree.value.rows.single { it.name == "token" }).displayText)
     }
 
     @Test
@@ -178,9 +197,14 @@ class LabViewModelTest {
     fun `a toggle writes through the seam and refreshes the panel`() {
         val vm = vm()
         val before = panelCalls
+        assertTrue(vm.hasOpenChucker())
+        // The fake snapshot changes under the VM, so counting panelSnapshot() calls is not enough:
+        // a refreshPanel() that re-snapshots but never publishes leaves `Open Chucker` on the panel.
+        chuckerEnabled = false
         vm.onToggle(LabToggle.ARCHIVER_ENABLED, false)
         assertEquals(listOf(LabToggle.ARCHIVER_ENABLED to false), toggled)
         assertEquals(before + 1, panelCalls)
+        assertFalse(vm.hasOpenChucker())
     }
 
     @Test

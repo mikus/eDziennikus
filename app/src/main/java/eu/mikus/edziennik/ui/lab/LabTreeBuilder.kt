@@ -23,7 +23,7 @@ import com.google.gson.JsonPrimitive
  */
 object LabTreeBuilder {
 
-    /** `JsonObjectViewHolder.kt:44` - `.take(200)`. */
+    /** `JsonObjectViewHolder.kt@53a07964:44` - `.take(200)`. */
     private const val PreviewChars = 200
 
     fun build(roots: Map<LabRoot, JsonElement>): List<LabNode> = buildList {
@@ -78,7 +78,7 @@ object LabTreeBuilder {
         style: LabContainerStyle,
     ): LabNode.Container {
         // Only a Full row renders these. Computing them for a Compact row would serialise its whole
-        // subtree for something the screen discards - JsonSubObjectViewHolder.kt:30-41 had neither.
+        // subtree for something the screen discards - JsonSubObjectViewHolder.kt@53a07964:30-41 had neither.
         val full = style == LabContainerStyle.Full
         return LabNode.Container(
             path = path, name = name, depth = depth, typeLabel = typeLabel, style = style,
@@ -87,7 +87,7 @@ object LabTreeBuilder {
         )
     }
 
-    /** `JsonElementViewHolder.kt:34-43`, verbatim. */
+    /** `JsonElementViewHolder.kt@53a07964:34-43`, verbatim. */
     private fun typeLabelOf(element: JsonElement): String? = when {
         element is JsonPrimitive && element.isNumber -> "Number"
         element is JsonPrimitive && element.isString -> "String"

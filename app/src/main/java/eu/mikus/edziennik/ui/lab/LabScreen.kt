@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -43,7 +45,7 @@ import eu.mikus.edziennik.ui.dialogs.base.FormDropdownItem
 /**
  * One scrolling screen (design D2): the control panel, then the six-root inspector. The tab strip it
  * replaces was already commented out at `lab_fragment.xml@53a07964:28-36`, and its two titles were hardcoded
- * English literals (`LabFragment.kt:52-53`).
+ * English literals (`LabFragment.kt@53a07964:52-53`).
  */
 @Composable
 fun LabScreen(
@@ -94,8 +96,25 @@ private fun LabControlView(
     ) {
         when (control) {
             is LabControl.Button -> LabButton(control, onAction)
-            is LabControl.Check -> Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = control.checked, onCheckedChange = { onToggle(control.toggle, it) })
+            // The old MaterialCheckBox was match_parent with android:text, so the whole row toggled
+            // and the text was the box's own label. Hoisting the toggle onto the Row restores both the
+            // affordance and the accessibility node - SettingsScreen's switch rows hoist the tap onto
+            // the row the same way (`SettingsScreen.kt:129-131`), though with `clickable` and a live
+            // Switch, so they keep the two separate nodes this one merges. The repo's three checkbox
+            // rows (`ConfigControls.kt:28-33`, `MessagesComposeScreen.kt:587-596`,
+            // `GradesConfigDialog.kt:250-255`) all keep a live `Checkbox` too and so also read as two
+            // nodes; merging here is deliberate, not an oversight, and they are left alone.
+            is LabControl.Check -> Row(
+                Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = control.checked,
+                        role = Role.Checkbox,
+                        onValueChange = { onToggle(control.toggle, it) },
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = control.checked, onCheckedChange = null)
                 Text(control.label)
             }
             is LabControl.ProfilePicker -> FormDropdown(
@@ -132,10 +151,10 @@ private fun LabButton(control: LabControl.Button, onAction: (LabAction) -> Unit)
 }
 
 /**
- * `LabPageFragment.kt:180-204`, cue for cue: bold domain, **underlined name when the cookie is
+ * `LabPageFragment.kt@53a07964:180-204`, cue for cue: bold domain, **underlined name when the cookie is
  * persistent**, italic secondary-coloured value, monospace throughout (`lab_fragment.xml@53a07964:122`).
- * Compose takes no `Spannable`, so `asUnderlineSpannable` is re-expressed as a [SpanStyle] here and
- * loses its last caller.
+ * Compose takes no `Spannable`, so `asUnderlineSpannable` is re-expressed as a [SpanStyle] here and the
+ * extension, having lost its last caller, was deleted in the same phase.
  */
 @Composable
 private fun CookiesReadout(groups: List<CookieGroup>) {
@@ -195,10 +214,11 @@ private fun LabRow(node: LabNode.Container, onClick: () -> Unit) {
             )
         }
         if (node.style == LabContainerStyle.Full) {
-            // preview while closed, summary while open - JsonObjectViewHolder.kt:40-41. Both are
+            // preview while closed, summary while open - JsonObjectViewHolder.kt@53a07964:40-41. Both are
             // non-null exactly when style == Full; orEmpty() is the compiler's price for that.
-            // Only the preview was monospace (lab_item_object.xml@53a07964:40-45); the summary, which
-            // reads "N elements" rather than JSON, was not - so the fixed pitch follows the JSON.
+            // Only the preview was monospace (lab_item_object.xml@53a07964:58-65, its
+            // android:fontFamily at :62); the summary (lab_item_object.xml@53a07964:67-73), which reads
+            // "N elements" rather than JSON, declared none - so the fixed pitch follows the JSON.
             Text(
                 (if (node.expanded) node.summary else node.preview).orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
@@ -211,7 +231,7 @@ private fun LabRow(node: LabNode.Container, onClick: () -> Unit) {
     }
 }
 
-/** `JsonElementViewHolder.kt:31-52`: key in the secondary colour, `": "`, then the italic value. */
+/** `JsonElementViewHolder.kt@53a07964:31-52`: key in the secondary colour, `": "`, then the italic value. */
 @Composable
 private fun LabLeafRow(node: LabNode.Leaf, onClick: () -> Unit) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant

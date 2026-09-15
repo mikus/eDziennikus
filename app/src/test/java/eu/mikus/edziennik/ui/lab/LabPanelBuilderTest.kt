@@ -34,7 +34,10 @@ class LabPanelBuilderTest {
         val controls = LabPanelBuilder.build(snapshot())
         assertEquals(18, controls.size)
         assertEquals(1, controls.filterIsInstance<LabControl.Cookies>().size)
-        assertEquals(17, controls.size - 1)
+        // A per-kind breakdown, not `size - cookies`: that would restate the two lines above and could
+        // never fail on its own. Buttons are pinned against LabAction.entries in the next test.
+        assertEquals(3, controls.toggles().size)
+        assertEquals(1, controls.filterIsInstance<LabControl.ProfilePicker>().size)
     }
 
     @Test
@@ -46,7 +49,7 @@ class LabPanelBuilderTest {
 
     @Test
     fun `the profile gate hides exactly nine controls`() {
-        // LabPageFragment.kt:61-71 - last10unseen, fullSync, clearProfile, clearEndpointTimers, rodo,
+        // LabPageFragment.kt@53a07964:61-71 - last10unseen, fullSync, clearProfile, clearEndpointTimers, rodo,
         // removeHomework, resetEventTypes, unarchive, profile.
         val full = LabPanelBuilder.build(snapshot(profileIsZero = false))
         val gated = LabPanelBuilder.build(snapshot(profileIsZero = true))
@@ -78,7 +81,7 @@ class LabPanelBuilderTest {
 
     @Test
     fun `Open Chucker is present exactly when Chucker is enabled, independently of the profile gate`() {
-        // lab_fragment.xml@53a07964:56 android:visibility="gone", flipped only at LabPageFragment.kt:125-126.
+        // lab_fragment.xml@53a07964:56 android:visibility="gone", flipped only at LabPageFragment.kt@53a07964:125-126.
         assertTrue(LabAction.OpenChucker in LabPanelBuilder.build(snapshot(chuckerEnabled = true)).actions())
         assertTrue(LabAction.OpenChucker !in LabPanelBuilder.build(snapshot(chuckerEnabled = false)).actions())
         assertTrue(

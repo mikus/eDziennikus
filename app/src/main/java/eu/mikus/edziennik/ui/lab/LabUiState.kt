@@ -23,8 +23,8 @@ enum class LabRoot(val label: String) {
  * A node's address: a root plus the keys below it.
  *
  * Structured, not the old `"Config:key"` colon string. The adapter minted paths by concatenating with
- * `":"` (`LabJsonAdapter.kt:49-51, :63-64`) and the resolver re-split them
- * (`LabProfileFragment.kt:66`), so a key containing a colon could not round-trip. The repo already
+ * `":"` (`LabJsonAdapter.kt@53a07964:49-51, :63-64`) and the resolver re-split them
+ * (`LabProfileFragment.kt@53a07964:66`), so a key containing a colon could not round-trip. The repo already
  * refused that once - `AttendanceUiState.kt:20` keeps `NodeKey` as the identity and `stableId` only
  * as a LazyColumn key, which is exactly what [stableId] is for here.
  */
@@ -38,13 +38,13 @@ data class LabPath(val root: LabRoot, val segments: List<String> = emptyList()) 
      */
     val stableId: String get() = root.name + segments.joinToString("") { "/${it.length}:$it" }
     fun child(segment: String) = copy(segments = segments + segment)
-    /** The dialog title, as `item.key` was (`LabProfileFragment.kt:102`). */
+    /** The dialog title, as `item.key` was (`LabProfileFragment.kt@53a07964:102`). */
     val title: String get() = (listOf(root.label) + segments).joinToString(" / ")
 }
 
 /**
  * Which of the three container renderings a row gets. Selected by **depth**, not by kind:
- * `LabJsonAdapter.kt:98-100` reads `if (item.level == 1)`, while an array always got the full
+ * `LabJsonAdapter.kt@53a07964:98-100` reads `if (item.level == 1)`, while an array always got the full
  * rendering (`ITEM_TYPE_ARRAY`). Decided here, in the builder, so `LabTreeBuilderTest` can assert it
  * instead of the composable branching on depth.
  */
@@ -74,7 +74,7 @@ sealed interface LabNode {
         override val name: String,
         override val depth: Int,
         override val typeLabel: String?,
-        /** `JsonElement.toString()` - quoted, as `JsonElementViewHolder.kt:51` rendered it. */
+        /** `JsonElement.toString()` - quoted, as `JsonElementViewHolder.kt@53a07964:51` rendered it. */
         val displayText: String,
     ) : LabNode
 }
@@ -95,7 +95,7 @@ sealed interface LabTarget {
 
     /**
      * A reachable node that cannot be edited. Kept as an explicit arm, not deleted: array elements
-     * arrive here because `LabJsonAdapter.kt:64` indexes arrays into clickable rows, and without this
+     * arrive here because `LabJsonAdapter.kt@53a07964:64` indexes arrays into clickable rows, and without this
      * arm they fall to the reflective branch, which runs `getDeclaredField("0")` on a `JsonArray`.
      */
     data class Unsupported(val reason: String) : LabTarget

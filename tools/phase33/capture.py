@@ -199,7 +199,7 @@ def main():
         taptext("More")
     taptext("Notes");        shot("09-notes", ["Notes"])
 
-    go("Lab", None);         shot("12-lab", ["CLICK ME"])
+    go("Lab", None);         shot("12-lab", ["Chucker"])
 
     go("Home page", None)
     tap(1006, 2263, 3.0)                      # sheet button

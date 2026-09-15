@@ -8,8 +8,8 @@ package eu.mikus.edziennik.ui.lab
  * Pure, Android-free assembly of Lab's control panel, in `lab_fragment.xml` order.
  *
  * The roster used to live in two files that disagreed: nine controls hidden by
- * `LabPageFragment.kt:61-71`, `openChucker` hidden by its own `android:visibility="gone"`
- * (`lab_fragment.xml@53a07964:56`, flipped at `LabPageFragment.kt:125-126`), and two checkboxes with no
+ * `LabPageFragment.kt@53a07964:61-71`, `openChucker` hidden by its own `android:visibility="gone"`
+ * (`lab_fragment.xml@53a07964:56`, flipped at `LabPageFragment.kt@53a07964:125-126`), and two checkboxes with no
  * `android:id` that exist only as two-way data binding (`lab_fragment.xml@53a07964:139-149`) and appear in no
  * handler at all. Building the roster here makes dropping one a deliberate deletion.
  *

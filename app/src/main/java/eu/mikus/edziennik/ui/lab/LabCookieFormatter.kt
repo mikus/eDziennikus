@@ -8,10 +8,10 @@ import okhttp3.Cookie
 import pl.szczodrzynski.fslogin.decode
 
 /**
- * `LabPageFragment.kt:177-203`, lifted out of the `Spannable` concatenation so it can be asserted.
+ * `LabPageFragment.kt@53a07964:177-203`, lifted out of the `Spannable` concatenation so it can be asserted.
  *
  * The persistent flag rides along because the readout underlined persistent cookie names
- * (`asUnderlineSpannable`, `ext/TextExtensions.kt:163`). Compose takes no `Spannable`, so the screen
+ * (`asUnderlineSpannable`, `ext/TextExtensions.kt@53a07964:163`). Compose takes no `Spannable`, so the screen
  * re-renders that cue as `SpanStyle(textDecoration = TextDecoration.Underline)`; the extension itself
  * then has no caller left and commit 4 removes it.
  */

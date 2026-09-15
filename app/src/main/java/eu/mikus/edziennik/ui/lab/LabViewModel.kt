@@ -158,7 +158,7 @@ class LabViewModel(
         private val loginStore by lazy { app.db.loginStoreDao().getByIdNow(app.profile.loginStoreId) }
 
         /**
-         * Read once, as `LabPageFragment.kt:161` read it. The list cannot change while Lab is on
+         * Read once, as `LabPageFragment.kt@53a07964:161` read it. The list cannot change while Lab is on
          * screen - picking a profile calls `MainActivity.navigate`, which rebuilds the fragment - and
          * keeping it out of `panelSnapshot` stops the 300 ms cookie poll from also re-running a
          * blocking `SELECT * FROM profiles` on the main thread 3.3 times a second.
@@ -242,7 +242,7 @@ internal fun writeLabValue(resolved: Resolved, newValue: Any?) {
     }
 }
 
-/** `LabProfileFragment.kt:139-142`. The config roots need nothing: `BaseConfig.set` already wrote. */
+/** `LabProfileFragment.kt@53a07964:139-142`. The config roots need nothing: `BaseConfig.set` already wrote. */
 internal fun persistLabRoot(app: App, root: LabRoot, loginStore: LoginStore?) {
     when (root) {
         LabRoot.PROFILE, LabRoot.PROFILE_STUDENT_DATA -> app.profileSave()

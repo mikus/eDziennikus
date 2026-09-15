@@ -4,7 +4,7 @@
 Covers the attendance details dialog, the Material date and time pickers,
 dialog_generate_block_timetable, both code-built TextInputLayout modes (note editor DIALOG,
 composer FILLED), a message attachment chip and its PopupMenu, the Lab profile dropdown's
-PopupMenu, the crash screen, a tinted-light theme and an active text selection.
+ExposedDropdownMenu, the crash screen, a tinted-light theme and an active text selection.
 
 A thin client of capture.py: every helper is imported, none is re-implemented. Writes into the
 SAME /tmp/n5a/<label> directory as the other two and never clears it — capture.py is the only
@@ -169,14 +169,25 @@ def main():
     key("KEYCODE_BACK", 2.5)
     key("KEYCODE_BACK", 3.0)
 
-    # --- entry 9c: the Lab profile dropdown's PopupMenu. The Lab page shows through, so the list is
-    # anchored on its bottom clamp. Do NOT tap a row — that navigates and the switch persists.
-    # The row texts double as the profile/archive-state guard for the whole run.
+    # --- entry 9c: the Lab profile dropdown's ExposedDropdownMenu. Lab is now ONE LazyColumn whose
+    # tail is the six JSON-root rows below a divider, not the old ScrollView ending at rebuildConfig,
+    # so the bottom clamp lands well past the picker — anchoring on it would leave node() returning
+    # None and blame a profile leak for a scroll problem. Search for the row and stop on it instead.
+    # This is the one place scroll_bottom's reproducibility argument does not apply: the tap
+    # coordinates come from node(), not from an offset assumed off the clamp, so nothing here depends
+    # on where the scroll stopped. drag() rather than a fling, so the search cannot overshoot the row
+    # it is hunting for. Do NOT tap a row of the menu once it opens — that navigates and the switch
+    # persists. The row texts double as the profile/archive-state guard for the whole run.
     go("Lab")
-    scroll_bottom(6)
     c = node(f"2 {PROFILE} archived false")
+    for _ in range(10):
+        if c:
+            break
+        drag(540, 1900, 1100)
+        c = node(f"2 {PROFILE} archived false")
     if not c:
-        die("Lab profile dropdown missing or not on profile 2 — a profile switch or archive leaked")
+        die("Lab profile picker never came into view — either not on profile 2 (a profile switch or "
+            "archive leaked), or the picker moved out of the panel")
     tap(c[0], c[1], 3.0)
     shot("33-lab-dropdown", ["1 Jan Szkolny archived false", f"2 {PROFILE} archived false",
                              "3 Tomasz Olszewski archived false", "4 Stanisław Olszewski archived false"])

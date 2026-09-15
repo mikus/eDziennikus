@@ -73,14 +73,14 @@ class LabPathResolverTest {
 
     @Test
     fun `a JsonNull leaf is Unsupported, not a ClassCastException`() {
-        // LabProfileFragment.kt:110 did `objVal as JsonPrimitive` inside the uncovered listener.
+        // LabProfileFragment.kt@53a07964:110 did `objVal as JsonPrimitive` inside the uncovered listener.
         val target = assertIs<LabTarget.Unsupported>(resolve(LabRoot.PROFILE_STUDENT_DATA, "nul").getOrThrow().target)
         assertTrue(target.reason.isNotBlank())
     }
 
     @Test
     fun `an array element is Unsupported, and the arm is reachable`() {
-        // LabJsonAdapter.kt:64 indexes arrays into clickable rows, so this path really is reached.
+        // LabJsonAdapter.kt@53a07964:64 indexes arrays into clickable rows, so this path really is reached.
         // Without the arm it falls to reflection and runs getDeclaredField("0") on a JsonArray.
         val target = assertIs<LabTarget.Unsupported>(
             resolve(LabRoot.PROFILE_STUDENT_DATA, "list", "0").getOrThrow().target,
