@@ -698,8 +698,8 @@ class ShellPolicyTest {
 
     @Test
     fun `a drained queue clears a sync nothing else can end`() {
-        // Three cancels on the sync notification: checkIfTaskFrozen fires on taskCancelTries >= 3
-        // and calls allCompleted(), which posts AllFinished and neither Finished nor Error.
+        // One cancel on the sync notification: onTaskCancelRequest calls allCompleted() directly,
+        // which posts AllFinished and neither Finished nor Error.
         var subtitle: SyncSubtitle = SyncSubtitle.Idle
         subtitle = nextSubtitle(subtitle, SyncSignal.Started(profileId = 3), activeProfileId = 3)
         subtitle = nextSubtitle(

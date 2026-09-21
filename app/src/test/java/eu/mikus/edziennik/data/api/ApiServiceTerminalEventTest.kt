@@ -8,6 +8,7 @@ import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskFinishedEvent
 import eu.mikus.edziennik.data.api.events.requests.ServiceCloseRequest
+import eu.mikus.edziennik.data.api.events.requests.TaskCancelRequest
 import eu.mikus.edziennik.data.api.task.ErrorReportTask
 import eu.mikus.edziennik.data.api.task.IApiTask
 import org.greenrobot.eventbus.EventBus
@@ -94,7 +95,7 @@ class ApiServiceTerminalEventTest {
     private fun allFinished() = EventBus.getDefault().getStickyEvent(ApiTaskAllFinishedEvent::class.java)
 
     /** Fixture self-check: proves the hang is a hang, not a silent completion. `prepare()` runs at
-     *  `runTask():188`, before the `when`, so a non-null taskName proves the task really reached the
+     *  `runTask():187`, before the `when`, so a non-null taskName proves the task really reached the
      *  dispatch point. Do NOT assert on a sticky `ApiTaskStartedEvent` - it is posted with `post`,
      *  not `postSticky`. */
     private fun startHanging(): HangingTask {
@@ -145,6 +146,20 @@ class ApiServiceTerminalEventTest {
             "and it completed rather than erroring",
             EventBus.getDefault().getStickyEvent(ApiTaskErrorEvent::class.java),
         )
+    }
+
+    @Test fun `one cancel tap ends the sync`() {
+        startHanging()
+        controller.get().onTaskCancelRequest(TaskCancelRequest(1))
+        assertNotNull("one tap is an instruction, not a question", allFinished())
+    }
+
+    @Test fun `a cancel reaches the running task`() {
+        val task = startHanging()
+        controller.get().onTaskCancelRequest(TaskCancelRequest(1))
+        // Fails at 0 if clearTask() is ever ordered before taskRunning?.cancel(): clearTask() nulls
+        // taskRunning, so the cancel would silently never reach the task while the service stopped.
+        assertEquals(1, task.cancelCount)
     }
 
     private companion object { const val HANGING = "hanging" }

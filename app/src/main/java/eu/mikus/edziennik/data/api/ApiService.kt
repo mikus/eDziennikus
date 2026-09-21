@@ -40,7 +40,6 @@ class ApiService : Service() {
         }
 
         var lastEventTime = System.currentTimeMillis()
-        var taskCancelTries = 0
     }
 
     private val app by lazy { applicationContext as App }
@@ -217,29 +216,15 @@ class ApiService : Service() {
 
     /**
      * Check if a task is inactive for more than 30 seconds.
-     * If the user tries to cancel a task with no success at least three times,
-     * consider it frozen as well.
      *
      * This usually means it is broken and won't become active again.
      * This method cancels the task and removes any pointers to it.
      */
-    private fun checkIfTaskFrozen(): Boolean {
-        if (System.currentTimeMillis() - lastEventTime > 30*1000
-                || taskCancelTries >= 3) {
+    private fun checkIfTaskFrozen() {
+        if (System.currentTimeMillis() - lastEventTime > 30*1000) {
             val time = System.currentTimeMillis() - lastEventTime
             d(TAG, "!!! Task $taskRunningId froze for $time ms. $taskRunning")
             clearTask()
-            return true
-        }
-        return false
-    }
-
-    /**
-     * Stops the service if the current task is frozen/broken.
-     */
-    private fun stopIfTaskFrozen() {
-        if (checkIfTaskFrozen()) {
-            allCompleted()
         }
     }
 
@@ -254,7 +239,6 @@ class ApiService : Service() {
         taskProgress = -1f
         taskProgressText = null
         taskCancelled = false
-        taskCancelTries = 0
     }
 
     private fun allCompleted() {
@@ -310,10 +294,17 @@ class ApiService : Service() {
         EventBus.getDefault().removeStickyEvent(request)
         d(TAG, request.toString())
 
-        taskCancelTries++
-        taskCancelled = true
+        // A tap on Anuluj is an instruction, not a question. It ends the whole sync, which is what
+        // runTask()'s taskCancelled arm has always intended - that arm simply never fired, because
+        // clearTask() resets the flag before any callback path reaches it.
+        // Post FIRST, for the same reason onServiceCloseRequest does (spec D-3): cancel() reaches
+        // Data.saveData(), a multi-DAO flush, and a throw there would otherwise skip allCompleted(),
+        // be swallowed by this ASYNC subscriber, and strand the sync with nothing posted at all -
+        // on the route this commit makes the user's primary way out.
+        // Below the post, order still matters: clearTask() nulls taskRunning, so cancel comes first.
+        allCompleted()
         taskRunning?.cancel()
-        stopIfTaskFrozen()
+        clearTask()
     }
     @Subscribe(sticky = true, threadMode = ThreadMode.ASYNC)
     fun onServiceCloseRequest(request: ServiceCloseRequest) {
