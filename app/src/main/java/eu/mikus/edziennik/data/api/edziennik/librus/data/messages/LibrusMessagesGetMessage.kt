@@ -5,8 +5,10 @@
 package eu.mikus.edziennik.data.api.edziennik.librus.data.messages
 
 import android.util.Base64
+import eu.mikus.edziennik.data.api.ERROR_LIBRUS_MESSAGES_NO_MESSAGE_DATA
 import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusMessages
+import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.db.entity.Message.Companion.TYPE_RECEIVED
 import eu.mikus.edziennik.data.db.entity.Message.Companion.TYPE_SENT
 import eu.mikus.edziennik.data.db.entity.Metadata
@@ -34,7 +36,15 @@ class LibrusMessagesGetMessage(override val data: DataLibrus,
                 "messageId" to messageObject.id,
                 "archive" to 0
         )) { doc ->
-            val message = doc.select("response GetMessage data").first() ?: return@messagesGet
+            val message = doc.select("response GetMessage data").first() ?: run {
+                // Without this the callback returns with neither data.error(...) nor onSuccess(),
+                // so the sync never ends and the wait dialog never dismisses. Same shape as
+                // ae66d569. The response is attached as a devMode breadcrumb; outerHtml() because
+                // withApiResponse has JsonObject? and String? overloads and no Document one.
+                data.error(ApiError(TAG, ERROR_LIBRUS_MESSAGES_NO_MESSAGE_DATA)
+                        .withApiResponse(doc.outerHtml()))
+                return@messagesGet
+            }
 
             val body = Base64.decode(message.select("Message").text(), Base64.DEFAULT)
                     .toString(Charset.defaultCharset())
