@@ -125,11 +125,11 @@ sealed interface SyncSignal {
      * queue makes any `Syncing` stale by definition. `SyncStatus.onAllFinished` already treats this
      * event as terminal for "a sync is in progress".
      *
-     * It is not a catch-all for *every* way a sync can end. Two routes post no terminal event at all,
-     * so no arm here can see them: one or two `TaskCancelRequest`s against a task hung inside an HTTP
-     * call (`checkIfTaskFrozen` is only re-armed by `runTask`, so below 3 tries and 30 s nothing
-     * fires), and `ApiService.onDestroy`. The refresh spinner and `SyncStatus.isRefreshing` hang on
-     * exactly those two as well, which is the argument for fixing them together or not at all.
+     * It is not a catch-all for *every* way a sync can end. A `TaskCancelRequest` against a task hung
+     * inside an HTTP call still posts nothing below 3 tries and 30 s, and two silent exits stay out
+     * of scope: the `onApiTask` dedupe drop and a throwing `task.prepare()`. `ApiService.onDestroy`
+     * now posts directly - not via `allCompleted()` - when the platform takes the service, so the
+     * refresh spinner and `SyncStatus.isRefreshing` no longer hang on that route.
      *
      * Not to be confused with [Finished], which is one task ending; this is the whole queue.
      */

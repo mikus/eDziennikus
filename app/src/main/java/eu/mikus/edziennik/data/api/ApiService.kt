@@ -322,8 +322,13 @@ class ApiService : Service() {
 
         serviceClosed = true
         taskCancelled = true
-        taskRunning?.cancel()
+        // Post before cancelling, not after: a throwing cancel() would otherwise skip allCompleted(),
+        // be swallowed by EventBus (throwSubscriberException defaults to false), and then have
+        // onDestroy's guard suppress the second chance too, because serviceClosed is already true.
+        // stopSelf() inside allCompleted() does not run onDestroy synchronously, so the cancel below
+        // still executes normally.
         allCompleted()
+        taskRunning?.cancel()
     }
 
     /*     _____                 _                                     _     _
@@ -346,6 +351,17 @@ class ApiService : Service() {
 
     override fun onDestroy() {
         d(TAG, "Service destroyed")
+        // The guard reads serviceClosed BEFORE this method sets it. allCompleted() assigns the flag
+        // before it posts, so a false flag here means no terminal event was ever sent - the platform
+        // took the service (FGS reclaim, the Android 15 dataSync budget) and no
+        // consumer will ever be told. Two placements are wrong and both compile:
+        //   - below the assignment: the condition is always false and this does nothing;
+        //   - inside allCompleted(): runTask()'s serviceClosed arm posts for a task enqueued into a
+        //     closing service, and that post is the only thing clearing the spinner SyncTrigger
+        //     turned on eagerly via markRefreshing(). Guarding there trades a silent no-op for a
+        //     permanently stuck spinner.
+        if (!serviceClosed)
+            EventBus.getDefault().postSticky(ApiTaskAllFinishedEvent())
         serviceClosed = true
         EventBus.getDefault().unregister(this)
     }
