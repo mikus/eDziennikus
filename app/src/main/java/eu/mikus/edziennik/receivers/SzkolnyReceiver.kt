@@ -16,6 +16,22 @@ import eu.mikus.edziennik.data.api.events.requests.TaskCancelRequest
 class SzkolnyReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION = "eu.mikus.edziennik.SZKOLNY_MAIN"
+
+        /**
+         * Distinct `PendingIntent` request codes, one per action that targets this receiver.
+         *
+         * They must differ from each other. `PendingIntent` matching is
+         * (package, factory kind, requestCode, [android.content.Intent.filterEquals]) and **extras
+         * are excluded** (mutability is not), so intents that differ only in their `task` extra
+         * collapse into one record and whichever site was created first decides what the others
+         * deliver.
+         *
+         * Cancel keeps 0 so tokens already minted on upgraded installs keep resolving to it.
+         */
+        const val REQUEST_TASK_CANCEL = 0
+        const val REQUEST_SERVICE_CLOSE = 1
+        const val REQUEST_WIDGET_SYNC = 2
+
         fun getIntent(context: Context, extras: Bundle): Intent {
             val intent = Intent(context, SzkolnyReceiver::class.java)
             intent.putExtras(extras)

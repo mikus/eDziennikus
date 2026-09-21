@@ -54,14 +54,14 @@ class EdziennikNotification(val app: App) {
                 "task" to "TaskCancelRequest",
                 "taskId" to taskId
         ))
-        return PendingIntent.getBroadcast(app, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentFlag()) as PendingIntent
+        return PendingIntent.getBroadcast(app, SzkolnyReceiver.REQUEST_TASK_CANCEL, intent, PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentFlag()) as PendingIntent
     }
     private val closePendingIntent: PendingIntent
         get() {
             val intent = SzkolnyReceiver.getIntent(app, Bundle(
                     "task" to "ServiceCloseRequest"
             ))
-            return PendingIntent.getBroadcast(app, 0, intent, pendingIntentFlag()) as PendingIntent
+            return PendingIntent.getBroadcast(app, SzkolnyReceiver.REQUEST_SERVICE_CLOSE, intent, pendingIntentFlag()) as PendingIntent
         }
 
     private fun errorCountText(): String? {

@@ -51,7 +51,7 @@ class WidgetNotificationsProvider : AppWidgetProvider() {
             val syncIntent = SzkolnyReceiver.getIntent(context, Bundle(
                     "task" to "SyncRequest"
             ))
-            val syncPendingIntent = PendingIntent.getBroadcast(context, 0, syncIntent, pendingIntentMutable())
+            val syncPendingIntent = PendingIntent.getBroadcast(context, SzkolnyReceiver.REQUEST_WIDGET_SYNC, syncIntent, pendingIntentMutable())
             views.setOnClickPendingIntent(R.id.widgetNotificationsSync, syncPendingIntent)
 
             views.setImageViewBitmap(
