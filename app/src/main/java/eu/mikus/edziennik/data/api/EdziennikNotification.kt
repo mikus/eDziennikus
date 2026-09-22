@@ -49,6 +49,18 @@ class EdziennikNotification(val app: App) {
     private var criticalErrorCount = 0
     var serviceClosed = false
 
+    /**
+     * Set from [eu.mikus.edziennik.data.api.ApiService.onStartCommand], the sole caller of
+     * `startForeground`. A service that was only BOUND — which is how the background sync now
+     * reaches it, because a foreground start is refused from a cached process — must post nothing:
+     * `post()` is a plain NotificationManager.notify and nothing in the tree ever cancels the sync
+     * notification, so a single background sync would strand one in the shade for good.
+     *
+     * The foreground path is unaffected. `startForeground` is what displays the notification there;
+     * these posts only update it.
+     */
+    var serviceStarted = false
+
     private fun cancelPendingIntent(taskId: Int): PendingIntent {
         val intent = SzkolnyReceiver.getIntent(app, Bundle(
                 "task" to "TaskCancelRequest",
@@ -167,7 +179,7 @@ class EdziennikNotification(val app: App) {
 
     @Synchronized
     fun post() {
-        if (serviceClosed)
+        if (serviceClosed || !serviceStarted)
             return
         notificationManager.notify(app.notificationChannelsManager.sync.id, notification)
     }
