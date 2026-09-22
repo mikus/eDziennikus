@@ -144,6 +144,16 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
             .connectTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(10, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
+            // readTimeout bounds one read, not one call. A socket that trickles a byte at a time
+            // rearms it forever, and retryOnConnectionFailure above can stack fresh 30 s windows, so
+            // without this a request has no ceiling at all - and a sync that never returns is a sync
+            // that never posts a terminal event, which hangs the subtitle, nine refresh spinners and
+            // the first-login screen. Measured 2026-09-22 on a real profile: a HEALTHY endpoint on a
+            // GPRS-grade link is legitimately silent for up to 30.1 s (exactly readTimeout), so 90 s
+            // is 3x the worst legitimate silence and clears two stacked read timeouts. At or below
+            // 60 s this would cut a healthy sync short. See
+            // docs/superpowers/specs/2026-09-22-sync-watchdog-measurement.md
+            .callTimeout(90, TimeUnit.SECONDS)
 
         SSLProviderInstaller.enableSupportedTls(builder, enableCleartext = true)
 
