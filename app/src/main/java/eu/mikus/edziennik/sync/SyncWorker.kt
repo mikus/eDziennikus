@@ -8,6 +8,7 @@ import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.ext.formatDate
 import eu.mikus.edziennik.utils.Utils.d
 import java.util.concurrent.TimeUnit
+import java.util.UUID
 
 class SyncWorker(val context: Context, val params: WorkerParameters) : Worker(context, params) {
     companion object {
@@ -28,8 +29,8 @@ class SyncWorker(val context: Context, val params: WorkerParameters) : Worker(co
          *
          * If [ConfigSync.enabled] is not true, just cancel every job.
          */
-        fun rescheduleNext(app: App) {
-            cancelNext(app)
+        fun rescheduleNext(app: App, exceptId: UUID? = null) {
+            cancelNext(app, exceptId)
             val enableSync = app.config.sync.enabled
             if (!enableSync) {
                 return
@@ -59,10 +60,23 @@ class SyncWorker(val context: Context, val params: WorkerParameters) : Worker(co
 
         /**
          * Cancel any scheduled sync job.
+         *
+         * [exceptId] spares one job, which is how a worker rescheduling from inside its own
+         * `doWork` avoids cancelling itself — `cancelAllWorkByTag` has no "except me" form, and
+         * `ExistingWorkPolicy.REPLACE` would cancel running work too. Callers outside a worker pass
+         * null and get exactly today's behaviour; `App.onCreate` and the settings screen rely on
+         * that.
          */
-        fun cancelNext(app: App) {
-            d(TAG, "Cancelling work by tag $TAG")
-            WorkManager.getInstance(app).cancelAllWorkByTag(TAG)
+        fun cancelNext(app: App, exceptId: UUID? = null) {
+            d(TAG, "Cancelling work by tag $TAG (sparing ${exceptId ?: "nothing"})")
+            val workManager = WorkManager.getInstance(app)
+            if (exceptId == null) {
+                workManager.cancelAllWorkByTag(TAG)
+                return
+            }
+            workManager.getWorkInfosByTag(TAG).get()
+                    .filter { it.id != exceptId && !it.state.isFinished }
+                    .forEach { workManager.cancelWorkById(it.id) }
             //WorkManager.getInstance(app).pruneWork() // do not prune the work in order to look for failed tasks
         }
     }

@@ -256,6 +256,11 @@ dependencies {
     // Kotlin-friendly mocking.
     testImplementation "io.mockk:mockk:1.13.13"
 
+    // WorkManager test harness — drives a real in-memory WorkManager on the JVM so
+    // rescheduleNext's cancel-then-enqueue is observable. Pinned to the runtime
+    // version above; the two must not drift.
+    testImplementation "androidx.work:work-testing:2.7.1"
+
     // Robolectric — Android framework fakes on the JVM. 4.14.1 is the first stable
     // release with Android 14 / 15 (SDK 35) support. We do NOT depend on
     // androidx.test:core or androidx.test.ext:junit. Historically they shipped
