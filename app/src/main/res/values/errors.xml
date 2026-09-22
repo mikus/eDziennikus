@@ -32,6 +32,7 @@
     <string name="error_112" translatable="false">ERROR_NOT_IMPLEMENTED</string>
     <string name="error_113" translatable="false">ERROR_FILE_DOWNLOAD</string>
     <string name="error_114" translatable="false">ERROR_REQUIRES_USER_ACTION</string>
+    <string name="error_115" translatable="false">ERROR_SERVICE_START_REFUSED</string>
 
     <string name="error_5000" translatable="false">ERROR_API_PDO_ERROR</string>
     <string name="error_5001" translatable="false">ERROR_API_INVALID_CLIENT</string>
@@ -164,6 +165,7 @@
     <string name="error_112_reason">Nie zaimplementowano</string>
     <string name="error_113_reason">Wystąpił błąd podczas pobierania pliku. Dziennik może być przeciążony lub mieć przerwę techniczną.</string>
     <string name="error_114_reason">Wymagana akcja w aplikacji</string>
+    <string name="error_115_reason">Nie udało się uruchomić synchronizacji w tle. Otwórz aplikację i spróbuj ponownie.</string>
 
     <string name="error_5000_reason">ERROR_API_PDO_ERROR</string>
     <string name="error_5001_reason">Nieprawidłowy ID klienta API</string>

@@ -11,6 +11,9 @@ import android.os.Build.VERSION_CODES.O
 import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.data.api.ApiService
+import eu.mikus.edziennik.data.api.ERROR_SERVICE_START_REFUSED
+import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
+import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.db.entity.Profile
 
 abstract class IApiTask(open val profileId: Int) {
@@ -28,10 +31,33 @@ abstract class IApiTask(open val profileId: Int) {
 
     fun enqueue(context: Context) {
         Intent(context, ApiService::class.java).let {
-            if (SDK_INT >= O)
-                context.startForegroundService(it)
-            else
-                context.startService(it)
+            try {
+                if (SDK_INT >= O)
+                    context.startForegroundService(it)
+                else
+                    context.startService(it)
+            } catch (e: IllegalStateException) {
+                // Android 12+ refuses a foreground-service start from a background process. The
+                // exception is ForegroundServiceStartNotAllowedException, added in API 31; it is
+                // caught by its IllegalStateException parent so this still compiles against
+                // minSdk 23 without a version gate.
+                //
+                // Reported, not rethrown: an escaping throw kills the process, and
+                // CustomActivityOnCrash cannot even show its dialog from the background, so the
+                // user gets nothing at all. Reported, not swallowed, for the opposite reason --
+                // syncFeature calls markRefreshing() five lines before reaching here and
+                // SyncStatus clears isRefreshing only on AllFinished or Error, so a silent catch
+                // would leave a spinner that nothing can ever stop. Sticky, so a failure raised
+                // from a backgrounded process still reaches the UI when it next opens.
+                EventBus.getDefault().postSticky(
+                    ApiTaskErrorEvent(ApiError(TAG, ERROR_SERVICE_START_REFUSED).apply {
+                        throwable = e
+                    })
+                )
+                // Before postSticky(this), deliberately: onApiTask is a sticky subscriber, so a
+                // task left on the bus would fire against whichever service starts next.
+                return
+            }
         }
         EventBus.getDefault().postSticky(this)
     }
@@ -41,6 +67,8 @@ abstract class IApiTask(open val profileId: Int) {
     }
 
     companion object {
+        private const val TAG = "IApiTask"
+
         fun enqueueAll(context: Context, tasks: List<IApiTask>) {
             if (tasks.isEmpty())
                 return

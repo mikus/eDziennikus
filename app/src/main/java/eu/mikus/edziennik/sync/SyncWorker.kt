@@ -69,8 +69,16 @@ class SyncWorker(val context: Context, val params: WorkerParameters) : Worker(co
 
     override fun doWork(): Result {
         d(TAG, "Running worker ID ${params.id}")
-        EdziennikTask.sync().enqueue(context)
-        rescheduleNext(context as App)
+        try {
+            EdziennikTask.sync().enqueue(context)
+        } finally {
+            // The hourly sync is a self-rescheduling chain of OneTimeWorkRequests, so anything that
+            // escapes enqueue() takes every future sync with it. Measured 2026-09-22: a refused
+            // foreground-service start threw here, this line never ran, and no job was left
+            // scheduled at all -- WorkManager swallowed the throw into Result.FAILURE, so nothing
+            // surfaced anywhere. The reschedule must not depend on the enqueue succeeding.
+            rescheduleNext(context as App)
+        }
         return Result.success()
     }
 }

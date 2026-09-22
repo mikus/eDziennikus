@@ -60,6 +60,7 @@ const val ERROR_LOGIN_METHOD_NOT_SATISFIED                  = 111
 const val ERROR_NOT_IMPLEMENTED                             = 112
 const val ERROR_FILE_DOWNLOAD                               = 113
 const val ERROR_REQUIRES_USER_ACTION                        = 114
+const val ERROR_SERVICE_START_REFUSED                       = 115
 
 const val ERROR_API_PDO_ERROR                               = 5000
 const val ERROR_API_INVALID_CLIENT                          = 5001
