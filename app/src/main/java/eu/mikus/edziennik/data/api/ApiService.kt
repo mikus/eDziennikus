@@ -218,7 +218,8 @@ class ApiService : Service() {
      * Check if a task is inactive for more than 30 seconds.
      *
      * This usually means it is broken and won't become active again.
-     * This method cancels the task and removes any pointers to it.
+     * This drops the service's pointers to the task; it does NOT call IApiTask.cancel(), so the
+     * task itself keeps running until its own HTTP timeout.
      */
     private fun checkIfTaskFrozen() {
         if (System.currentTimeMillis() - lastEventTime > 30*1000) {
@@ -294,17 +295,28 @@ class ApiService : Service() {
         EventBus.getDefault().removeStickyEvent(request)
         d(TAG, request.toString())
 
-        // A tap on Anuluj is an instruction, not a question. It ends the whole sync, which is what
+        // A tap on Anuluj is an instruction, not a question: it ends the whole sync, which is what
         // runTask()'s taskCancelled arm has always intended - that arm simply never fired, because
         // clearTask() resets the flag before any callback path reaches it.
-        // Post FIRST, for the same reason onServiceCloseRequest does (spec D-3): cancel() reaches
-        // Data.saveData(), a multi-DAO flush, and a throw there would otherwise skip allCompleted(),
-        // be swallowed by this ASYNC subscriber, and strand the sync with nothing posted at all -
-        // on the route this commit makes the user's primary way out.
-        // Below the post, order still matters: clearTask() nulls taskRunning, so cancel comes first.
-        allCompleted()
-        taskRunning?.cancel()
-        clearTask()
+        //
+        // Aborting means fetching no further profiles, NOT skipping the wrap-up. Clearing the queue
+        // and letting runTask() fall through to its tail runs SzkolnyTask, the only caller of
+        // setAllNotEmpty() - and ~14 endpoints stamp Metadata's seen/notified from profile.empty, so
+        // skipping it would leave that flag set and make the NEXT sync write every row as
+        // already-seen: no notifications, no unread badges. runTask() always reaches allCompleted()
+        // from here, because the queue is now empty, so the terminal event is still guaranteed.
+        //
+        // try/finally because cancel() reaches Data.saveData(), a multi-DAO flush: it must finish
+        // before the sync is declared over, yet a throw in it must not cost the terminal event -
+        // this ASYNC subscriber would swallow the throw and onDestroy's guard would then suppress
+        // the retry. clearTask() stays after cancel(), because it nulls taskRunning.
+        taskQueue.clear()
+        try {
+            taskRunning?.cancel()
+        } finally {
+            clearTask()
+            runTask()
+        }
     }
     @Subscribe(sticky = true, threadMode = ThreadMode.ASYNC)
     fun onServiceCloseRequest(request: ServiceCloseRequest) {
@@ -313,13 +325,17 @@ class ApiService : Service() {
 
         serviceClosed = true
         taskCancelled = true
-        // Post before cancelling, not after: a throwing cancel() would otherwise skip allCompleted(),
-        // be swallowed by EventBus (throwSubscriberException defaults to false), and then have
-        // onDestroy's guard suppress the second chance too, because serviceClosed is already true.
-        // stopSelf() inside allCompleted() does not run onDestroy synchronously, so the cancel below
-        // still executes normally.
-        allCompleted()
-        taskRunning?.cancel()
+        // try/finally, so both properties hold. cancel() reaches Data.saveData(), a multi-DAO flush,
+        // and it must finish before allCompleted() calls stopSelf() and drops the foreground-service
+        // importance - otherwise the sync's own data can still be in flight when the process becomes
+        // evictable. But a throw in that flush must not skip the terminal post: it would be swallowed
+        // here (throwSubscriberException defaults to false) and onDestroy's guard would suppress the
+        // second chance too, because serviceClosed is already true.
+        try {
+            taskRunning?.cancel()
+        } finally {
+            allCompleted()
+        }
     }
 
     /*     _____                 _                                     _     _

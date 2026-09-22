@@ -41,8 +41,9 @@ import org.robolectric.annotation.Config
  *    methods are `ThreadMode.ASYNC`, so a posted event crosses a pool thread, and EventBus's
  *    `throwSubscriberException` defaults to false - a swallowed exception would read as "nothing
  *    was posted", which is exactly the assertion.
- * 3. **This class boots the real [App]**, unlike the repo's six other Robolectric classes, which
- *    all pin `application = Application::class`. It has to: `ApiService.app` is
+ * 3. **This class boots the real [App]**, as does [EdziennikNotificationActionsTest]; the repo's
+ *    six other Robolectric classes all pin `application = Application::class`. It has to:
+ *    `ApiService.app` is
  *    `applicationContext as App`, dereferenced through the `notification` lazy in `onCreate`, so a
  *    stock `Application` throws `ClassCastException`. Do not "fix" this to match the others.
  */
@@ -53,8 +54,12 @@ class ApiServiceTerminalEventTest {
     /** A fourth [IApiTask] subtype: matches no arm of `runTask()`'s `when`, so it never calls back. */
     private class HangingTask : IApiTask(0) {
         var cancelCount = 0
+        var throwOnCancel = false
         override fun prepare(app: App) { taskName = HANGING }
-        override fun cancel() { cancelCount++ }
+        override fun cancel() {
+            cancelCount++
+            if (throwOnCancel) throw IllegalStateException("simulated saveData() failure")
+        }
     }
 
     /**
@@ -106,12 +111,25 @@ class ApiServiceTerminalEventTest {
         return task
     }
 
+    /**
+     * Reproduces the defect: a service the platform stops told nobody. Red at `d8db7649`.
+     *
+     * Also the only guard on the fix's line placement. `onDestroy` sets `serviceClosed` itself, so
+     * a post written BELOW that assignment can never fire - this test is red for that too, not just
+     * for a missing post.
+     */
     @Test fun `a destroyed service ends the sync`() {
         startHanging()
         controller.get().onDestroy()
         assertNotNull("a platform-killed service must report the sync ended", allFinished())
     }
 
+    /**
+     * Deliberately not named "no second terminal event": it covers the `stopSelf()` -> `onDestroy`
+     * path only. It CANNOT see the late-callback route, where a cancelled task's HTTP call returns
+     * after the service stopped and posts again - [HangingTask] never calls back. That route is
+     * known, accepted and harmless across all five subscribers; it is simply not tested here.
+     */
     @Test fun `the close route does not also post from onDestroy`() {
         val probe = Probe()
         EventBus.getDefault().register(probe)
@@ -135,6 +153,14 @@ class ApiServiceTerminalEventTest {
         assertEquals("the cancel must still run after allCompleted()", 1, task.cancelCount)
     }
 
+    /**
+     * The positive control, and the only test here that does real DB work: draining the queue makes
+     * `runTask()` synthesise a real `SzkolnyTask`, which sweeps nine DAOs and posts notifications.
+     * Inert on the empty test database, and it terminates.
+     *
+     * The two extra assertions are load-bearing. `allCompleted()` is reached by the error path too,
+     * so a bare "a terminal event exists" would pass whether or not the task actually completed.
+     */
     @Test fun `a normally completed task ends the sync`() {
         controller.get().onApiTask(ErrorReportTask())
         assertNotNull("the queue drained", allFinished())
@@ -160,6 +186,50 @@ class ApiServiceTerminalEventTest {
         // Fails at 0 if clearTask() is ever ordered before taskRunning?.cancel(): clearTask() nulls
         // taskRunning, so the cancel would silently never reach the task while the service stopped.
         assertEquals(1, task.cancelCount)
+    }
+
+    /**
+     * Cancelling aborts the remaining profiles, but must still run the queue's tail task.
+     *
+     * `SzkolnyTask` is the only caller of `setAllNotEmpty()`, which clears `profiles.empty` - and
+     * ~14 endpoints stamp Metadata's seen/notified columns from that flag. A cancel that skipped the
+     * tail would leave it set, so the NEXT sync would write every row as already-seen and
+     * already-notified: no notifications, no unread badges, silently.
+     *
+     * Observed through the sticky `ApiTaskFinishedEvent`, which only a task that actually completed
+     * posts. [HangingTask] never calls back, so this event can only have come from the tail.
+     *
+     * Replacing `runTask()` with `allCompleted()` in the handler's `finally` fails this.
+     */
+    @Test fun `a cancel still runs the queue tail`() {
+        startHanging()
+        controller.get().onTaskCancelRequest(TaskCancelRequest(1))
+        assertNotNull(
+            "the tail task must still run, or profiles.empty is never cleared",
+            EventBus.getDefault().getStickyEvent(ApiTaskFinishedEvent::class.java),
+        )
+        assertNotNull("and the sync must still end", allFinished())
+    }
+
+    /**
+     * Pins the reason both terminal handlers use try/finally rather than a plain statement order.
+     *
+     * `IApiTask.cancel()` reaches `Data.saveData()`, a multi-DAO flush. Both handlers are ASYNC
+     * subscribers, and EventBus's `throwSubscriberException` defaults to false - so in production a
+     * throw in that flush is swallowed silently. Without the `finally`, `allCompleted()` would be
+     * skipped, nothing would be posted, and `onDestroy`'s guard would suppress the retry too,
+     * because the handler has already set `serviceClosed`. The sync would hang exactly as it did
+     * before this phase.
+     *
+     * Replacing the `finally` block with a plain call after the `try` fails this test.
+     */
+    @Test fun `a throwing cancel still ends the sync`() {
+        val task = startHanging()
+        task.throwOnCancel = true
+        // Driven directly, so the throw reaches us rather than EventBus. Production swallows it.
+        runCatching { controller.get().onTaskCancelRequest(TaskCancelRequest(1)) }
+        assertEquals("the cancel must have been attempted", 1, task.cancelCount)
+        assertNotNull("the flush threw, but the sync must still be reported ended", allFinished())
     }
 
     private companion object { const val HANGING = "hanging" }

@@ -23,8 +23,8 @@ class SzkolnyReceiver : BroadcastReceiver() {
          * They must differ from each other. `PendingIntent` matching is
          * (package, factory kind, requestCode, [android.content.Intent.filterEquals]) and **extras
          * are excluded** (mutability is not), so intents that differ only in their `task` extra
-         * collapse into one record and whichever site was created first decides what the others
-         * deliver.
+         * collapse into one record - and a site passing `FLAG_UPDATE_CURRENT` (here: cancel)
+         * rewrites the extras that every other site then delivers, whenever it is created.
          *
          * Cancel keeps 0 so tokens already minted on upgraded installs keep resolving to it.
          */
