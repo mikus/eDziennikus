@@ -293,10 +293,13 @@ internal fun performLabAction(app: App, action: LabAction) {
         LabAction.ResetCert -> app.config.apiInvalidCert = null
         LabAction.RebuildConfig -> App.config = Config(App.db)
         LabAction.ClearCookies -> app.cookieJar.clearAllDomains()
-        // App.kt:209 reads `devMode = config.devMode ?: debugMode`, so a non-null false bypasses the
-        // BuildConfig.DEBUG fallback forever, and the only re-enable (checkDevModePassword, App.kt:386)
-        // is gated on config.devModePassword, which nothing in app/src/main ever writes. The recovery
-        // is the config row keyed "debugMode" (Config.kt:38) at profileId = -1 - not "devMode".
+        // App.kt:219 reads `devMode = config.devMode ?: debugMode`, so a non-null false bypasses the
+        // BuildConfig.DEBUG fallback forever, and the only re-enable (checkDevModePassword, App.kt:396)
+        // is gated on config.devModePassword. Its single writer is the v3 prefs migration
+        // (AppConfigMigrationV3.kt:38), which ConfigMigration.kt:18 gates on a legacy prefs key it
+        // deletes as it runs, so no in-app path re-enables. Recovery means editing stored state from
+        // outside the app: the config row keyed "debugMode" (Config.kt:38) at profileId = -1 - not
+        // "devMode" - or the legacy prefs pair that replays the migration.
         LabAction.DisableDevMode -> {
             app.config.devMode = false
             App.devMode = false

@@ -254,7 +254,7 @@ class LabViewModelTest {
 
     @Test
     fun `Disable Dev Mode only writes once confirmed, then asks for the restart`() = runTest {
-        // App.kt:209 reads `devMode = config.devMode ?: debugMode`, so a non-null false bypasses the
+        // App.kt:219 reads `devMode = config.devMode ?: debugMode`, so a non-null false bypasses the
         // BuildConfig.DEBUG fallback forever. That is why this one is behind its own confirm (D6).
         val vm = vm()
         val effects = collectEffects(vm)
