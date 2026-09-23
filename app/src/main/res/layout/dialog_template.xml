@@ -3,22 +3,21 @@
   ~ Copyright (c) Kuba Szczodrzyński 2020-1-8.
   -->
 
-<layout xmlns:android="http://schemas.android.com/apk/res/android">
-    <LinearLayout
-        android:layout_width="match_parent"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="24dp">
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="24dp">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Hello world"/>
+        android:text="Hello world"/>
 
-        <Button
-            android:id="@+id/clickMe"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Click me"/>
-    </LinearLayout>
-</layout>
+    <Button
+        android:id="@+id/clickMe"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click me"/>
+</LinearLayout>
