@@ -4,9 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.work.*
+import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.data.api.ApiService
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
+import eu.mikus.edziennik.data.api.events.requests.TaskCancelRequest
 import eu.mikus.edziennik.ext.formatDate
 import eu.mikus.edziennik.utils.Utils.d
 import java.util.concurrent.TimeUnit
@@ -121,5 +123,15 @@ class SyncWorker(val context: Context, val params: WorkerParameters) : Worker(co
         // retry, not success, when the sync never reported an end: the chain is already rescheduled
         // above, and Result.success() here would record a sync that did not happen.
         return if (ended) Result.success() else Result.retry()
+    }
+
+    /**
+     * WorkManager is taking the window back. Ask the service to end the sync rather than letting the
+     * process be reclaimed while `Data.saveData()` is still flushing. Non-sticky deliberately: if no
+     * service is registered there is nothing to cancel, and a sticky that found no subscriber would
+     * be delivered to the NEXT service created and abort a sync the user did ask for.
+     */
+    override fun onStopped() {
+        EventBus.getDefault().post(TaskCancelRequest(-1))
     }
 }

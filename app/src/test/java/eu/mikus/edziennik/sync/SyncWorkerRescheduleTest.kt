@@ -11,8 +11,12 @@ import androidx.work.testing.TestWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.data.api.ApiService
+import eu.mikus.edziennik.data.api.ApiServiceBindAndAwaitTest
+import eu.mikus.edziennik.data.api.events.requests.TaskCancelRequest
+import org.greenrobot.eventbus.EventBus
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -125,5 +129,32 @@ class SyncWorkerRescheduleTest {
         }
 
         assertTrue("a replacement must be scheduled", pending().isNotEmpty())
+    }
+
+    /**
+     * WorkManager is taking the window back. The sync is still writing — `cancel()` reaches
+     * `Data.saveData()`, a multi-DAO flush — so the service must be asked to end it rather than
+     * the process being reclaimed mid-write. Best effort: there is no time guarantee here, which is
+     * why `bindAndAwait`'s timeout path does the same thing with a grace wait rather than relying on
+     * this.
+     */
+    @Test fun `being stopped asks the service to end the sync`() {
+        val probe = ApiServiceBindAndAwaitTest.CancelProbe()
+        EventBus.getDefault().register(probe)
+        try {
+            TestWorkerBuilder<SyncWorker>(app, SynchronousExecutor()).build().onStopped()
+
+            assertTrue("the service must be asked to stop", probe.seen.isNotEmpty())
+            // ...and asked NON-stickily. postSticky would also reach the probe above, so that
+            // assertion alone cannot tell the two apart -- and a sticky that found no subscriber
+            // would be delivered to the next service created and abort a sync the user did ask for.
+            assertNull(
+                "a cancel request must not be left on the bus",
+                EventBus.getDefault().getStickyEvent(TaskCancelRequest::class.java),
+            )
+        } finally {
+            EventBus.getDefault().unregister(probe)
+            EventBus.getDefault().removeStickyEvent(TaskCancelRequest::class.java)
+        }
     }
 }
