@@ -264,7 +264,7 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
                     SyncWorker.cancelNext(this@App)
 
                 if (config.sync.notifyAboutUpdates)
-                    UpdateWorker.scheduleNext(this@App, false)
+                    UpdateWorker.scheduleNext(this@App)
                 else
                     UpdateWorker.cancelNext(this@App)
 

@@ -9,46 +9,117 @@ import android.os.AsyncTask
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.impl.WorkManagerImpl
+import androidx.work.impl.model.WorkSpec
 import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.ext.MINUTE
 import eu.mikus.edziennik.ext.formatDate
 import eu.mikus.edziennik.utils.Utils
 
+/**
+ * What [WorkerUtils.scheduleNext] asks its caller to do about the schedule. There is deliberately no
+ * `None` case: "leave it alone" is the absence of a decision, so the callback is simply not invoked
+ * and no caller has to handle a state that never reaches it.
+ */
+internal enum class RescheduleDecision {
+    /** Nothing viable is scheduled. Schedule one at the worker's normal interval. */
+    AtInterval,
+
+    /** Everything scheduled is already past due. Schedule one soon instead of an interval away. */
+    Promptly,
+}
+
 object WorkerUtils {
+    /** A job later than this should be replaced — it is not going to run on its own. */
+    internal const val RESCHEDULE_GRACE_MS = 1 * MINUTE * 1000
+
     /**
-     * Schedule the sync job only if it's not already scheduled.
+     * ...but only a job later than *this* is evidence that an OEM App Manager killed it.
+     *
+     * Two thresholds because they answer two questions. This object cannot tell "killed by an App
+     * Manager" from "waiting on a network constraint that is still unmet" — it never could. At one
+     * shared minute, the prompt replacement scheduled by [RescheduleDecision.Promptly] would itself
+     * look failed 70 s later, and a user with no network would get the non-cancelable dialog at
+     * `MainActivity.onAppManagerDetectedEvent` on essentially every app open, falsely.
+     */
+    internal const val APP_MANAGER_GRACE_MS = 15 * MINUTE * 1000
+
+    /**
+     * Whether the schedule needs a new job, and how urgently. Null means leave it alone.
+     *
+     * [overdueCount] counts a subset of [unfinishedCount], so `unfinished - overdue` is the number
+     * of jobs still expected to run by themselves. Both are plain `Int` and therefore silently
+     * swappable at the call site — hence the names rather than `pendingCount`/`failedCount`.
+     */
+    internal fun decideReschedule(
+        unfinishedCount: Int,
+        overdueCount: Int,
+        rescheduleIfFailedFound: Boolean,
+    ): RescheduleDecision? {
+        // The path used by App.onCreate and by UpdateWorker: only refill an empty queue, never
+        // reason about lateness. A four-day update check has no useful notion of "a minute late".
+        if (!rescheduleIfFailedFound)
+            return if (unfinishedCount < 1) RescheduleDecision.AtInterval else null
+        if (unfinishedCount - overdueCount > 0)
+            return null
+        return if (overdueCount > 0) RescheduleDecision.Promptly else RescheduleDecision.AtInterval
+    }
+
+    /**
+     * The jobs that should have run at least [graceMs] ago and did not.
+     *
+     * Returns the specs rather than a count because the caller needs this at two thresholds (see
+     * [APP_MANAGER_GRACE_MS]) and because [AppManagerDetectedEvent] carries the due timestamps.
+     *
+     * Only `ENQUEUED` work can be overdue. A `RUNNING` job is doing exactly what it was scheduled to
+     * do, however long ago that was — treating it as failed is what let an app open cancel a sync in
+     * flight.
      */
     @SuppressLint("RestrictedApi")
-    inline fun scheduleNext(app: App, rescheduleIfFailedFound: Boolean = true, crossinline onReschedule: () -> Unit) {
+    internal fun overdueWork(specs: List<WorkSpec>, nowMs: Long, graceMs: Long): List<WorkSpec> =
+        specs.filter {
+            it.state == WorkInfo.State.ENQUEUED && it.periodStartTime + it.initialDelay < nowMs - graceMs
+        }
+
+    /**
+     * Schedule [tag]'s job only if it is not already scheduled, and tell the caller how urgently.
+     *
+     * `internal` and not `inline`. The lambda is captured into an `AsyncTask.execute` Runnable, so
+     * `inline` never inlined anything useful at the call site — and a *public* `inline` function may
+     * not reference `internal` declarations at all, which would rule out [decideReschedule].
+     *
+     * [tag] is a parameter rather than `SyncWorker`'s class name. It was hardcoded, so
+     * `UpdateWorker.scheduleNext` decided from **SyncWorker's** jobs and could not see its own.
+     */
+    @SuppressLint("RestrictedApi")
+    internal fun scheduleNext(
+        app: App,
+        tag: String,
+        rescheduleIfFailedFound: Boolean = true,
+        onReschedule: (RescheduleDecision) -> Unit,
+    ) {
         AsyncTask.execute {
             val workManager = WorkManager.getInstance(app) as WorkManagerImpl
-            val scheduledWork = workManager.workDatabase.workSpecDao().scheduledWork
-            scheduledWork.forEach {
-                Utils.d("WorkerUtils", "Work: ${it.id} at ${(it.periodStartTime + it.initialDelay).formatDate()}. State = ${it.state} (finished = ${it.state.isFinished})")
+            val dao = workManager.workDatabase.workSpecDao()
+            // getUnfinishedWorkWithTag is `state NOT IN (2,3,5) AND <tag matches>`. The query this
+            // replaced, getScheduledWork(), is `state=0 AND schedule_requested_at<>-1` -- ENQUEUED
+            // only. RUNNING work was invisible, so an app open during a sync saw an empty schedule
+            // and cancelled the sync it was in the middle of.
+            val specs = dao.getWorkSpecs(dao.getUnfinishedWorkWithTag(tag)).filterNot { it.isPeriodic }
+            specs.forEach {
+                Utils.d("WorkerUtils", "Work: ${it.id} at ${(it.periodStartTime + it.initialDelay).formatDate()}. State = ${it.state}")
             }
-            // remove finished work and other than SyncWorker
-            scheduledWork.removeAll { it.workerClassName != SyncWorker::class.java.canonicalName || it.isPeriodic || it.state.isFinished }
-            Utils.d("WorkerUtils", "Found ${scheduledWork.size} unfinished work")
-            // remove all enqueued work that had to (but didn't) run at some point in the past (at least 1min ago)
-            val failedWork = scheduledWork.filter { it.state == WorkInfo.State.ENQUEUED && it.periodStartTime + it.initialDelay < System.currentTimeMillis() - 1 * MINUTE * 1000 }
-            Utils.d("WorkerUtils", "${failedWork.size} work requests failed to start (out of ${scheduledWork.size} requests)")
+            val now = System.currentTimeMillis()
+            val overdue = overdueWork(specs, now, RESCHEDULE_GRACE_MS)
+            Utils.d("WorkerUtils", "${overdue.size} of ${specs.size} $tag work requests are overdue")
             if (rescheduleIfFailedFound) {
-                if (failedWork.isNotEmpty()) {
+                val failed = overdueWork(specs, now, APP_MANAGER_GRACE_MS)
+                if (failed.isNotEmpty()) {
                     Utils.d("WorkerUtils", "App Manager detected!")
-                    EventBus.getDefault().postSticky(AppManagerDetectedEvent(failedWork.map { it.periodStartTime + it.initialDelay }))
-                }
-                if (scheduledWork.size - failedWork.size < 1) {
-                    Utils.d("WorkerUtils", "No pending work found, scheduling next:")
-                    onReschedule()
-                }
-            } else {
-                Utils.d("WorkerUtils", "NOT rescheduling: waiting to open the activity")
-                if (scheduledWork.size < 1) {
-                    Utils.d("WorkerUtils", "No work found *at all*, scheduling next:")
-                    onReschedule()
+                    EventBus.getDefault().postSticky(AppManagerDetectedEvent(failed.map { it.periodStartTime + it.initialDelay }))
                 }
             }
+            decideReschedule(specs.size, overdue.size, rescheduleIfFailedFound)?.let(onReschedule)
         }
     }
 }

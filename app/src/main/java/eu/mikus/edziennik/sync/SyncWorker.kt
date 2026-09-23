@@ -1,6 +1,5 @@
 package eu.mikus.edziennik.sync
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.work.*
@@ -33,12 +32,23 @@ class SyncWorker(val context: Context, val params: WorkerParameters) : Worker(co
         internal var SYNC_TIMEOUT_MS = 300_000L
 
         /**
+         * How soon to run a sync that should already have happened.
+         *
+         * Not zero: the app is still doing its start-up work in the first frames after
+         * `MainActivity.onCreate` asks for this, and a sync competing with that helps nobody. Ten
+         * seconds is out of the way and still comfortably inside a typical session.
+         */
+        internal const val PROMPT_DELAY_SECONDS = 10L
+
+        /**
          * Schedule the sync job only if it's not already scheduled.
          */
-        @SuppressLint("RestrictedApi")
         fun scheduleNext(app: App, rescheduleIfFailedFound: Boolean = true) {
-            WorkerUtils.scheduleNext(app, rescheduleIfFailedFound) {
-                rescheduleNext(app)
+            WorkerUtils.scheduleNext(app, TAG, rescheduleIfFailedFound) { decision ->
+                rescheduleNext(app, delaySeconds = when (decision) {
+                    RescheduleDecision.Promptly -> PROMPT_DELAY_SECONDS
+                    RescheduleDecision.AtInterval -> app.config.sync.interval.toLong()
+                })
             }
         }
 
@@ -47,14 +57,16 @@ class SyncWorker(val context: Context, val params: WorkerParameters) : Worker(co
          *
          * If [ConfigSync.enabled] is not true, just cancel every job.
          */
-        fun rescheduleNext(app: App, exceptId: UUID? = null) {
+        fun rescheduleNext(app: App, exceptId: UUID? = null, delaySeconds: Long? = null) {
             cancelNext(app, exceptId)
             val enableSync = app.config.sync.enabled
             if (!enableSync) {
                 return
             }
             val onlyWifi = app.config.sync.onlyWifi
-            val syncInterval = app.config.sync.interval.toLong()
+            // null means "the user's configured interval" -- so doWork's own reschedule, and every
+            // other caller, keeps exactly today's delay.
+            val syncInterval = delaySeconds ?: app.config.sync.interval.toLong()
 
             val syncAt = System.currentTimeMillis() + syncInterval*1000
             d(TAG, "Scheduling work at ${syncAt.formatDate()}")

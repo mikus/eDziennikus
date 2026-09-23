@@ -3,9 +3,11 @@
  */
 package eu.mikus.edziennik.sync
 
+import android.annotation.SuppressLint
 import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.impl.WorkManagerImpl
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.TestWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
@@ -159,5 +161,41 @@ class SyncWorkerRescheduleTest {
             EventBus.getDefault().unregister(probe)
             EventBus.getDefault().removeStickyEvent(TaskCancelRequest::class.java)
         }
+    }
+
+    /**
+     * The point of the phase: a sync that should already have happened runs in seconds, not an
+     * interval from now.
+     *
+     * The delay is read off the WorkSpec, not off WorkInfo. WorkManager 2.7.1's WorkInfo exposes
+     * only id/state/outputData/tags/progress/runAttemptCount — there is no initial-delay accessor
+     * until 2.9. Asserting merely that "a job exists" would pass identically before and after this
+     * change, so the RestrictedApi read is the assertion, exactly as production already does it.
+     */
+    @Test
+    @SuppressLint("RestrictedApi")
+    fun `a prompt reschedule is scheduled in seconds, not an interval`() {
+        app.config.sync.interval = 3600
+        SyncWorker.rescheduleNext(app, delaySeconds = SyncWorker.PROMPT_DELAY_SECONDS)
+
+        val workManager = WorkManager.getInstance(app) as WorkManagerImpl
+        val id = pending().single().id.toString()
+        val spec = workManager.workDatabase.workSpecDao().getWorkSpec(id)
+
+        assertEquals(SyncWorker.PROMPT_DELAY_SECONDS * 1000, spec.initialDelay)
+    }
+
+    /** ...and the default is still the configured interval, so doWork's own reschedule is unchanged. */
+    @Test
+    @SuppressLint("RestrictedApi")
+    fun `rescheduleNext without a delay still uses the configured interval`() {
+        app.config.sync.interval = 3600
+        SyncWorker.rescheduleNext(app)
+
+        val workManager = WorkManager.getInstance(app) as WorkManagerImpl
+        val id = pending().single().id.toString()
+        val spec = workManager.workDatabase.workSpecDao().getWorkSpec(id)
+
+        assertEquals(3600L * 1000, spec.initialDelay)
     }
 }

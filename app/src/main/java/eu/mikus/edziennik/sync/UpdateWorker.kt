@@ -4,7 +4,6 @@
 
 package eu.mikus.edziennik.sync
 
-import android.annotation.SuppressLint
 import android.content.Context
 import androidx.work.*
 import kotlinx.coroutines.*
@@ -21,11 +20,17 @@ class UpdateWorker(val context: Context, val params: WorkerParameters) : Worker(
         const val TAG = "UpdateWorker"
 
         /**
-         * Schedule the sync job only if it's not already scheduled.
+         * Schedule the update job only if it's not already scheduled.
+         *
+         * `rescheduleIfFailedFound = false` deliberately, and not a parameter. Once the tag is its
+         * own, the sync's calibration would land on a four-day job: a 1-minute overdue grace would
+         * cancel and re-enqueue an update check four days out on every `MainActivity.onCreate`, and
+         * a 15-minute App-Manager grace would raise the "your device is killing background work"
+         * dialog after any overnight power-off. Neither can happen today only because the tag was
+         * hardcoded to SyncWorker. An update check simply has no useful notion of "late".
          */
-        @SuppressLint("RestrictedApi")
-        fun scheduleNext(app: App, rescheduleIfFailedFound: Boolean = true) {
-            WorkerUtils.scheduleNext(app, rescheduleIfFailedFound) {
+        fun scheduleNext(app: App) {
+            WorkerUtils.scheduleNext(app, TAG, rescheduleIfFailedFound = false) {
                 rescheduleNext(app)
             }
         }
