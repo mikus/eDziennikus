@@ -7,8 +7,10 @@ import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.TestWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
 import eu.mikus.edziennik.App
+import eu.mikus.edziennik.data.api.ApiService
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -94,5 +96,34 @@ class SyncWorkerRescheduleTest {
         SyncWorker.rescheduleNext(app, exceptId = UUID.randomUUID())
 
         assertEquals(1, pending().size)
+    }
+
+    /**
+     * The one assertion `work-testing` exists for: a worker rescheduling from inside its own
+     * `doWork` must leave a replacement job behind and must not have cancelled itself. The sync will
+     * time out quickly here (nothing services the bind under Robolectric), which is fine — the
+     * reschedule is in a `finally`.
+     *
+     * The timeout is shortened for the duration of the call; at its production value this one test
+     * would hold the suite for five minutes.
+     */
+    @Test fun `doWork reschedules without cancelling itself`() {
+        val worker = TestWorkerBuilder<SyncWorker>(app, SynchronousExecutor()).build()
+
+        val timeout = SyncWorker.SYNC_TIMEOUT_MS
+        val grace = ApiService.CANCEL_GRACE_MS
+        SyncWorker.SYNC_TIMEOUT_MS = 100
+        // Nothing services the bind under Robolectric, so the sync always times out here and the
+        // cancel grace always runs out in full. At its production 15 s that is 15 s added to every
+        // suite run for no signal.
+        ApiService.CANCEL_GRACE_MS = 50
+        try {
+            worker.doWork()
+        } finally {
+            SyncWorker.SYNC_TIMEOUT_MS = timeout
+            ApiService.CANCEL_GRACE_MS = grace
+        }
+
+        assertTrue("a replacement must be scheduled", pending().isNotEmpty())
     }
 }

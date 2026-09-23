@@ -5,9 +5,12 @@
 package eu.mikus.edziennik.data.api
 
 import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.IBinder
+import androidx.annotation.VisibleForTesting
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -24,6 +27,8 @@ import eu.mikus.edziennik.data.api.task.SzkolnyTask
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.ext.toApiError
 import eu.mikus.edziennik.utils.Utils.d
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -38,6 +43,79 @@ class ApiService : Service() {
             context.startService(Intent(context, ApiService::class.java))
             EventBus.getDefault().postSticky(request)
         }
+
+        /**
+         * Run [request] on this service and block until the sync reports it is over. Returns true if
+         * it ended, false on timeout or a refused bind.
+         *
+         * **Binds rather than starts, and that is the whole point.** `BIND_AUTO_CREATE` creates the
+         * service — running `onCreate`, which registers it on EventBus — without `onStartCommand`,
+         * the sole caller of `startForeground`. A foreground start is refused from a cached process,
+         * which is why the hourly background sync has been dead since targetSdk reached 31. `onBind`
+         * returns null, so the connection reports `onNullBinding`; the binding still holds and still
+         * keeps the service alive, which is all that is needed.
+         *
+         * Four details each have a wrong default:
+         * - the subscriber is NON-sticky and the stale terminal sticky is cleared first. Both
+         *   terminal events are postSticky'd and only MainActivity removes them, which does not
+         *   exist during a background sync — a sticky subscriber would be handed the previous run's
+         *   event at register() and return instantly, having synced nothing.
+         * - only ApiTaskAllFinishedEvent releases it. ApiTaskErrorEvent ends a TASK, not the sync;
+         *   releasing on it would unbind mid-sync and skip the trailing SzkolnyTask, the sole caller
+         *   of setAllNotEmpty()/setAllNotified(true), silently poisoning the NEXT sync.
+         * - on timeout the service is asked to stop, because the abandoned task is still writing and
+         *   cancel() reaches Data.saveData(), a multi-DAO flush. Non-sticky: the service is still
+         *   bound and therefore still registered, and a sticky that found no subscriber would abort
+         *   the next sync instead.
+         * - the finally releases the connection on EVERY exit, including a refused bind (Android
+         *   requires it), and sweeps both the task and the cancel request off the bus.
+         */
+        /* Deliberately `internal` and NOT @VisibleForTesting: SyncWorker.doWork is a genuine
+         * production caller in another class, so the annotation would be a lie and would raise a
+         * VisibleForTests lint warning. `internal` already scopes this to the module, which is what
+         * the tests need. */
+        internal fun bindAndAwait(
+            context: Context,
+            request: IApiTask,
+            timeoutMs: Long,
+            graceMs: Long = CANCEL_GRACE_MS,
+        ): Boolean {
+            val bus = EventBus.getDefault()
+            bus.removeStickyEvent(ApiTaskAllFinishedEvent::class.java)
+            val done = CountDownLatch(1)
+            val waiter = SyncEndWaiter(done)
+            val connection = object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, binder: IBinder?) = Unit
+                override fun onServiceDisconnected(name: ComponentName?) = Unit
+                override fun onNullBinding(name: ComponentName?) = Unit
+            }
+            bus.register(waiter)
+            try {
+                val bound = context.bindService(
+                    Intent(context, ApiService::class.java), connection, Context.BIND_AUTO_CREATE,
+                )
+                if (!bound) {
+                    d(TAG, "Could not bind the sync service")
+                    return false
+                }
+                bus.postSticky(request)
+                if (done.await(timeoutMs, TimeUnit.MILLISECONDS))
+                    return true
+                d(TAG, "Sync timed out after ${timeoutMs}ms; asking the service to end it")
+                bus.post(TaskCancelRequest(-1))
+                return done.await(graceMs, TimeUnit.MILLISECONDS)
+            } finally {
+                runCatching { context.unbindService(connection) }
+                runCatching { bus.unregister(waiter) }
+                bus.removeStickyEvent(request)
+                bus.removeStickyEvent(TaskCancelRequest::class.java)
+            }
+        }
+
+        /** How long to let the service finish flushing after a timed-out sync is cancelled.
+         *  A `var` only so tests need not pay it: nothing in production writes it. */
+        @VisibleForTesting
+        internal var CANCEL_GRACE_MS = 15_000L
 
         var lastEventTime = System.currentTimeMillis()
     }
@@ -377,4 +455,11 @@ class ApiService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
+}
+
+/** Releases [done] when the sync reports it is over. Registered non-sticky by
+ *  [ApiService.bindAndAwait], and deliberately NOT subscribed to ApiTaskErrorEvent. */
+class SyncEndWaiter(private val done: CountDownLatch) {
+    @Subscribe
+    fun onAllFinished(event: ApiTaskAllFinishedEvent) = done.countDown()
 }
