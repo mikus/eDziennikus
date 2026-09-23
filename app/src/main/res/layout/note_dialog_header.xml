@@ -3,12 +3,18 @@
   ~ Copyright (c) Kuba Szczodrzyński 2021-10-24.
   -->
 
-<merge xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  ~ A real LinearLayout root, not a <merge>. Under DataBinding a <merge> include could still be
+  ~ addressed by id; ViewBinding's generated bind() resolves an include's id with findViewById, and a
+  ~ <merge> leaves no view to carry it, so `<include android:id="@+id/header">` in note_list_dialog
+  ~ crashed with "Missing required view with ID: .../header". The root below is exactly what this
+  ~ file's own tools:parentTag/tools:orientation/tools:layout_* hints always described.
+  -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:layout_height="wrap_content"
-    tools:layout_width="match_parent"
-    tools:orientation="vertical"
-    tools:parentTag="LinearLayout">
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/title"
@@ -35,4 +41,4 @@
         android:layout_height="wrap_content"
         tools:itemCount="1"
         tools:listitem="@layout/grades_item_grade" />
-</merge>
+</LinearLayout>

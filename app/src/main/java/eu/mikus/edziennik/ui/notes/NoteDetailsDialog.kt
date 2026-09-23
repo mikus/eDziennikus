@@ -94,7 +94,7 @@ class NoteDetailsDialog(
                     modifier = Modifier.fillMaxWidth(),
                     factory = { ctx ->
                         val container = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-                        val hb = NoteDialogHeaderBinding.inflate(LayoutInflater.from(ctx), container)
+                        val hb = NoteDialogHeaderBinding.inflate(LayoutInflater.from(ctx), container, true)
                         app.noteManager.configureHeader(activity, owner, hb)
                         hb.ownerItemList.isNestedScrollingEnabled = false
                         container
