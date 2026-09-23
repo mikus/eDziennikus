@@ -3,10 +3,8 @@
   ~ Copyright (c) Kuba Szczodrzyński 2020-4-30.
   -->
 
-<layout xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/composeView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-</layout>
+<androidx.compose.ui.platform.ComposeView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/composeView"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
