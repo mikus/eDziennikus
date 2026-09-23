@@ -20,6 +20,7 @@ import eu.mikus.edziennik.data.db.entity.Note.OwnerType
 import eu.mikus.edziennik.data.db.entity.Noteable
 import eu.mikus.edziennik.data.db.full.*
 import eu.mikus.edziennik.databinding.NoteDialogHeaderBinding
+import eu.mikus.edziennik.ext.autoSizeLeftDrawable
 import eu.mikus.edziennik.ext.resolveDrawable
 import eu.mikus.edziennik.ui.agenda.DayDialog
 import eu.mikus.edziennik.ui.agenda.lessonchanges.LessonChangesAdapter
@@ -280,5 +281,6 @@ class NoteManager(private val app: App) {
             null,
             null,
         )
+        b.title.autoSizeLeftDrawable()
     }
 }

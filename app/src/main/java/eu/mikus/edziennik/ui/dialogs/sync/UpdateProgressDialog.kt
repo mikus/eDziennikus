@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
+import eu.mikus.edziennik.BuildConfig
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.models.Update
 import eu.mikus.edziennik.databinding.UpdateProgressDialogBinding
@@ -43,7 +44,8 @@ class UpdateProgressDialog(
 
     override suspend fun onShow() {
         EventBus.getDefault().register(this)
-        b.update = update
+        b.currentVersion.text = BuildConfig.VERSION_BASE
+        b.newVersion.text = update.versionName
         b.progress.progress = 0
 
         val downloadManager = app.getSystemService<DownloadManager>() ?: return

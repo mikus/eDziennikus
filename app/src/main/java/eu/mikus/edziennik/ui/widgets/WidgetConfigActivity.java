@@ -215,7 +215,10 @@ public class WidgetConfigActivity extends Activity {
                 .setNegativeButton(R.string.cancel, null)
                 .show();
 
-        b.setProfileName(profileName);
+        b.profileNameText.setText(profileName);
+        int vis = profileName == null ? View.GONE : View.VISIBLE;
+        b.profileNameLabel.setVisibility(vis);
+        b.profileNameText.setVisibility(vis);
 
         WallpaperManager wallpaperManager = WallpaperManager.getInstance(this);
         try {

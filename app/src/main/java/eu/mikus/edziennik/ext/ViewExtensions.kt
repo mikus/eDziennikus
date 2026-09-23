@@ -20,6 +20,22 @@ fun TextView.setText(@StringRes resid: Int, vararg formatArgs: Any) {
     text = context.getString(resid, *formatArgs)
 }
 
+/**
+ * Scale the start compound drawable to match the text size.
+ *
+ * Was `Binding.drawableLeftAutoSize`, an `@BindingAdapter` invoked from XML as
+ * `android:drawableLeftAutoSize="@{true}"`. The old `enable: Boolean` parameter is gone: the body
+ * never read it, so every call site passed a value that did nothing.
+ *
+ * Call this AFTER setting the drawable — it resizes what is already there.
+ */
+fun TextView.autoSizeLeftDrawable() {
+    val drawables = compoundDrawables
+    val size = textSize.toInt()
+    drawables[0]?.setBounds(0, 0, size, size)
+    setCompoundDrawables(drawables[0], drawables[1], drawables[2], drawables[3])
+}
+
 @Suppress("UNCHECKED_CAST")
 inline fun <T : View> T.onClick(crossinline onClickListener: (v: T) -> Unit) {
     setOnClickListener { v: View ->

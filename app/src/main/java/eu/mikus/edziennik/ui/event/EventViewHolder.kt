@@ -52,7 +52,7 @@ class EventViewHolder(
         val bullet = " • "
         val colorHighlight = R.attr.colorControlHighlight.resolveAttr(activity)
 
-        b.simpleMode = adapter.simpleMode
+        b.addedBy.isVisible = !adapter.simpleMode
 
         manager.setEventTopic(b.topic, item, showType = false, showNotes = adapter.showNotes)
         b.topic.text = adapter.highlightSearchText(

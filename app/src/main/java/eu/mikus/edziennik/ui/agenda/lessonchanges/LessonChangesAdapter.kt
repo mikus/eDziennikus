@@ -9,6 +9,7 @@ import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.recyclerview.widget.RecyclerView
 import eu.mikus.edziennik.R
@@ -52,7 +53,6 @@ class LessonChangesAdapter(
 
         val timeRange = "${startTime.stringHM} - ${endTime.stringHM}".asColoredSpannable(colorSecondary)
 
-        b.unread = false
         b.root.background = null
 
         b.root.updateLayoutParams<ViewGroup.MarginLayoutParams> {
@@ -87,7 +87,9 @@ class LessonChangesAdapter(
             }.concat(arrowRight)
 
 
-        b.lessonNumber = lesson.displayLessonNumber
+        val lessonNumber = lesson.displayLessonNumber
+        b.lessonNumberText.isVisible = lessonNumber != null
+        if (lessonNumber != null) b.lessonNumberText.text = lessonNumber.toString()
         val lessonText = lesson.getNoteSubstituteText(showNotes) ?: lesson.displaySubjectName
         b.subjectName.text = lessonText?.let {
             if (lesson.type == Lesson.TYPE_CANCELLED || lesson.type == Lesson.TYPE_SHIFTED_SOURCE)
@@ -104,10 +106,9 @@ class LessonChangesAdapter(
         //lb.subjectName.typeface = Typeface.create("sans-serif-light", Typeface.BOLD)
         when (lesson.type) {
             Lesson.TYPE_NORMAL -> {
-                b.annotationVisible = false
+                // nothing type-specific to render; the cue set below drives both views
             }
             Lesson.TYPE_CANCELLED -> {
-                b.annotationVisible = true
                 b.annotation.setText(R.string.timetable_lesson_cancelled)
                 b.annotation.background.colorFilter = PorterDuffColorFilter(
                         getColorFromAttr(context, R.attr.timetable_lesson_cancelled_color),
@@ -116,7 +117,6 @@ class LessonChangesAdapter(
                 //lb.subjectName.typeface = Typeface.DEFAULT
             }
             Lesson.TYPE_CHANGE -> {
-                b.annotationVisible = true
                 when {
                     lesson.subjectId != lesson.oldSubjectId && lesson.teacherId != lesson.oldTeacherId
                             && lesson.oldSubjectName != null && lesson.oldTeacherName != null ->
@@ -145,7 +145,6 @@ class LessonChangesAdapter(
                 )
             }
             Lesson.TYPE_SHIFTED_SOURCE -> {
-                b.annotationVisible = true
                 when {
                     lesson.date != lesson.oldDate && lesson.date != null ->
                         b.annotation.setText(
@@ -166,7 +165,6 @@ class LessonChangesAdapter(
                 b.annotation.background.setTintColor(R.attr.timetable_lesson_shifted_source_color.resolveAttr(context))
             }
             Lesson.TYPE_SHIFTED_TARGET -> {
-                b.annotationVisible = true
                 when {
                     lesson.date != lesson.oldDate && lesson.oldDate != null ->
                         b.annotation.setText(
@@ -189,6 +187,11 @@ class LessonChangesAdapter(
                         PorterDuff.Mode.SRC_ATOP
                 )
             }
+        }
+
+        lessonCues(lesson.type)?.let { cues ->
+            b.annotation.isVisible = cues.annotationVisible
+            b.subjectName.maxLines = cues.subjectMaxLines
         }
     }
 

@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Noteable
 import eu.mikus.edziennik.databinding.NoteListDialogBinding
+import eu.mikus.edziennik.ext.autoSizeLeftDrawable
 import eu.mikus.edziennik.ui.dialogs.base.BindingDialog
 import eu.mikus.edziennik.utils.SimpleDividerItemDecoration
 
@@ -48,6 +49,7 @@ class NoteListDialog(
 
     override suspend fun onShow() {
         manager.configureHeader(activity, owner, b.header)
+        b.subtitleText.autoSizeLeftDrawable()
 
         adapter = NoteListAdapter(
             activity = activity,
