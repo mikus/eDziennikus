@@ -6,6 +6,8 @@ package eu.mikus.edziennik.sync
 
 import android.annotation.SuppressLint
 import android.os.AsyncTask
+import android.os.Build
+import androidx.work.NetworkType
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.impl.WorkManagerImpl
@@ -14,6 +16,7 @@ import org.greenrobot.eventbus.EventBus
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.ext.MINUTE
 import eu.mikus.edziennik.ext.formatDate
+import eu.mikus.edziennik.ext.readConnectivityState
 import eu.mikus.edziennik.utils.Utils
 
 /**
@@ -28,6 +31,16 @@ internal enum class RescheduleDecision {
     /** Everything scheduled is already past due. Schedule one soon instead of an interval away. */
     Promptly,
 }
+
+/**
+ * A deliberate subset of WorkManager's own internal `NetworkState`, re-derived because that type is
+ * not public API. Named differently so it does not read as the same thing.
+ */
+internal data class ConnectivityState(
+    val connected: Boolean,
+    val validated: Boolean,
+    val unmetered: Boolean,
+)
 
 object WorkerUtils {
     /** A job later than this should be replaced — it is not going to run on its own. */
@@ -82,6 +95,50 @@ object WorkerUtils {
         }
 
     /**
+     * Whether [required] is currently satisfied, mirroring WorkManager's own constraint controllers
+     * rather than assuming they agree with each other.
+     *
+     * A null [state] means connectivity could not be read at all — not that the device is offline,
+     * which is `connected = false`. It answers true, so an unreadable state still warns: staying
+     * silent would hide the one condition this whole feature exists to report.
+     *
+     * `NOT_ROAMING` is answered true whenever the device is connected. Deciding it properly needs
+     * roaming detail this phase has no reason to gather, and no worker in this app sets it. That is a
+     * deliberate limit, not an oversight.
+     *
+     * [sdkInt] is a parameter so the API-26 branch is testable without Robolectric.
+     */
+    internal fun networkConstraintMet(
+        required: NetworkType,
+        state: ConnectivityState?,
+        sdkInt: Int = Build.VERSION.SDK_INT,
+    ): Boolean = when {
+        state == null -> true
+        required == NetworkType.NOT_REQUIRED -> true
+        !state.connected -> false
+        // NetworkConnectedController: SDK_INT >= 26 ? (connected && validated) : connected
+        required == NetworkType.CONNECTED -> sdkInt < Build.VERSION_CODES.O || state.validated
+        required == NetworkType.UNMETERED -> state.unmetered
+        else -> true
+    }
+
+    /**
+     * The overdue jobs whose lateness is NOT explained by an unmet network constraint — i.e. the ones
+     * worth blaming an OEM App Manager for.
+     *
+     * Deliberately separate from [overdueWork], which keeps feeding the *reschedule* decision its
+     * unfiltered list: filtering that too would stop an offline job ever being replaced, which is the
+     * opposite of what the previous phase built.
+     */
+    @SuppressLint("RestrictedApi")
+    internal fun appManagerSuspects(
+        specs: List<WorkSpec>,
+        nowMs: Long,
+        state: ConnectivityState?,
+    ): List<WorkSpec> = overdueWork(specs, nowMs, APP_MANAGER_GRACE_MS)
+        .filter { networkConstraintMet(it.constraints.requiredNetworkType, state) }
+
+    /**
      * Schedule [tag]'s job only if it is not already scheduled, and tell the caller how urgently.
      *
      * `internal` and not `inline`. The lambda is captured into an `AsyncTask.execute` Runnable, so
@@ -113,7 +170,7 @@ object WorkerUtils {
             val overdue = overdueWork(specs, now, RESCHEDULE_GRACE_MS)
             Utils.d("WorkerUtils", "${overdue.size} of ${specs.size} $tag work requests are overdue")
             if (rescheduleIfFailedFound) {
-                val failed = overdueWork(specs, now, APP_MANAGER_GRACE_MS)
+                val failed = appManagerSuspects(specs, now, app.readConnectivityState())
                 if (failed.isNotEmpty()) {
                     Utils.d("WorkerUtils", "App Manager detected!")
                     EventBus.getDefault().postSticky(AppManagerDetectedEvent(failed.map { it.periodStartTime + it.initialDelay }))

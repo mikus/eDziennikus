@@ -3,6 +3,8 @@
  */
 package eu.mikus.edziennik.sync
 
+import androidx.work.Constraints
+import androidx.work.NetworkType
 import androidx.work.WorkInfo
 import androidx.work.impl.model.WorkSpec
 import kotlin.test.assertEquals
@@ -118,5 +120,83 @@ class WorkerUtilsDecisionTest {
         val late = spec(WorkInfo.State.ENQUEUED, now - grace - 1)
         assertEquals(listOf(late), WorkerUtils.overdueWork(listOf(late), now, grace))
         assertEquals(emptyList<WorkSpec>(), WorkerUtils.overdueWork(listOf(late), now, WorkerUtils.APP_MANAGER_GRACE_MS))
+    }
+
+    // ---- networkConstraintMet / appManagerSuspects ------------------------
+
+    private fun conn(connected: Boolean = true, validated: Boolean = true, unmetered: Boolean = true) =
+        ConnectivityState(connected = connected, validated = validated, unmetered = unmetered)
+
+    @Test fun `a validated connection satisfies CONNECTED`() =
+        assertEquals(true, WorkerUtils.networkConstraintMet(NetworkType.CONNECTED, conn(), sdkInt = 35))
+
+    @Test fun `being offline does not satisfy CONNECTED`() =
+        assertEquals(false, WorkerUtils.networkConstraintMet(NetworkType.CONNECTED, conn(connected = false), sdkInt = 35))
+
+    /**
+     * The captive-portal case. WorkManager's NetworkConnectedController requires VALIDATED from API
+     * 26, so a network that is "connected" but has no internet does NOT satisfy CONNECTED. An earlier
+     * draft of this phase modelled connectivity without a validated bit and would have left the
+     * headline false positive in place on the default configuration.
+     */
+    @Test fun `an unvalidated connection does not satisfy CONNECTED above api 26`() =
+        assertEquals(false, WorkerUtils.networkConstraintMet(NetworkType.CONNECTED, conn(validated = false), sdkInt = 35))
+
+    /** ...but below 26 WorkManager does not check validation, so neither do we. */
+    @Test fun `an unvalidated connection satisfies CONNECTED below api 26`() =
+        assertEquals(true, WorkerUtils.networkConstraintMet(NetworkType.CONNECTED, conn(validated = false), sdkInt = 23))
+
+    @Test fun `a metered connection does not satisfy UNMETERED`() =
+        assertEquals(false, WorkerUtils.networkConstraintMet(NetworkType.UNMETERED, conn(unmetered = false), sdkInt = 35))
+
+    @Test fun `an unmetered connection satisfies UNMETERED`() =
+        assertEquals(true, WorkerUtils.networkConstraintMet(NetworkType.UNMETERED, conn(), sdkInt = 35))
+
+    @Test fun `being offline does not satisfy UNMETERED`() =
+        assertEquals(false, WorkerUtils.networkConstraintMet(NetworkType.UNMETERED, conn(connected = false), sdkInt = 35))
+
+    /** Unreadable connectivity must still warn: silence would hide the condition this feature reports. */
+    @Test fun `unknown connectivity satisfies CONNECTED`() =
+        assertEquals(true, WorkerUtils.networkConstraintMet(NetworkType.CONNECTED, null, sdkInt = 35))
+
+    @Test fun `unknown connectivity satisfies UNMETERED`() =
+        assertEquals(true, WorkerUtils.networkConstraintMet(NetworkType.UNMETERED, null, sdkInt = 35))
+
+    /** NOT_REQUIRED cannot be unmet — the offline floor must not swallow it. */
+    @Test fun `NOT_REQUIRED is satisfied even offline`() =
+        assertEquals(true, WorkerUtils.networkConstraintMet(NetworkType.NOT_REQUIRED, conn(connected = false), sdkInt = 35))
+
+    /** The offline floor applies to the types this app never sets, too. */
+    @Test fun `an unevaluated type is still unsatisfied offline`() =
+        assertEquals(false, WorkerUtils.networkConstraintMet(NetworkType.NOT_ROAMING, conn(connected = false), sdkInt = 35))
+
+    /**
+     * The test the earlier draft of this phase lacked. Everything above exercises the predicate in
+     * isolation and would still pass if the filter were never wired in, or wired to the wrong list.
+     *
+     * `WorkSpec(id, className)` defaults its constraints to `Constraints.NONE`, i.e. NOT_REQUIRED,
+     * which is always satisfied — so a version of this test that does not set `constraints`
+     * explicitly passes whether or not the filter works, and is worthless.
+     */
+    @Test
+    fun `offline suppresses only the jobs whose network constraint is unmet`() {
+        val needsNetwork = spec(WorkInfo.State.ENQUEUED, now - 20 * 60_000).apply {
+            constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+        }
+        val needsNothing = spec(WorkInfo.State.ENQUEUED, now - 20 * 60_000).apply {
+            constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.NOT_REQUIRED).build()
+        }
+        val specs = listOf(needsNetwork, needsNothing)
+
+        assertEquals(
+            listOf(needsNothing),
+            WorkerUtils.appManagerSuspects(specs, now, conn(connected = false)),
+            "offline, only the constraint-free job is a genuine suspect",
+        )
+        assertEquals(
+            specs,
+            WorkerUtils.appManagerSuspects(specs, now, conn()),
+            "online, both are suspects",
+        )
     }
 }
