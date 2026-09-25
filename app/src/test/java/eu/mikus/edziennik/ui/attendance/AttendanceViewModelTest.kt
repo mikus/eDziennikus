@@ -13,6 +13,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -35,7 +36,7 @@ class AttendanceViewModelTest {
 
     private val absentType = AttendanceType(1, 1, Attendance.TYPE_ABSENT, "nieobecność", "nb", "nb", null)
 
-    private fun row(id: Long, semester: Int = 1, seen: Boolean = true): AttendanceFull =
+    private fun row(id: Long, semester: Int = 1, seen: Boolean = true, day: Int = 1): AttendanceFull =
         mockk(relaxed = true) {
             every { this@mockk.id } returns id
             every { this@mockk.semester } returns semester
@@ -44,7 +45,7 @@ class AttendanceViewModelTest {
             every { typeObject } returns absentType
             every { subjectId } returns 1L
             every { subjectLongName } returns "Algebra"
-            every { date } returns eu.mikus.edziennik.utils.models.Date(2026, 6, 1)
+            every { date } returns eu.mikus.edziennik.utils.models.Date(2026, 6, day)
         }
 
     private val config = AttendanceTreeBuilder.Config(
@@ -55,7 +56,8 @@ class AttendanceViewModelTest {
         source: () -> Flow<List<AttendanceFull>>,
         onMarkSeen: (AttendanceFull) -> Unit = {},
         onMarkAllSeen: () -> Unit = {},
-    ) = AttendanceViewModel(source, config, Period.ALL, onMarkAllSeen, onMarkSeen, dispatcher)
+        configFlow: Flow<AttendanceTreeBuilder.Config> = flowOf(config),
+    ) = AttendanceViewModel(source, configFlow, Period.ALL, onMarkAllSeen, onMarkSeen, dispatcher)
 
     @BeforeEach fun setUp() = Dispatchers.setMain(dispatcher)
     @AfterEach fun tearDown() = Dispatchers.resetMain()
@@ -184,4 +186,48 @@ class AttendanceViewModelTest {
             .tabs.filterIsInstance<AttendanceTab.ListTab>().single().leaves.size)
         job.cancel()
     }
+
+    /**
+     * The starvation guard, as a transition rather than a bare negative: `combine` produces nothing
+     * until every input has emitted, so an unprimed config flow holds the screen on Loading. Drop
+     * `configFlow` from the combine and the first assert fails; the second proves the first is not
+     * passing because the VM never reaches Content at all.
+     */
+    @Test
+    fun `stays Loading until the config flow emits, then reaches Content`() = runTest(dispatcher) {
+        val configs = MutableSharedFlow<AttendanceTreeBuilder.Config>(extraBufferCapacity = 1)
+        val model = vm(source = { flowOf(listOf(row(1))) }, configFlow = configs)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertTrue(model.uiState.value is AttendanceUiState.Loading)
+
+        configs.tryEmit(config)
+        advanceUntilIdle()
+        assertTrue(model.uiState.value is AttendanceUiState.Content)
+        job.cancel()
+    }
+
+    /**
+     * The point of the phase: a new config value re-derives the tree with no new source data and no
+     * ViewModel recreation. Two ADJACENT non-present days are the only input `groupConsecutiveDays`
+     * reads — the builder needs `ranges.size > 1`, i.e. two distinct dates.
+     */
+    @Test
+    fun `re-derives when the config flow emits a new value`() = runTest(dispatcher) {
+        val configs = MutableStateFlow(config.copy(groupConsecutiveDays = false))
+        val model = vm(source = { flowOf(listOf(row(1, day = 1), row(2, day = 2))) }, configFlow = configs)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(2, dayRanges(model).size)          // one range per day
+
+        configs.value = config.copy(groupConsecutiveDays = true)
+        advanceUntilIdle()
+        assertEquals(1, dayRanges(model).size)          // the consecutive run merged
+        assertEquals(2, dayRanges(model).single().leaves.size)
+        job.cancel()
+    }
+
+    private fun dayRanges(model: AttendanceViewModel): List<DayRangeHeader> =
+        (model.uiState.value as AttendanceUiState.Content)
+            .tabs.filterIsInstance<AttendanceTab.DaysTab>().single().dayRanges
 }

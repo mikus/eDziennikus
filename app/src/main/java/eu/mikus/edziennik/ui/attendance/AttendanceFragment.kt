@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -20,6 +21,7 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.config.configFlow
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.AttendanceFragmentBinding
 import eu.mikus.edziennik.ui.base.ScreenAction
@@ -64,7 +66,7 @@ class AttendanceFragment : Fragment() {
 
         activity.setScreenActions(listOf(
             ScreenAction(R.string.menu_attendance_config, CommunityMaterial.Icon.cmd_cog_outline) {
-                AttendanceConfigDialog(activity, true, null, null).show()
+                AttendanceConfigDialog(activity, reloadOnDismiss = false).show()
             },
             ScreenAction(
                 R.string.menu_mark_as_read,
@@ -84,11 +86,14 @@ class AttendanceFragment : Fragment() {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val period by viewModel.period.collectAsStateWithLifecycle()
             val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            val useSymbols by remember {
+                configFlow(app.config, app.profile.config) { manager.useSymbols }
+            }.collectAsStateWithLifecycle(manager.useSymbols)
             PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.ATTENDANCE) }) {
                 AttendanceScreen(
                     state = state,
                     period = period,
-                    useSymbols = manager.useSymbols,
+                    useSymbols = useSymbols,
                     colorForAttendance = { Color(manager.getAttendanceColor(it)) },
                     colorForType = { Color(manager.getAttendanceColor(it)) },
                     icon = { manager.getAttendanceIcon(it) },

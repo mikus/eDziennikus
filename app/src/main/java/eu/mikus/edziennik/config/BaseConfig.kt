@@ -7,6 +7,9 @@ package eu.mikus.edziennik.config
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import eu.mikus.edziennik.config.db.ConfigEntry
 import eu.mikus.edziennik.data.db.AppDb
@@ -26,6 +29,19 @@ abstract class BaseConfig(
 
     val values = hashMapOf<String, String?>()
 
+    private val _changes = MutableSharedFlow<String>(extraBufferCapacity = 64)
+
+    /**
+     * Emits the key of every config value written through [set].
+     *
+     * Per instance, and there is more than one — see [configFlow], which is how callers should
+     * consume this.
+     *
+     * `extraBufferCapacity` keeps [tryEmit] non-suspending. Dropping an event under extreme burst is
+     * acceptable because collectors re-read current state rather than accumulating deltas.
+     */
+    val changes: SharedFlow<String> = _changes.asSharedFlow()
+
     init {
         if (entries == null)
             entries = db.configDao().getAllNow()
@@ -39,6 +55,7 @@ abstract class BaseConfig(
 
     fun set(key: String, value: String?) {
         values[key] = value
+        _changes.tryEmit(key)
         launch(Dispatchers.IO) {
             db.configDao().add(ConfigEntry(profileId ?: -1, key, value))
         }

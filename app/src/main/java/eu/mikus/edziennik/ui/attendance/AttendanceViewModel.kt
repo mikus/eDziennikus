@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import eu.mikus.edziennik.App
+import eu.mikus.edziennik.config.configFlow
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import kotlinx.coroutines.CoroutineDispatcher
@@ -26,7 +27,7 @@ import kotlinx.coroutines.launch
 
 class AttendanceViewModel(
     source: () -> Flow<List<AttendanceFull>>,
-    private val config: AttendanceTreeBuilder.Config,
+    configFlow: Flow<AttendanceTreeBuilder.Config>,
     periodInitial: Period,
     private val onMarkAllSeen: () -> Unit,
     private val onMarkSeen: (AttendanceFull) -> Unit,
@@ -40,8 +41,8 @@ class AttendanceViewModel(
     private val seenIds = mutableSetOf<Long>()
 
     val uiState: StateFlow<AttendanceUiState> =
-        combine(source(), _period, expandedNodes) { att, p, exp ->
-            withExpanded(AttendanceTreeBuilder.build(att, config, p), exp)
+        combine(source(), _period, expandedNodes, configFlow) { att, p, exp, cfg ->
+            withExpanded(AttendanceTreeBuilder.build(att, cfg, p), exp)
         }
             .flowOn(dispatcher)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AttendanceUiState.Loading)
@@ -93,14 +94,21 @@ class AttendanceViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             val app = appContext.applicationContext as App
-            val attendanceConfig = app.profile.config.attendance
+            // Capture once: the flow must observe the SAME ProfileConfig instance that readConfig
+            // reads, or a profile switch leaves it listening to one profile and reading another.
+            val profileConfig = app.profile.config
+            fun readConfig() = profileConfig.attendance.let {
+                AttendanceTreeBuilder.Config(
+                    groupConsecutiveDays = it.groupConsecutiveDays,
+                    showPresenceInMonth = it.showPresenceInMonth,
+                    // Not config-derived: Profile.currentSemester is a wall-clock getter
+                    // (Profile.kt:74-75). Re-reading it on a config write is a no-op.
+                    currentSemester = app.profile.currentSemester,
+                )
+            }
             return AttendanceViewModel(
                 source = { app.db.attendanceDao().getAll(App.profileId).asFlow() },
-                config = AttendanceTreeBuilder.Config(
-                    groupConsecutiveDays = attendanceConfig.groupConsecutiveDays,
-                    showPresenceInMonth = attendanceConfig.showPresenceInMonth,
-                    currentSemester = app.profile.currentSemester,
-                ),
+                configFlow = configFlow(app.config, profileConfig) { readConfig() },
                 periodInitial = Period.ALL,
                 onMarkAllSeen = {
                     App.db.metadataDao().setAllSeen(App.profileId, MetadataType.ATTENDANCE, true)
