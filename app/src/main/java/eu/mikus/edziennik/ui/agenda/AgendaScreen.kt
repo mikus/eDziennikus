@@ -52,10 +52,10 @@ import java.util.Locale
 
 /**
  * [subjectImportant] is the profile's `agendaSubjectImportant` preference, which picks whether an event
- * row names its subject or its type — the legacy renderer's showType/showSubject pairing. It reads the
- * live config by default rather than travelling through AgendaUiState, because AgendaConfigDialog
- * reloads the fragment on dismiss; that is the same assumption AgendaViewModel.Factory already makes
- * for the other two agenda flags.
+ * row names its subject or its type — the legacy renderer's showType/showSubject pairing. AgendaFragment
+ * supplies it from a `configFlow`, so the checkbox applies without the screen being rebuilt; the default
+ * below is only a fallback for a caller that has no flow, and nothing in the app reaches it. Do NOT route
+ * it through AgendaUiState — AgendaBuilder ignores it, so the state object would not change identity.
  */
 @Composable
 fun AgendaScreen(

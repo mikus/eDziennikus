@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -19,6 +20,7 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.config.configFlow
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.AgendaFragmentBinding
 import eu.mikus.edziennik.ui.agenda.lessonchanges.LessonChangesDialog
@@ -71,7 +73,7 @@ class AgendaFragment : Fragment() {
                 EventManualDialog(activity, App.profileId, defaultDate = viewModel.selectedDate.value).show()
             },
             ScreenAction(R.string.menu_agenda_config, CommunityMaterial.Icon.cmd_cog_outline) {
-                AgendaConfigDialog(activity, true, null, null).show()
+                AgendaConfigDialog(activity, reloadOnDismiss = false).show()
             },
             ScreenAction(
                 R.string.menu_mark_as_read,
@@ -94,6 +96,9 @@ class AgendaFragment : Fragment() {
         b.composeView.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            val subjectImportant by remember {
+                configFlow(app.config, app.profile.config) { app.profile.config.ui.agendaSubjectImportant }
+            }.collectAsStateWithLifecycle(app.profile.config.ui.agendaSubjectImportant)
             PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.AGENDA) }) {
                 AgendaScreen(
                     state = state,
@@ -105,6 +110,7 @@ class AgendaFragment : Fragment() {
                     onItemSeen = viewModel::markSeen,
                     onLessonChangesClick = { LessonChangesDialog(activity, App.profileId, defaultDate = it).show() },
                     onTeacherAbsenceClick = { TeacherAbsenceDialog(activity, App.profileId, date = it).show() },
+                    subjectImportant = subjectImportant,
                 )
             }
         }
