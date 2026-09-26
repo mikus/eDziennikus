@@ -102,7 +102,7 @@ private fun LabControlView(
             // the row the same way (`SettingsScreen.kt:129-131`), though with `clickable` and a live
             // Switch, so they keep the two separate nodes this one merges. The repo's three checkbox
             // rows (`ConfigControls.kt:28-33`, `MessagesComposeScreen.kt:587-596`,
-            // `GradesConfigDialog.kt:250-255`) all keep a live `Checkbox` too and so also read as two
+            // `GradesConfigDialog.kt:251-256`) all keep a live `Checkbox` too and so also read as two
             // nodes; merging here is deliberate, not an oversight, and they are left alone.
             is LabControl.Check -> Row(
                 Modifier

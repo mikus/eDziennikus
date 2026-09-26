@@ -14,6 +14,8 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -42,6 +44,20 @@ class GradesViewModelTest {
     )
     private val config = Config(false, false, false, false, 0)
 
+    private fun gradesInputs(
+        config: Config = this.config,
+        plusValue: Float? = null,
+        yearAverageMode: Int = 0,
+    ) = GradesInputs(
+        config = config,
+        plusValue = plusValue,
+        minusValue = null,
+        averageWithoutWeight = true,
+        yearAverageMode = yearAverageMode,
+        dontCountEnabled = false,
+        dontCountGrades = emptyList(),
+    )
+
     private fun grade(id: Long, subjectId: Long, semester: Int = 1, value: Float = 4f, seen: Boolean = true): GradeFull =
         mockk(relaxed = true) {
             every { this@mockk.id } returns id
@@ -64,16 +80,20 @@ class GradesViewModelTest {
         marked: MutableList<GradeFull> = mutableListOf(),
         markedAll: MutableList<Unit> = mutableListOf(),
         initialSubject: Long = 0L,
+        math: Math = this.math,
+        inputs: Flow<GradesInputs> = flowOf(gradesInputs()),
     ) = GradesViewModel(
         source = { flowOf(grades) as Flow<List<GradeFull>> },
         math = math,
-        config = config,
-        averageMode = 0,
+        inputs = inputs,
         expandedSubjectInitial = initialSubject,
         onMarkAllSeen = { markedAll.add(Unit) },
         onMarkSeen = { marked.add(it) },
         dispatcher = dispatcher,
     )
+
+    private fun semester(model: GradesViewModel) =
+        (model.uiState.value as GradesUiState.Content).subjects.single().semesters.single()
 
     @Test fun `emits Content from the builder`() = runTest(dispatcher) {
         val model = vm(listOf(grade(1, 10)))
@@ -163,6 +183,77 @@ class GradesViewModelTest {
         assertEquals(null, args.gradeSumOtherSemester)
         assertEquals(null, args.averageOtherSemester)
         assertEquals(null, model.editorArgs(999L, 1))
+        job.cancel()
+    }
+
+    /**
+     * The phase, in one test. The two assertions gate two different halves and two different mutations:
+     * - `plusValue` never reaches the builder; `GradesManager.getGradeValue` re-reads it at call time
+     *   (GradesManager.kt:113-127), which the math stub below mirrors. So the ONLY thing that can
+     *   apply a new value is the combine re-running — that is what the fourth input buys, and what a
+     *   ViewModel rebuild used to do.
+     * - `hideImproved` does reach the builder through `i.config`. Freeze that (build from the first
+     *   emission forever) and this second assertion goes red while the first still passes.
+     */
+    @Test fun `re-derives when the inputs flow emits a new value`() = runTest(dispatcher) {
+        val inputs = MutableStateFlow(gradesInputs(plusValue = 0f))
+        val liveMath = Math(
+            gradeValue = { it.value + (inputs.value.plusValue ?: 0f) },
+            gradeWeight = { it.weight },
+            semesterAverage = { a: GradesAverages -> if (a.normalWeightedCount > 0f) a.normalAvg = a.normalWeightedSum / a.normalWeightedCount },
+            yearAverage = { _, _ -> },
+            roundedGrade = { v -> v.toInt() },
+        )
+        val improved = grade(2, 10).also { every { it.isImproved } returns true }
+        val model = vm(listOf(grade(1, 10), improved), math = liveMath, inputs = inputs)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(4f, semester(model).averages.normalAvg)
+        assertEquals(2, semester(model).grades.size)
+
+        inputs.value = gradesInputs(config = config.copy(hideImproved = true), plusValue = 1f)
+        advanceUntilIdle()
+        assertEquals(5f, semester(model).averages.normalAvg)   // live plusValue, applied by re-deriving
+        assertEquals(1, semester(model).grades.size)           // i.config, actually re-read
+        job.cancel()
+    }
+
+    /**
+     * The starvation guard, as a transition. `combine` produces nothing until every input has emitted,
+     * so an unprimed inputs flow holds the screen on Loading forever — which is why `configFlow`
+     * primes with `onStart` (ConfigFlow.kt:26). The second assert proves the first is not passing
+     * because the VM never reaches Content at all.
+     */
+    @Test fun `stays Loading until the inputs flow emits, then reaches Content`() = runTest(dispatcher) {
+        val inputs = MutableSharedFlow<GradesInputs>(extraBufferCapacity = 1)
+        val model = vm(listOf(grade(1, 10)), inputs = inputs)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertTrue(model.uiState.value is GradesUiState.Loading)
+
+        inputs.tryEmit(gradesInputs())
+        advanceUntilIdle()
+        assertTrue(model.uiState.value is GradesUiState.Content)
+        job.cancel()
+    }
+
+    /**
+     * The regression this phase would otherwise introduce. `averageMode` does not feed the tree — it
+     * goes into the GRADES_EDITOR nav Bundle (GradesListFragment.onEditorClick), where
+     * GradesEditorViewModel.kt:88 computes `yearAverageAfter` from it. Today a dismiss rebuilds the
+     * fragment and refreshes it; after this phase nothing does, so it has to come off the flow.
+     * Mutation: capture it as a ctor field again and this goes red.
+     */
+    @Test fun `editorArgs averageMode tracks the newest yearAverageMode`() = runTest(dispatcher) {
+        val inputs = MutableStateFlow(gradesInputs(yearAverageMode = 4))
+        val model = vm(listOf(grade(1, 10, semester = 1)), inputs = inputs)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(4, model.editorArgs(10L, 1)!!.averageMode)
+
+        inputs.value = gradesInputs(yearAverageMode = 1)
+        advanceUntilIdle()
+        assertEquals(1, model.editorArgs(10L, 1)!!.averageMode)
         job.cancel()
     }
 }

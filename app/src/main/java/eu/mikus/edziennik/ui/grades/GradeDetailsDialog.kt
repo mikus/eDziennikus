@@ -91,7 +91,7 @@ class GradeDetailsDialog(
             showCustomValue = manager.plusValue != null || manager.minusValue != null,
             showNotes = showNotes,
             activity = activity,
-            onCustomValue = { GradesConfigDialog(activity, reloadOnDismiss = true).show() },
+            onCustomValue = { GradesConfigDialog(activity, reloadOnDismiss = false).show() },
             onHistoryClick = { GradeDetailsDialog(activity, it).show() },
             onTeacherAction = dialog::dismiss,
             onShowListener = onShowListener,

@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -20,6 +21,7 @@ import com.mikepenz.iconics.typeface.library.community.material.CommunityMateria
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.config.configFlow
 import eu.mikus.edziennik.data.db.entity.Grade
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.GradeFull
@@ -66,7 +68,7 @@ class GradesListFragment : Fragment() {
 
         activity.setScreenActions(listOf(
             ScreenAction(R.string.menu_grades_config, CommunityMaterial.Icon.cmd_cog_outline) {
-                GradesConfigDialog(activity, true, null, null).show()
+                GradesConfigDialog(activity, reloadOnDismiss = false).show()
             },
             ScreenAction(
                 R.string.menu_mark_as_read,
@@ -82,22 +84,34 @@ class GradesListFragment : Fragment() {
         b.gradesCompose.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+            // colorMode is the one dialog key no ViewModel path can carry: the builder never sees it,
+            // GradesFormatters.gradeColor reads it live at draw time (GradesManager.kt:143).
+            val colorMode by remember {
+                configFlow(app.config, app.profile.config) { app.profile.config.grades.colorMode }
+            }.collectAsStateWithLifecycle(app.profile.config.grades.colorMode)
+            // `colorMode` looks unused here — it is NOT. GradesScreen has no colorMode parameter, so
+            // `by` registers no State read inside the composition and an unused local would recompose
+            // nothing; keying this remember on it is the ONLY thing that rebuilds the formatters when
+            // the setting changes. Do not "clean it up".
+            val formatters = remember(colorMode) {
+                GradesFormatters(
+                    gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
+                    averageText = { snap -> app.gradesManager.getAverageString(ctx, snap.toGradesAverages())?.toString() },
+                    semesterAverageText = { snap, n ->
+                        app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true, showSemester = n)?.toString()
+                    },
+                    yearAverageText = { snap ->
+                        app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true)?.toString()
+                    },
+                    yearSummaryText = { count, snap -> app.gradesManager.getYearSummaryString(ctx, count, snap.toGradesAverages()) },
+                    weightText = { app.gradesManager.getWeightString(ctx, it, showClassAverage = true)?.toString() },
+                    gradeDateText = ::gradeDateText,
+                )
+            }
             PullToRefreshBox(isRefreshing = refreshing, onRefresh = { syncFeature(activity, FeatureType.GRADES) }) {
                 GradesScreen(
                     state = state,
-                    formatters = GradesFormatters(
-                        gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
-                        averageText = { snap -> app.gradesManager.getAverageString(ctx, snap.toGradesAverages())?.toString() },
-                        semesterAverageText = { snap, n ->
-                            app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true, showSemester = n)?.toString()
-                        },
-                        yearAverageText = { snap ->
-                            app.gradesManager.getAverageString(ctx, snap.toGradesAverages(), nameSemester = true)?.toString()
-                        },
-                        yearSummaryText = { count, snap -> app.gradesManager.getYearSummaryString(ctx, count, snap.toGradesAverages()) },
-                        weightText = { app.gradesManager.getWeightString(ctx, it, showClassAverage = true)?.toString() },
-                        gradeDateText = ::gradeDateText,
-                    ),
+                    formatters = formatters,
                     onSubjectToggle = viewModel::toggleSubject,
                     onSemesterToggle = viewModel::toggleSemester,
                     onGradeClick = ::onGradeClick,

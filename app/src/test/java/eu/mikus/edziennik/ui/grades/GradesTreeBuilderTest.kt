@@ -171,6 +171,24 @@ class GradesTreeBuilderTest {
         assertEquals(listOf(10L, 20L), asc.subjects.map { it.subjectId })
     }
 
+    /**
+     * The only gate on this phase's headline behaviour. Sort-by-subject used to work purely because
+     * dismissing the dialog rebuilt the fragment with a fresh ORDER BY; with the clause now frozen,
+     * a missing branch here would silently keep the old order while sort-by-date still worked.
+     * Three subjects, because with two, one direction always equals insertion order.
+     */
+    @Test fun `orderBy subject asc vs desc sorts subjects by name`() {
+        val grades = listOf(
+            grade(1, 10, subjectLongName = "Biologia"),
+            grade(2, 20, subjectLongName = "Angielski"),
+            grade(3, 30, subjectLongName = "Chemia"),
+        )
+        val asc = GradesTreeBuilder.build(grades, cfg(orderBy = GradesManagerOrder.SUBJECT_ASC), math) as GradesUiState.Content
+        assertEquals(listOf(20L, 10L, 30L), asc.subjects.map { it.subjectId })
+        val desc = GradesTreeBuilder.build(grades, cfg(orderBy = GradesManagerOrder.SUBJECT_DESC), math) as GradesUiState.Content
+        assertEquals(listOf(30L, 10L, 20L), desc.subjects.map { it.subjectId })
+    }
+
     @Test fun `preserves DAO semester order (current first) and picks firstNonEmpty from unfiltered scratch`() {
         // DAO orders gradeSemester DESC, so the sem2 grade arrives first → sem2 displayed first (legacy)
         val grades = listOf(
@@ -222,5 +240,7 @@ class GradesTreeBuilderTest {
 /** Mirror of GradesManager order constants used by the builder's post-build sort (kept local to avoid an App dep in tests). */
 object GradesManagerOrder {
     const val DATE_DESC = 0
+    const val SUBJECT_ASC = 1
     const val DATE_ASC = 2
+    const val SUBJECT_DESC = 3
 }

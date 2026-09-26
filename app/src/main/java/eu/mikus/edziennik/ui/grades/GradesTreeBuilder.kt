@@ -14,7 +14,9 @@ import kotlin.math.max
 object GradesTreeBuilder {
 
     const val ORDER_BY_DATE_DESC = 0
+    const val ORDER_BY_SUBJECT_ASC = 1
     const val ORDER_BY_DATE_ASC = 2
+    const val ORDER_BY_SUBJECT_DESC = 3
 
     data class Config(
         val isUniversity: Boolean,
@@ -105,9 +107,16 @@ object GradesTreeBuilder {
         }
 
         // --- order ---
+        // Total over GradesManager's 4-value domain (GradesManager.kt:36-39): the ORDER BY clause is
+        // now read once and frozen (GradesViewModel.kt Factory), so a missing branch here would keep
+        // the stale SQL order instead of re-sorting. Plain compareTo, not a locale comparator —
+        // matching SQLite's `subjectLongName ASC` is the point. Value 3 is unreachable from the dialog
+        // but reachable from stored config (AppConfigMigrationV3.kt:47).
         when (config.orderBy) {
             ORDER_BY_DATE_DESC -> scratch.sortByDescending { it.lastAddedDate }
             ORDER_BY_DATE_ASC -> scratch.sortBy { it.lastAddedDate }
+            ORDER_BY_SUBJECT_ASC -> scratch.sortBy { it.subjectName }
+            ORDER_BY_SUBJECT_DESC -> scratch.sortByDescending { it.subjectName }
         }
 
         // --- project to immutable items ---

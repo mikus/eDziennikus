@@ -78,6 +78,7 @@ class GradesConfigDialog(
 
 @Composable
 private fun GradesConfigContent(app: App) {
+    // Adding a key here? Add it to GradesInputs (GradesViewModel.kt) or the screen will not re-derive.
     val context = LocalContext.current
     val globalConfig = app.config.grades          // GLOBAL: orderBy
     val profileConfig = app.profile.config.grades  // PROFILE: the rest
