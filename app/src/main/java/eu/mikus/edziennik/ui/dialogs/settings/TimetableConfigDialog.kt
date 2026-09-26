@@ -21,9 +21,7 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.enums.FeatureType
-import eu.mikus.edziennik.ext.Intent
 import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
-import eu.mikus.edziennik.ui.timetable.TimetableFragment
 
 class TimetableConfigDialog(
     activity: AppCompatActivity,
@@ -41,7 +39,6 @@ class TimetableConfigDialog(
 
     override fun onDismiss() {
         if (reloadOnDismiss && activity is MainActivity) activity.reloadTarget()
-        activity.sendBroadcast(Intent(TimetableFragment.ACTION_RELOAD_PAGES))
     }
 }
 

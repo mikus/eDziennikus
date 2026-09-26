@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -30,6 +31,7 @@ import com.mikepenz.iconics.utils.sizeDp
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.config.configFlow
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.MetadataType
@@ -55,7 +57,6 @@ class TimetableFragment : Fragment() {
     companion object {
         private const val TAG = "TimetableFragment"
         const val ACTION_SCROLL_TO_DATE = "eu.mikus.edziennik.timetable.SCROLL_TO_DATE"
-        const val ACTION_RELOAD_PAGES = "eu.mikus.edziennik.timetable.RELOAD_PAGES"
         const val DEFAULT_START_HOUR = 6
         const val DEFAULT_END_HOUR = 19
         var pageSelection: Date? = null
@@ -125,7 +126,6 @@ class TimetableFragment : Fragment() {
             viewModel = vm
 
             val lessonHeight = app.data.uiConfig.lessonHeight
-            val colorSubjectName = app.profile.config.ui.timetableColorSubjectName
 
             // Built here, armed only by onPageChanged below. A non-null ScreenFab means
             // fabEnable = true, and this screen must ENTER with its FAB hidden: arming here would
@@ -184,6 +184,9 @@ class TimetableFragment : Fragment() {
             b.composeView.setAppThemeContent {
                 val requested by vm.requestedDate.collectAsStateWithLifecycle()
                 val refreshing by app.syncStatus.isRefreshing.collectAsStateWithLifecycle()
+                val colorSubjectName by remember {
+                    configFlow(app.config, app.profile.config) { app.profile.config.ui.timetableColorSubjectName }
+                }.collectAsStateWithLifecycle(app.profile.config.ui.timetableColorSubjectName)
                 PullToRefreshBox(
                     isRefreshing = refreshing,
                     onRefresh = { syncFeature(activity, FeatureType.TIMETABLE, JsonObject("weekStart" to currentWeekStart())) },
@@ -234,9 +237,6 @@ class TimetableFragment : Fragment() {
                     val dateStr = i.extras?.getString("timetableDate", null) ?: return
                     viewModel?.requestDate(Date.fromY_m_d(dateStr))
                 }
-                ACTION_RELOAD_PAGES -> {
-                    // no-op: dayFlow is reactive, lessons re-emit on re-sync
-                }
             }
         }
     }
@@ -248,7 +248,6 @@ class TimetableFragment : Fragment() {
             broadcastReceiver,
             IntentFilter().apply {
                 addAction(ACTION_SCROLL_TO_DATE)
-                addAction(ACTION_RELOAD_PAGES)
             },
             ContextCompat.RECEIVER_EXPORTED,
         )

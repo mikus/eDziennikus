@@ -15,6 +15,8 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -47,11 +49,12 @@ class TimetableViewModelTest {
     private fun vm(
         lessons: (Date) -> Flow<List<LessonFull>>,
         onMarkSeen: (LessonFull) -> Unit = {},
+        configFlow: Flow<TimetableDayBuilder.Config> = flowOf(cfg),
     ) = TimetableViewModel(
         lessonsSource = lessons,
         eventsFetch = { emptyList<EventFull>() },
         attendanceFetch = { emptyList<AttendanceFull>() },
-        config = cfg,
+        configFlow = configFlow,
         initialDate = date,
         onMarkSeen = onMarkSeen,
         dispatcher = dispatcher,
@@ -119,5 +122,48 @@ class TimetableViewModelTest {
         val model = vm(lessons = { flowOf(listOf(lesson())) })
         model.onPageChanged(Date(2026, 6, 12))
         assertEquals(Date(2026, 6, 12).value, model.currentDate.value.value)
+    }
+
+    /**
+     * The phase: a config change re-derives the day with no new lesson data and no ViewModel
+     * recreation. `trimHourRange` is the observable because it is the only Config flag the builder
+     * turns into a field of Content without an events or attendance fixture — vm() feeds both as
+     * emptyList(), so showEvents/showAttendance are unobservable here.
+     */
+    @Test
+    fun `dayFlow re-emits a new hour range when the config flow emits`() = runTest(dispatcher) {
+        val configs = MutableStateFlow(cfg)                // trimHourRange = false
+        val model = vm(lessons = { flowOf(listOf(lesson())) }, configFlow = configs)
+        val states = mutableListOf<TimetableDayUiState>()
+        val job = launch { model.dayFlow(date).collect { states += it } }
+        advanceUntilIdle()
+        assertEquals(6, assertIs<TimetableDayUiState.Content>(states.last()).startHour)
+
+        configs.value = cfg.copy(trimHourRange = true)
+        advanceUntilIdle()
+        assertEquals(2, states.size)
+        assertEquals(8, assertIs<TimetableDayUiState.Content>(states.last()).startHour)
+        job.cancel()
+    }
+
+    /**
+     * The starvation guard, the AgendaViewModelTest shape. `combine` produces nothing until every
+     * input has emitted, so an unprimed config flow yields no day at all — which is why configFlow()
+     * primes with .onStart. Gate: prime the input inside dayFlow (see the mutation table). Deleting
+     * .onStart from ConfigFlow.kt CANNOT redden this test, which injects its own flow.
+     */
+    @Test
+    fun `dayFlow emits nothing until the config flow emits`() = runTest(dispatcher) {
+        val configs = MutableSharedFlow<TimetableDayBuilder.Config>(extraBufferCapacity = 1)
+        val model = vm(lessons = { flowOf(listOf(lesson())) }, configFlow = configs)
+        val states = mutableListOf<TimetableDayUiState>()
+        val job = launch { model.dayFlow(date).collect { states += it } }
+        advanceUntilIdle()
+        assertEquals(0, states.size)
+
+        configs.tryEmit(cfg)
+        advanceUntilIdle()
+        assertEquals(1, states.size)
+        job.cancel()
     }
 }

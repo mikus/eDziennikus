@@ -161,7 +161,7 @@ private fun barColors(): BarColors = barColorsFor(MaterialTheme.colorScheme)
  *
  * It waits for the first non-null [ShellState.fab] of the current screen instead of keying on the
  * fab itself. Keying on the fab would replay the pulse every time a screen re-arms one, which
- * `TimetableFragment.kt:202` does on **every page swipe** (`setScreenFab(todayFab.takeIf { ... })`)
+ * `TimetableFragment.kt:205` does on **every page swipe** (`setScreenFab(todayFab.takeIf { ... })`)
  * and which `MessageFragment.kt:98-99` already carries an `armedFor` latch to prevent - a
  * user-visible replay this project has been bitten by once.
  *
