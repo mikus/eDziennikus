@@ -22,7 +22,7 @@ Gradle wrapper (`./gradlew`) is the entry point. **JDK 17 required** (CI uses Te
 
 **Variant rules** (`app/build.gradle`):
 - **No product flavors.** The fork ships a single sideload-distribution binary (GitHub Releases), so the upstream `unofficial`/`official`/`play` trio was collapsed. `./gradlew assembleDebug` produces a usable artifact at `app/build/outputs/apk/debug/app-debug.apk` (no more `variantFilter` trap).
-- The runtime `BuildConfig.FLAVOR` string is hard-coded to `"main"` via `buildConfigField` so the X-AppFlavor backend header and the config-sync cache key stay stable.
+- The runtime `BuildConfig.FLAVOR` string is hard-coded to `"main"` via `buildConfigField` so it keeps a stable value after the flavors were collapsed. Its only consumers are `BuildManager.kt:47` (`val buildFlavor = BuildConfig.FLAVOR`) and the diagnostic log line at `BuildManager.kt:248`. There is no `X-AppFlavor` header anywhere in the tree, and nothing keys a cache on it.
 - `versionName` in `defaultConfig` is appended with `gitInfo.versionSuffix` so running builds always reflect branch and dirty state.
 
 **Signed-release outputs** land in `app/release/` as `Edziennik_<versionName>.{apk,aab}` — a custom `rename<Task>` task is registered as a finalizer of `assembleRelease` / `bundleRelease` / `signReleaseBundle` and copies+renames the output.
@@ -44,16 +44,31 @@ The provider abstraction is kept from upstream even though the fork ships a sing
 When changing Librus behavior, scope changes to `librus/`; cross-cutting changes to the task contract belong in `helper/` or the database layer.
 
 ### Persistence
-Single Room database `AppDb` (`data/db/`). Migration schemas are committed under `app/schemas/eu.mikus.edziennik.data.db.AppDb/` — every schema change requires a new committed JSON schema and a written migration. Two kapt processors generate DAO code: `androidx.room:room-compiler` and `eu.szkolny.selective-dao:codegen` (the latter generates selective-update DAOs from annotations).
+Single Room database `AppDb` (`data/db/`). Two kapt processors generate DAO code: `androidx.room:room-compiler` and `eu.szkolny.selective-dao:codegen` (the latter generates selective-update DAOs from annotations).
+
+> **⚠ There are no Room migrations, and bumping the DB version destroys user data.**
+> `AppDb.kt:46` is `version = 1`, `AppDb.kt:101` builds with `.fallbackToDestructiveMigration()`, the tree
+> contains **zero** Room `Migration` objects and no `addMigrations(...)` call, and
+> `app/schemas/eu.mikus.edziennik.data.db.AppDb/` holds exactly one file, `1.json` — there is no "past"
+> snapshot to migrate from. Bumping the version therefore **drops and recreates every table**: the build
+> stays green and every user silently loses their local diary.
+>
+> Changing the schema is a **flag-and-confirm** change (see "Safe-change rules"). Doing it safely means
+> first replacing `.fallbackToDestructiveMigration()` with real `Migration` objects wired through
+> `addMigrations(...)`, which is its own piece of work — not a step inside a feature.
 
 ### UI
-Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timetable, widgets, etc.). Shared scaffolding in `ui/base/`, `ui/dialogs/`, `ui/views/`. Both **DataBinding and ViewBinding are enabled** — existing code mixes the two. AndroidX Navigation (`navigation-fragment-ktx`) is used for fragment graphs.
+Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timetable, widgets, etc.). Shared scaffolding in `ui/base/`, `ui/dialogs/`, `ui/views/`.
+
+**Jetpack Compose is the larger and growing surface** (`compose = true`, compose-bom, material3, activity-compose, lifecycle-runtime-compose; 83 files import `androidx.compose.runtime.Composable` against 63 that import a generated `eu.mikus.edziennik.databinding.*Binding`). **DataBinding is off** (`app/build.gradle:56`, `dataBinding = false`); ViewBinding is still on and still hosts the older screens. See "UI: Compose and ViewBinding".
+
+**There is no fragment Navigation graph.** The only navigation artifact is `androidx.navigation:navigation-compose:2.9.5`, and its only consumer is the login flow — `ui/login/LoginNavHost.kt`, whose entry composable is `LoginRoot` (`:42`). `NavHostFragment`, `navigation-fragment-ktx` and `res/navigation/` do not exist. The main content host swaps fragments by hand — `MainActivity.kt:976-977` does `transaction.replace(R.id.fragment, fragment)` + `commitAllowingStateLoss()` — with `NavStackPolicy.kt` as the back-stack authority.
 
 ### Networking
 - Provider-specific request/response models live alongside each provider under `data/api/`
-- `network/` holds shared OkHttp/Retrofit setup; `network/cookie/` handles per-provider cookie jars
-- Many providers are **HTML-scrape based** (hence `jsoup` + `jspoon` in deps)
-- Debug builds include **Chucker** for in-app HTTP traffic inspection
+- `network/` holds `SSLProviderInstaller.kt` and `cookie/` (per-provider cookie jars). The shared OkHttp client is assembled in `App.kt:138-168`, not here.
+- **Retrofit is declared but unused** — `retrofit2` has zero hits anywhere under `app/src`. Don't reach for it as if it were the established idiom; the providers are HTML-scrape based (hence `jsoup` + `jspoon`).
+- **Chucker ships in release builds too.** It is declared with plain `implementation` (`app/build.gradle:214`), not `debugImplementation`, and there is no no-op release variant. It is gated at *runtime* instead, by **both** flags: `App.kt:160-161` nests `if (enableChucker)` inside `if (devMode)`, so the interceptor needs `devMode && enableChucker`. `enableChucker` defaults to `devMode` (`App.kt:220`, `config.enableChucker ?: devMode`), and setting `config.enableChucker` cannot override a false `devMode`.
 
 ### Background work
 - `sync/` — sync logic driven by `androidx.work` (WorkManager)
@@ -62,16 +77,17 @@ Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timet
 ### Native code
 None. The fork has no native sources or NDK dependencies — the upstream
 `szkolny-signing` JNI library (used to sign requests to szkolny.eu's
-now-removed API) was deleted along with SzkolnyApi. `Signing.kt`
-survives as a pure-Kotlin helper that reads the APK's signing
-certificate for the `BuildManager.isSigned` keystore-recognition check.
+now-removed API) was deleted along with SzkolnyApi.
+`utils/AppCertificateReader.kt` survives as a pure-Kotlin helper that
+reads the APK's signing certificate; `BuildManager.kt:76` compares its
+MD5 against a known hash to set `isSigned`.
 
 ### Version metadata
-`app/git-info.gradle` runs at Gradle configure time and uses JGit to inject git metadata (hash, branch, tag, dirty flag, rev-count) into `BuildConfig.GIT_INFO`. `defaultConfig.versionName` appends `${gitInfo.versionSuffix}` so the running version reflects the branch and dirty state. Gradle configuration cache is intentionally disabled because this script reads live git state.
+`app/git-info.gradle` runs at Gradle configure time and uses JGit to inject git metadata (hash, branch, tag, dirty flag, rev-count) into `BuildConfig.GIT_INFO`. `defaultConfig.versionName` appends `${gitInfo.versionSuffix}` so the running version reflects the branch and dirty state. Because this script reads live git state at configure time it is not configuration-cache safe — but note the cache is simply **never opted into**: nothing in `gradle.properties`, `settings.gradle` or either `build.gradle` sets `org.gradle.configuration-cache`. Don't enable it without dealing with this script first.
 
 ## Coding conventions
 
-**Language**: Kotlin for all new code. Java files still exist (`utils/Utils.java`, `utils/Anim.java`, `utils/Colors.java`, `ui/announcements/AnnouncementsFragment.java`, several helpers) and may be edited in place, but don't write new `.java` files. **Don't opportunistically rewrite Java to Kotlin** as a side-effect of unrelated work — that's a refactor and must follow the refactor rule under "Testing & quality bar".
+**Language**: Kotlin for all new code. ~34 Java files still exist (`utils/Utils.java`, `utils/Anim.java`, `utils/Colors.java`, `utils/models/Date.java`, `ui/announcements/AnnouncementsAdapter.java`, a minority of `data/db/dao/` (7 of 31) and `data/db/entity/` (6 of 32) — both layers are majority Kotlin — and 4 of the 11 widget classes) and may be edited in place, but don't write new `.java` files. **Don't opportunistically rewrite Java to Kotlin** as a side-effect of unrelated work — that's a refactor and must follow the refactor rule under "Testing & quality bar".
 
 **File header**: New Kotlin files start with the copyright block already in use across the repo:
 ```kotlin
@@ -91,7 +107,8 @@ certificate for the `BuildManager.isSigned` keystore-recognition check.
 - Treat platform types from Android APIs as nullable unless the doc explicitly guarantees otherwise.
 
 **Concurrency**:
-- New async code uses Kotlin coroutines. The repo idiom is to implement `CoroutineScope` directly on the Fragment/controller with `override val coroutineContext = Job() + Dispatchers.Main`, then `launch { withContext(Dispatchers.IO) { ... } }`. See [AgendaFragmentDefault.kt:43-52](app/src/main/java/eu/mikus/edziennik/ui/agenda/AgendaFragmentDefault.kt) for the canonical shape.
+- New async code uses Kotlin coroutines. The **legacy** idiom, still used by adapters and Home cards, implements `CoroutineScope` directly with `private val job = Job()` + `override val coroutineContext get() = job + Dispatchers.Main`, then `launch { withContext(Dispatchers.IO) { ... } }` — see [AttendanceAdapter.kt:49-51](app/src/main/java/eu/mikus/edziennik/ui/attendance/AttendanceAdapter.kt).
+- **New screens should prefer a ViewModel** exposing `StateFlow`, collected with `collectAsStateWithLifecycle()`. That is what every *stateful* migrated screen does; see `AttendanceViewModel.kt`. (`ui/settings/LicensesActivity.kt` is the exception — a static list, no ViewModel.)
 - **Don't add new `AsyncTask` or raw `Thread { }`.** They still exist in legacy paths and should be migrated when the surrounding code is already being touched (with tests — see refactor rule).
 - Cancel the scope's `Job` in `onDestroyView` / `onCleared` when tied to a lifecycle.
 
@@ -108,14 +125,20 @@ certificate for the `BuildManager.isSigned` keystore-recognition check.
 
 **`when` and control flow**: Prefer expression-form `when` and `if` over statement-form when returning a value. Use `?.let { ... } ?: run { ... }` instead of `if (x != null) ... else ...` for nullable-driven branching.
 
-## UI & view binding
+## UI: Compose and ViewBinding
 
-ViewBinding and DataBinding are both enabled. ViewBinding is dominant (~6:1 by file count) and is the **default for new screens**.
+**DataBinding is off** — `app/build.gradle:56` sets `dataBinding = false`, and no `<layout>`-wrapped XML or `DataBindingUtil` call remains. Ignore any older note that says otherwise.
 
-- **New screens use ViewBinding.** Inflate via the generated `Fragment<Name>Binding.inflate(...)`; bind to a property named `b`; return `b.root` from `onCreateView`.
-- **Use DataBinding only when the layout genuinely needs it** — two-way binding (`@={}`), `<data>` expressions evaluated by the layout, or BR-class observability. A single one-shot `@{viewModel.title}` you can do imperatively in Kotlin is **not** a justification.
-- **When editing an existing screen, match its style.** Don't migrate DataBinding ↔ ViewBinding as a side-effect of unrelated work — it's a refactor and falls under the TDD-for-refactors rule below.
-- If the Fragment outlives its view, null out the binding in `onDestroyView` to avoid leaks.
+Two live styles, and the split is deliberate:
+
+- **Compose is the default for new screens and the larger surface** (83 files import `androidx.compose.runtime.Composable` vs 63 importing a generated `eu.mikus.edziennik.databinding.*Binding`). The house shape is a Fragment that owns a `ComposeView` and calls `setAppThemeContent { … }`, a ViewModel exposing `StateFlow`, and `collectAsStateWithLifecycle()` in the composable. `AttendanceFragment.kt` + `AttendanceViewModel.kt` + `AttendanceScreen.kt` is the canonical trio.
+- **ViewBinding still hosts the older screens.** Inflate via the generated `Fragment<Name>Binding.inflate(...)`; bind to a property named `b`; return `b.root` from `onCreateView`. If the Fragment outlives its view, null the binding in `onDestroyView`.
+
+**When editing an existing screen, match its style.** Don't migrate a ViewBinding screen to Compose as a side-effect of unrelated work — that's a refactor and falls under the TDD-for-refactors rule below.
+
+**Don't reintroduce a `<merge>`-rooted include.** ViewBinding *generates* a field for one, but `bind()` resolves that field via `findViewById`, and a `<merge>` leaves no view with that id — so the field is null and it throws `NullPointerException: Missing required view with ID: …`. This crashed the note dialog until `5c8bd79e` gave the header a real root; see the comment at `res/layout/note_dialog_header.xml:7-11`. No `<merge>`-rooted layout remains today. A probe showing the field exists does not show it resolves.
+
+**Compose UI tests cannot run here.** `createComposeRule` cannot be hosted under Robolectric 4.14.1 + compose-bom 2026.06.00, and there is no `app/src/androidTest/` — see the note at `ShellPolicyTest.kt:23-26`. `androidx.compose.ui:ui-test-junit4` *is* on the test classpath (`app/build.gradle:276`) and is vestigial; the comment above it at `:275` claiming these tests run is stale. So anything observable only in a composition is an emulator smoke, not a gate — say so in a plan rather than implying a test covers it.
 
 ## Testing & quality bar
 
@@ -125,7 +148,7 @@ Dependencies in `app/build.gradle`:
 - `org.junit:junit-bom:5.13.4` aligns Jupiter / Platform / Vintage versions.
 - `org.junit.jupiter:junit-jupiter` (API + engine via BOM), `org.junit.platform:junit-platform-launcher`, `org.junit.vintage:junit-vintage-engine`.
 - `org.jetbrains.kotlin:kotlin-test-junit5` for Kotlin-friendly assertions.
-- `org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4` — pinned to match the transitive coroutines version; bumping requires bumping coroutines first.
+- `org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2` — pinned to match `kotlinx-coroutines-android:1.10.2` (`app/build.gradle:253-254`); bump the two together. `runTest`, `runCurrent`, `advanceUntilIdle` and virtual-time `withTimeoutOrNull` are all available.
 - `io.mockk:mockk:1.13.13` for Kotlin-friendly mocking.
 - `org.robolectric:robolectric:4.14.1` for Android-framework fakes on the JVM (first stable with SDK 35 support).
 
@@ -145,7 +168,7 @@ Robolectric tests can instantiate the production `App.onCreate()` directly — t
 **Policy** (now actionable):
 
 - **New features → TDD.** Write the failing test first; implementation follows. Prefer Jupiter (`org.junit.jupiter.api.Test`) for non-Android tests; reach for Robolectric only when the unit under test genuinely touches `android.*`.
-- **Refactors → characterize first.** Before changing the structure of existing code, write tests that pin down its current observable behavior. Refactor against a green bar. **Refactor PRs that don't add coverage for the touched area should be rejected**, including Java → Kotlin migrations and DataBinding ↔ ViewBinding moves.
+- **Refactors → characterize first.** Before changing the structure of existing code, write tests that pin down its current observable behavior. Refactor against a green bar. **Refactor PRs that don't add coverage for the touched area should be rejected**, including Java → Kotlin migrations and ViewBinding → Compose moves.
 - **Bug fixes → reproduce first.** Failing test that reproduces the bug, then fix.
 
 **Definition of done for any change**:
@@ -160,10 +183,9 @@ Robolectric tests can instantiate the production `App.onCreate()` directly — t
 
 These changes have hidden coordination cost or break things in non-obvious ways. **Flag and confirm before doing any of them**, even if the diff looks small:
 
-- **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `assembleDebug` on every push/PR; `release.yml` triggers on `v*.*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
-- **`app/schemas/eu.mikus.edziennik.data.db.AppDb/`** — these JSON files are *committed snapshots* of past Room schemas. Room uses them to verify migrations. Don't edit them. To change schema, bump `AppDb` version, write a new `Migration`, and let Room export the new snapshot on the next build.
-- **Shipped Room `Migration` objects** — never edit a migration after it has shipped (a user already ran it). Add a new migration instead.
-- **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker on debug builds is the standard tool).
+- **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `./gradlew assembleDebug lint` on every push/PR and uploads nothing; `release.yml` triggers on `v*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
+- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = 1` with `.fallbackToDestructiveMigration()` and there are no `Migration` objects, so **bumping the version wipes every user's data while the build stays green**. Don't edit `app/schemas/…/1.json` either; Room regenerates it.
+- **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker is the standard tool; it is compiled into every build but only captures when `devMode` **and** `enableChucker` are both true — see Networking).
 - **`eu.mikus.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and sideload identity depend on exact values. Changing the application ID forces users to reinstall and loses their data.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
 - **Adding new dependencies** — many providers parse HTML using `jsoup` + `jspoon` already in deps. Don't add a second HTML parser, JSON library, or networking layer without justifying why the existing one is insufficient.
@@ -172,14 +194,14 @@ These changes have hidden coordination cost or break things in non-obvious ways.
 ## CI / release pipeline
 
 Workflows in `.github/workflows/` — both are self-contained for this fork (no upstream reusable workflow indirection):
-- `build.yml` — push / PR to any branch → `./gradlew assembleDebug`, uploads `app-debug.apk` as a workflow artifact. The smoke gate.
-- `release.yml` — `v*.*` tag → `./gradlew assembleRelease` with a signing config materialised from repo secrets, attaches the signed APK to the GitHub Release.
+- `build.yml` — push / PR to any branch → `./gradlew assembleDebug lint`. The smoke gate. It produces **no artifact**: there is no upload step, so don't expect to download an APK from a CI run. Note it also runs `lint`, so a new lint **error** fails CI even though the task table above lists lint separately. Warnings do not fail it — `warningsAsErrors` is not set (`app/build.gradle:73-78`).
+- `release.yml` — `v*` tag (not `v*.*`) → `./gradlew assembleRelease` with a signing config materialised from repo secrets, attaches the signed APK to the GitHub Release.
 
 There is no Play AAB upload, no nightly cron, and no Discord/Firebase distribution any more — those upstream paths were removed when the fork dropped its `play` and `official` flavors. Releases are sideload-only via GitHub Releases.
 
 ## Constraints to keep in mind
 
-- **`minSdk = 23` (Android 6.0)**: guard newer APIs with `Build.VERSION.SDK_INT` / `@RequiresApi`. Core library desugaring is enabled, so `java.time` and streams are fine without checks. Note that guards for API levels **≤ 23 are now dead code** — `lintDebug` already reports them as `Unnecessary; SDK_INT is always >= 23` (e.g. three in `MainActivity.kt`). Don't add new ones; removing the existing ones is a separate, test-backed change.
+- **`minSdk = 23` (Android 6.0)**: guard newer APIs with `Build.VERSION.SDK_INT` / `@RequiresApi`. Core library desugaring is enabled, so `java.time` and streams are fine without checks. Note that guards for API levels **≤ 23 are now dead code** — `lintDebug` already reports them as `Unnecessary; SDK_INT is always >= 23`. There are 18 such comparisons left across 10 files (9 of them in `utils/PermissionChecker.java` alone); `MainActivity.kt:980` is the only one in `MainActivity`. Don't add new ones; removing the existing ones is a separate, test-backed change.
 - **R8 full mode is off** (`android.enableR8.fullMode=false`). Don't rely on aggressive shrinking in release builds.
 - **`android.enableJetifier=true`** is on for transitively-pulled legacy support libs.
 - **All commit messages in this repo follow `[Area] Title` convention** (e.g., `[UI] …`, `[API/Librus] …`, `[Actions] …`, `[Gradle] …`). Match the prefix style when adding commits.
