@@ -33,16 +33,10 @@ class SzkolnyTask(val app: App, val syncingProfiles: List<Profile>) : IApiTask(-
         // What remains here is the local notification pipeline only.
         d(TAG, "Created ${notificationList.count()} notifications.")
 
-        // filter notifications
-        notificationList
-                .mapNotNull { it.profileId }
-                .distinct()
-                .map { app.config[it].sync.notificationFilter }
-                .forEach { filter ->
-                    filter.forEach { type ->
-                        notificationList.removeAll { it.type == type }
-                    }
-                }
+        // filter notifications: each one is judged against ITS OWN profile's filter. Filtering by
+        // type across the whole list let one profile's preference suppress another profile's
+        // notifications, and setAllNotified below made that permanent rather than merely delayed.
+        retainUnfilteredNotifications(notificationList) { app.config[it].sync.notificationFilter }
 
         // update the database
         app.db.metadataDao().setAllNotified(true)
