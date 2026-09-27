@@ -5,10 +5,16 @@
 package eu.mikus.edziennik.ui.home
 
 /**
- * Pure read-modify-write transforms over the FULL per-profile card list, mirroring the legacy
- * HomeFragment.swapCards / removeCard. Pinned cards (cardId >= 100: Archive 101 / Availability 102)
- * are never moved or removed. Operating on the full list (not the gated display list) means a card
- * that is merely feature-gated-off right now is never dropped from persistence.
+ * Pure transforms over the persisted home-card list, mirroring the pre-Compose
+ * HomeFragment.swapCards / removeCard (both removed in 52fd2b4d). Pinned cards
+ * (cardId >= 100: Archive 101 / Availability 102) are never moved, removed
+ * or minted. Operating on the persisted list (not the gated display list) means a card that is
+ * merely feature-gated-off right now is never dropped from persistence.
+ *
+ * Two contracts, distinguished by the first parameter's name:
+ *  - [swap] and [remove] take and return ONE profile's list (`cards`).
+ *  - [mergeForProfile] and [applySelection] take and return the FULL list (`all`), so a write for
+ *    one profile never clobbers another's.
  */
 object HomeCardOrder {
 
@@ -36,4 +42,42 @@ object HomeCardOrder {
      */
     fun mergeForProfile(all: List<HomeCardModel>, profileId: Int, profileCards: List<HomeCardModel>): List<HomeCardModel> =
         all.filter { it.profileId != profileId } + profileCards
+
+    /**
+     * Reconcile [profileId]'s cards against a checkbox [selected] set WITHOUT reordering them.
+     *
+     * Surviving cards keep their stored order; newly-checked cards are appended in [offered] order.
+     * A stored card outside [offered] is preserved — the dialog has no opinion about a type it does
+     * not show — and a pinned id is never removed or minted even when [offered] lists it. [offered]
+     * must be duplicate-free: a repeated id would mint a duplicate card, and HomeScreen keys its
+     * LazyColumn by cardId, so a duplicate id crashes the screen.
+     *
+     * Returns null when there is nothing to write: the result equals [all], or it would leave
+     * [profileId] with no cards, which HomeViewModel.seedIfEmpty would immediately revert to the
+     * defaults, overwriting the stored order.
+     *
+     * The caller must also make sure the Home ViewModel is rebuilt after a write —
+     * `HomeViewModel._cards` is a construction-time snapshot that never observes config, so a
+     * ViewModel that survives the write would saveCards() its stale copy on the next reorder and
+     * discard this one.
+     */
+    fun applySelection(
+        all: List<HomeCardModel>,
+        profileId: Int,
+        selected: Set<Int>,
+        offered: List<Int>,
+    ): List<HomeCardModel>? {
+        val kept = all.filter {
+            it.profileId == profileId &&
+                (it.cardId in selected || isPinned(it.cardId) || it.cardId !in offered)
+        }
+        val keptIds = kept.mapTo(mutableSetOf()) { it.cardId }
+        val added = offered
+            .filter { it in selected && it !in keptIds && !isPinned(it) }
+            .map { HomeCardModel(profileId, it) }
+        val profileCards = kept + added
+        if (profileCards.isEmpty())
+            return null
+        return mergeForProfile(all, profileId, profileCards).takeIf { it != all }
+    }
 }
