@@ -17,6 +17,7 @@ import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.data.db.full.LuckyNumberFull
 import eu.mikus.edziennik.data.db.entity.Note
+import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.ext.getStudentData
 import eu.mikus.edziennik.ext.hasUIFeature
 import eu.mikus.edziennik.utils.models.Date
@@ -26,11 +27,26 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/**
+ * The [Profile] fields HomeBuilder renders, in one value so [distinctUntilChanged] compares them
+ * structurally and `combine`'s arity does not grow per field. The field list is named in three
+ * places — here, the `map`, and the `onStart` seed — because the seed comes from the constructor
+ * snapshot rather than from a [Profile].
+ */
+internal data class ProfileInputs(
+    val studentNumber: Int,
+    val profileName: String,
+    val archived: Boolean,
+)
 
 class HomeViewModel(
     luckyNumberSource: () -> Flow<LuckyNumberFull?>,
@@ -38,14 +54,15 @@ class HomeViewModel(
     gradesSource: () -> Flow<List<GradeFull>>,
     notesSource: () -> Flow<List<Note>>,
     timetableSource: () -> Flow<List<LessonFull>>,
+    profileSource: () -> Flow<Profile?>,
     private val loadCards: () -> List<HomeCardModel>,
     private val saveCards: (List<HomeCardModel>) -> Unit,
     private val availableFeatures: Set<FeatureType>,
-    private val archived: Boolean,
+    seedArchived: Boolean,
     private val updateAvailable: Boolean,
     private val locked: Boolean,
-    private val studentNumber: Int,
-    private val profileName: String,
+    seedStudentNumber: Int,
+    seedProfileName: String,
     private val today: Date,
     private val config: HomeBuilder.Config,
     private val defaultCards: List<HomeCardModel>,
@@ -61,11 +78,27 @@ class HomeViewModel(
         HomeBuilder.Data(lucky, events, grades, notes, timetable)
     }
 
-    val uiState = combine(dataFlow, _cards) { data, cards ->
+    /**
+     * `internal` so the gate for [distinctUntilChanged] can collect it: `uiState` ends in `stateIn`,
+     * which conflates equal values on its own, so that operator's effect is invisible there.
+     *
+     * The `onStart` seed is the constructor snapshot, and it re-fires whenever `WhileSubscribed`
+     * restarts the upstream — not only on a cold Home. It is load-bearing for a stronger reason than
+     * latency: `filterNotNull` is upstream, so a profile row that does not exist emits nothing at
+     * all, and without a seed `combine` never fills this operand and Home stays on
+     * HomeUiState.Loading indefinitely. Same reason `configFlow` primes with `read()`.
+     */
+    internal val profileFlow = profileSource()
+        .filterNotNull()
+        .map { ProfileInputs(it.studentNumber, it.name, it.archived) }
+        .onStart { emit(ProfileInputs(seedStudentNumber, seedProfileName, seedArchived)) }
+        .distinctUntilChanged()
+
+    val uiState = combine(dataFlow, _cards, profileFlow) { data, cards, profile ->
         HomeBuilder.build(
-            cards = cards, availableFeatures = availableFeatures, archived = archived,
-            updateAvailable = updateAvailable, locked = locked, studentNumber = studentNumber,
-            profileName = profileName, today = today, config = config, data = data,
+            cards = cards, availableFeatures = availableFeatures, archived = profile.archived,
+            updateAvailable = updateAvailable, locked = locked, studentNumber = profile.studentNumber,
+            profileName = profile.profileName, today = today, config = config, data = data,
         )
     }.flowOn(dispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState.Loading)
 
@@ -124,14 +157,15 @@ class HomeViewModel(
                             .map { list -> list.filter { it.profileId == profileId } }   // getBetweenDates is cross-profile
                     else flowOf(emptyList())
                 },
+                profileSource = { app.db.profileDao().getById(profileId).asFlow() },
                 loadCards = { ui.homeCards.filter { it.profileId == profileId } },
                 saveCards = { cards -> ui.homeCards = HomeCardOrder.mergeForProfile(ui.homeCards, profileId, cards) },
                 availableFeatures = available,
-                archived = profile.archived,
+                seedArchived = profile.archived,
                 updateAvailable = update != null && update.versionCode > BuildConfig.VERSION_CODE,
                 locked = ui.homeCardsLocked,
-                studentNumber = profile.studentNumber,
-                profileName = profile.name,
+                seedStudentNumber = profile.studentNumber,
+                seedProfileName = profile.name,
                 today = today,
                 config = HomeBuilder.Config(
                     agendaSubjectImportant = ui.agendaSubjectImportant,

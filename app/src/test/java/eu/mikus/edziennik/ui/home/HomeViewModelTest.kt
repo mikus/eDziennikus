@@ -4,15 +4,21 @@
 
 package eu.mikus.edziennik.ui.home
 
+import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.enums.FeatureType
+import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.GradeFull
 import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.data.db.full.LuckyNumberFull
 import eu.mikus.edziennik.data.db.entity.Note
+import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.utils.models.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -21,6 +27,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -41,26 +48,38 @@ class HomeViewModelTest {
         initialCards: List<HomeCardModel>,
         defaults: List<HomeCardModel> = listOf(HomeCardModel(1, HomeCard.CARD_NOTES)),
         saved: MutableList<List<HomeCardModel>> = mutableListOf(),
+        profileSource: () -> Flow<Profile?> = { flow {} },
     ) = HomeViewModel(
         luckyNumberSource = { flowOf<LuckyNumberFull?>(null) },
         eventsSource = { flowOf(emptyList<EventFull>()) },
         gradesSource = { flowOf(emptyList<GradeFull>()) },
         notesSource = { flowOf(emptyList<Note>()) },
         timetableSource = { flowOf(emptyList<LessonFull>()) },
+        profileSource = profileSource,
         loadCards = { initialCards },
         saveCards = { saved.add(it) },
         availableFeatures = allFeatures,
-        archived = false,
+        seedArchived = false,
         updateAvailable = false,
         locked = false,
-        studentNumber = 7,
-        profileName = "Jan",
+        seedStudentNumber = 7,
+        seedProfileName = "Jan",
         today = today,
         config = cfg,
         defaultCards = defaults,
         profileId = 1,
         dispatcher = dispatcher,
     )
+
+    private fun profile(studentNumber: Int, name: String = "Jan", archived: Boolean = false) =
+        Profile(id = 1, loginStoreId = 1, loginStoreType = LoginType.LIBRUS).also {
+            it.name = name
+            it.studentNumber = studentNumber
+            it.archived = archived
+        }
+
+    private fun luckyCard(state: HomeUiState.Content) =
+        state.cards.filterIsInstance<HomeCardUi.LuckyNumber>().single()
 
     @BeforeEach fun setUp() = Dispatchers.setMain(dispatcher)
     @AfterEach fun tearDown() = Dispatchers.resetMain()
@@ -120,9 +139,10 @@ class HomeViewModelTest {
             luckyNumberSource = { flowOf<LuckyNumberFull?>(null) }, eventsSource = { flowOf(emptyList()) },
             gradesSource = { flowOf(emptyList()) }, notesSource = { flowOf(emptyList()) },
             timetableSource = { flowOf(emptyList()) },
+            profileSource = { flow {} },
             loadCards = { listOf(HomeCardModel(1, HomeCard.CARD_GRADES), HomeCardModel(1, HomeCard.CARD_NOTES)) },
-            saveCards = { saved.add(it) }, availableFeatures = emptySet(), archived = false, updateAvailable = false,
-            locked = false, studentNumber = 7, profileName = "Jan", today = today, config = cfg,
+            saveCards = { saved.add(it) }, availableFeatures = emptySet(), seedArchived = false, updateAvailable = false,
+            locked = false, seedStudentNumber = 7, seedProfileName = "Jan", today = today, config = cfg,
             defaultCards = emptyList(), profileId = 1, dispatcher = dispatcher,
         )
         val job = launch { model.uiState.collect {} }
@@ -131,6 +151,129 @@ class HomeViewModelTest {
         model.removeCard(HomeCard.CARD_NOTES)
         advanceUntilIdle()
         assertTrue(saved.last().any { it.cardId == HomeCard.CARD_GRADES })
+        job.cancel()
+    }
+
+    /**
+     * The reproduction. Before this phase `studentNumber` was a constructor val, so the card kept
+     * saying "click to set" after the user set a number, until the fragment was rebuilt.
+     */
+    @Test
+    fun `a new studentNumber from the profile flow reaches uiState`() = runTest(dispatcher) {
+        val profiles = MutableSharedFlow<Profile?>(replay = 1)
+        val model = vm(
+            initialCards = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER)),
+            profileSource = { profiles },
+        )
+        val job = launch { model.uiState.collect {} }
+        profiles.emit(profile(studentNumber = -1))
+        advanceUntilIdle()
+        assertEquals(
+            R.string.home_lucky_number_details_click_to_set,
+            luckyCard(model.uiState.value as HomeUiState.Content).subTextRes,
+        )
+
+        profiles.emit(profile(studentNumber = 13))
+        advanceUntilIdle()
+        val card = luckyCard(model.uiState.value as HomeUiState.Content)
+        assertEquals(R.string.home_lucky_number_details, card.subTextRes)
+        assertEquals(listOf<Any>("Jan", 13), card.subTextArgs)
+        job.cancel()
+    }
+
+    @Test
+    fun `uiState emits from the seed before the profile flow emits`() = runTest(dispatcher) {
+        val model = vm(
+            initialCards = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER)),
+            profileSource = { flow {} },          // never emits
+        )
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        val card = luckyCard(model.uiState.value as HomeUiState.Content)
+        assertEquals(listOf<Any>("Jan", 7), card.subTextArgs)   // the ctor seed
+        job.cancel()
+    }
+
+    /**
+     * Ordering, not value: the seed must come FIRST. The source must COMPLETE — with a
+     * MutableSharedFlow the `onCompletion` mutation in Task 4 never fires and this gate cannot
+     * discriminate.
+     */
+    @Test
+    fun `the first real profile supersedes the seed`() = runTest(dispatcher) {
+        val model = vm(
+            initialCards = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER)),
+            profileSource = { flowOf(profile(studentNumber = 21, name = "Ola")) },
+        )
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        val card = luckyCard(model.uiState.value as HomeUiState.Content)
+        assertEquals(listOf<Any>("Ola", 21), card.subTextArgs)
+        assertNotEquals(listOf<Any>("Jan", 7), card.subTextArgs)
+        job.cancel()
+    }
+
+    /**
+     * Collects `profileFlow` directly, NOT `uiState`: `uiState` ends in `stateIn`, whose StateFlow
+     * conflates equal values, so an identical rebuild is swallowed there whether or not
+     * `distinctUntilChanged` is present. Mirrors ConfigChangesTest's equivalent gate.
+     */
+    @Test
+    fun `an identical profile does not re-emit`() = runTest(dispatcher) {
+        val profiles = MutableSharedFlow<Profile?>(replay = 1)
+        val model = vm(initialCards = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER)), profileSource = { profiles })
+        val seen = mutableListOf<ProfileInputs>()
+        val job = launch { model.profileFlow.collect { seen += it } }
+        advanceUntilIdle()
+
+        profiles.emit(profile(studentNumber = 7))   // identical to the seed
+        advanceUntilIdle()
+        profiles.emit(profile(studentNumber = 7))   // and again
+        advanceUntilIdle()
+
+        assertEquals(listOf(ProfileInputs(7, "Jan", false)), seen)
+        job.cancel()
+    }
+
+    /**
+     * The `archived` third of the seam. studentNumber and name deliberately MATCH the seed, so
+     * `archived` is the only field that differs — this reddens for the archived wiring alone and
+     * cannot be satisfied via studentNumber or profileName.
+     */
+    @Test
+    fun `archived from the profile flow pins the Archive card`() = runTest(dispatcher) {
+        val profiles = MutableSharedFlow<Profile?>(replay = 1)
+        val model = vm(
+            initialCards = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER)),
+            profileSource = { profiles },
+        )
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(
+            listOf(HomeCard.CARD_LUCKY_NUMBER),
+            (model.uiState.value as HomeUiState.Content).cards.map { it.cardId },
+        )                                           // seed: archived = false
+
+        profiles.emit(profile(studentNumber = 7, name = "Jan", archived = true))
+        advanceUntilIdle()
+        assertEquals(
+            listOf(101, HomeCard.CARD_LUCKY_NUMBER),
+            (model.uiState.value as HomeUiState.Content).cards.map { it.cardId },
+        )                                           // HomeBuilder pins Wrapped(101) when archived
+        job.cancel()
+    }
+
+    @Test
+    fun `a null profile leaves the last good values on screen`() = runTest(dispatcher) {
+        val profiles = MutableSharedFlow<Profile?>(replay = 1)
+        val model = vm(initialCards = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER)), profileSource = { profiles })
+        val job = launch { model.uiState.collect {} }
+        profiles.emit(profile(studentNumber = 13))
+        advanceUntilIdle()
+        profiles.emit(null)
+        advanceUntilIdle()
+        val card = luckyCard(model.uiState.value as HomeUiState.Content)
+        assertEquals(listOf<Any>("Jan", 13), card.subTextArgs)   // not cleared
         job.cancel()
     }
 }
