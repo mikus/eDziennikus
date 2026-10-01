@@ -62,6 +62,7 @@ class HomeCardsDialog(
 
     override suspend fun onShow() = Unit
 
+    /** Set only where the write happens, so Cancel and a toggle-and-revert do not rebuild Home. */
     private var configChanged = false
 
     override suspend fun onPositiveClick(): Boolean {
@@ -70,12 +71,11 @@ class HomeCardsDialog(
             profileId = App.profileId,
             selected = getMultiSelection(),
             offered = OFFERED_IDS,
-        )?.let { app.profile.config.ui.homeCards = it }
+        )?.let {
+            app.profile.config.ui.homeCards = it
+            configChanged = true
+        }
         return DISMISS
-    }
-
-    override suspend fun onMultiSelectionChanged(items: Set<Int>) {
-        configChanged = true
     }
 
     override fun onDismiss() {
