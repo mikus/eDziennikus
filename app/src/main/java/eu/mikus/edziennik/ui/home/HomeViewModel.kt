@@ -39,14 +39,35 @@ import kotlinx.coroutines.launch
 /**
  * The [Profile] fields HomeBuilder renders, in one value so [distinctUntilChanged] compares them
  * structurally and `combine`'s arity does not grow per field. The field list is named in three
- * places — here, the `map`, and the `onStart` seed — because the seed comes from the constructor
- * snapshot rather than from a [Profile].
+ * places — here, [profileInputsFlow]'s `map`, and the Factory that builds the seed.
+ *
+ * Public rather than `internal` because [HomeViewModel]'s constructor takes one, and a public
+ * constructor cannot expose an internal parameter type. Mirrors `GradesInputs`.
  */
-internal data class ProfileInputs(
+data class ProfileInputs(
     val studentNumber: Int,
     val profileName: String,
     val archived: Boolean,
 )
+
+/**
+ * [ProfileInputs] re-derived whenever the profile row changes, primed with [seed].
+ *
+ * The priming emission is what makes this safe inside a `combine`, which produces nothing until every
+ * input has emitted — and here it is load-bearing for a stronger reason than latency: `filterNotNull`
+ * is upstream, so a profile row that does not exist emits nothing at all, and without [seed] Home
+ * would stay on `HomeUiState.Loading` indefinitely. [seed] also re-fires whenever `WhileSubscribed`
+ * restarts the upstream, not only on a cold start. Same shape as `configFlow`.
+ *
+ * Top-level so a test can drive the derivation without widening [HomeViewModel]'s surface. Its gate
+ * collects this directly rather than `uiState`, because `uiState` ends in `stateIn`, whose StateFlow
+ * conflates equal values — asserted through `uiState`, [distinctUntilChanged] would be invisible.
+ */
+internal fun profileInputsFlow(source: Flow<Profile?>, seed: ProfileInputs): Flow<ProfileInputs> =
+    source.filterNotNull()
+        .map { ProfileInputs(it.studentNumber, it.name, it.archived) }
+        .onStart { emit(seed) }
+        .distinctUntilChanged()
 
 class HomeViewModel(
     luckyNumberSource: () -> Flow<LuckyNumberFull?>,
@@ -55,14 +76,12 @@ class HomeViewModel(
     notesSource: () -> Flow<List<Note>>,
     timetableSource: () -> Flow<List<LessonFull>>,
     profileSource: () -> Flow<Profile?>,
+    seedProfile: ProfileInputs,
     private val loadCards: () -> List<HomeCardModel>,
     private val saveCards: (List<HomeCardModel>) -> Unit,
     private val availableFeatures: Set<FeatureType>,
-    seedArchived: Boolean,
     private val updateAvailable: Boolean,
     private val locked: Boolean,
-    seedStudentNumber: Int,
-    seedProfileName: String,
     private val today: Date,
     private val config: HomeBuilder.Config,
     private val defaultCards: List<HomeCardModel>,
@@ -78,21 +97,7 @@ class HomeViewModel(
         HomeBuilder.Data(lucky, events, grades, notes, timetable)
     }
 
-    /**
-     * `internal` so the gate for [distinctUntilChanged] can collect it: `uiState` ends in `stateIn`,
-     * which conflates equal values on its own, so that operator's effect is invisible there.
-     *
-     * The `onStart` seed is the constructor snapshot, and it re-fires whenever `WhileSubscribed`
-     * restarts the upstream — not only on a cold Home. It is load-bearing for a stronger reason than
-     * latency: `filterNotNull` is upstream, so a profile row that does not exist emits nothing at
-     * all, and without a seed `combine` never fills this operand and Home stays on
-     * HomeUiState.Loading indefinitely. Same reason `configFlow` primes with `read()`.
-     */
-    internal val profileFlow = profileSource()
-        .filterNotNull()
-        .map { ProfileInputs(it.studentNumber, it.name, it.archived) }
-        .onStart { emit(ProfileInputs(seedStudentNumber, seedProfileName, seedArchived)) }
-        .distinctUntilChanged()
+    private val profileFlow = profileInputsFlow(profileSource(), seedProfile)
 
     val uiState = combine(dataFlow, _cards, profileFlow) { data, cards, profile ->
         HomeBuilder.build(
@@ -158,14 +163,12 @@ class HomeViewModel(
                     else flowOf(emptyList())
                 },
                 profileSource = { app.db.profileDao().getById(profileId).asFlow() },
+                seedProfile = ProfileInputs(profile.studentNumber, profile.name, profile.archived),
                 loadCards = { ui.homeCards.filter { it.profileId == profileId } },
                 saveCards = { cards -> ui.homeCards = HomeCardOrder.mergeForProfile(ui.homeCards, profileId, cards) },
                 availableFeatures = available,
-                seedArchived = profile.archived,
                 updateAvailable = update != null && update.versionCode > BuildConfig.VERSION_CODE,
                 locked = ui.homeCardsLocked,
-                seedStudentNumber = profile.studentNumber,
-                seedProfileName = profile.name,
                 today = today,
                 config = HomeBuilder.Config(
                     agendaSubjectImportant = ui.agendaSubjectImportant,

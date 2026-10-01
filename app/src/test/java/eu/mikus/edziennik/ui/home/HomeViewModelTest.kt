@@ -48,7 +48,7 @@ class HomeViewModelTest {
         initialCards: List<HomeCardModel>,
         defaults: List<HomeCardModel> = listOf(HomeCardModel(1, HomeCard.CARD_NOTES)),
         saved: MutableList<List<HomeCardModel>> = mutableListOf(),
-        profileSource: () -> Flow<Profile?> = { flow {} },
+        profileSource: () -> Flow<Profile?> = { flowOf(profile(studentNumber = 7)) },
     ) = HomeViewModel(
         luckyNumberSource = { flowOf<LuckyNumberFull?>(null) },
         eventsSource = { flowOf(emptyList<EventFull>()) },
@@ -59,11 +59,9 @@ class HomeViewModelTest {
         loadCards = { initialCards },
         saveCards = { saved.add(it) },
         availableFeatures = allFeatures,
-        seedArchived = false,
+        seedProfile = ProfileInputs(7, "Jan", false),
         updateAvailable = false,
         locked = false,
-        seedStudentNumber = 7,
-        seedProfileName = "Jan",
         today = today,
         config = cfg,
         defaultCards = defaults,
@@ -141,8 +139,8 @@ class HomeViewModelTest {
             timetableSource = { flowOf(emptyList()) },
             profileSource = { flow {} },
             loadCards = { listOf(HomeCardModel(1, HomeCard.CARD_GRADES), HomeCardModel(1, HomeCard.CARD_NOTES)) },
-            saveCards = { saved.add(it) }, availableFeatures = emptySet(), seedArchived = false, updateAvailable = false,
-            locked = false, seedStudentNumber = 7, seedProfileName = "Jan", today = today, config = cfg,
+            saveCards = { saved.add(it) }, availableFeatures = emptySet(), updateAvailable = false,
+            locked = false, seedProfile = ProfileInputs(7, "Jan", false), today = today, config = cfg,
             defaultCards = emptyList(), profileId = 1, dispatcher = dispatcher,
         )
         val job = launch { model.uiState.collect {} }
@@ -214,16 +212,17 @@ class HomeViewModelTest {
     }
 
     /**
-     * Collects `profileFlow` directly, NOT `uiState`: `uiState` ends in `stateIn`, whose StateFlow
-     * conflates equal values, so an identical rebuild is swallowed there whether or not
-     * `distinctUntilChanged` is present. Mirrors ConfigChangesTest's equivalent gate.
+     * Drives `profileInputsFlow` directly rather than `uiState`: `uiState` ends in `stateIn`, whose
+     * StateFlow conflates equal values, so `distinctUntilChanged`'s effect is invisible there.
+     * Mirrors ConfigChangesTest's equivalent gate.
      */
     @Test
     fun `an identical profile does not re-emit`() = runTest(dispatcher) {
         val profiles = MutableSharedFlow<Profile?>(replay = 1)
-        val model = vm(initialCards = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER)), profileSource = { profiles })
         val seen = mutableListOf<ProfileInputs>()
-        val job = launch { model.profileFlow.collect { seen += it } }
+        val job = launch {
+            profileInputsFlow(profiles, ProfileInputs(7, "Jan", false)).collect { seen += it }
+        }
         advanceUntilIdle()
 
         profiles.emit(profile(studentNumber = 7))   // identical to the seed
@@ -232,6 +231,46 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(ProfileInputs(7, "Jan", false)), seen)
+        job.cancel()
+    }
+
+    /**
+     * Ordering: the seed must come FIRST. The source must COMPLETE — against a MutableSharedFlow the
+     * `onCompletion` mutation in Task 4 can never fire, so the gate could not discriminate.
+     */
+    @Test
+    fun `profileInputsFlow emits the seed before the first real profile`() = runTest(dispatcher) {
+        val seen = mutableListOf<ProfileInputs>()
+        val job = launch {
+            profileInputsFlow(
+                flowOf(profile(studentNumber = 21, name = "Ola")),
+                ProfileInputs(7, "Jan", false),
+            ).collect { seen += it }
+        }
+        advanceUntilIdle()
+        assertEquals(
+            listOf(ProfileInputs(7, "Jan", false), ProfileInputs(21, "Ola", false)),
+            seen,
+        )
+        job.cancel()
+    }
+
+    @Test
+    fun `profileInputsFlow skips a null profile rather than blanking it`() = runTest(dispatcher) {
+        val profiles = MutableSharedFlow<Profile?>(replay = 1)
+        val seen = mutableListOf<ProfileInputs>()
+        val job = launch {
+            profileInputsFlow(profiles, ProfileInputs(7, "Jan", false)).collect { seen += it }
+        }
+        advanceUntilIdle()
+        profiles.emit(profile(studentNumber = 13))
+        advanceUntilIdle()
+        profiles.emit(null)
+        advanceUntilIdle()
+        assertEquals(
+            listOf(ProfileInputs(7, "Jan", false), ProfileInputs(13, "Jan", false)),
+            seen,
+        )                                           // the null produced nothing at all
         job.cancel()
     }
 
