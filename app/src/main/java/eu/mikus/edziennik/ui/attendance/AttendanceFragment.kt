@@ -37,7 +37,6 @@ class AttendanceFragment : Fragment() {
         const val VIEW_MONTHS = 2
         const val VIEW_TYPES = 3
         const val VIEW_LIST = 4
-        var pageSelection = 1
     }
 
     private lateinit var app: App
@@ -78,10 +77,8 @@ class AttendanceFragment : Fragment() {
             },
         ))
 
-        if (pageSelection == 1)
-            pageSelection = app.profile.config.attendance.attendancePageSelection
-
         val manager = app.attendanceManager
+        val attendanceCfg = app.profile.config.attendance
         b.composeView.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val period by viewModel.period.collectAsStateWithLifecycle()
@@ -101,11 +98,8 @@ class AttendanceFragment : Fragment() {
                     onNodeToggle = viewModel::toggleNode,
                     onLeafClick = { AttendanceDetailsDialog(activity, it).show() },
                     onItemSeen = viewModel::markSeen,
-                    initialPage = pageSelection,
-                    onPageChange = {
-                        pageSelection = it
-                        app.profile.config.attendance.attendancePageSelection = it
-                    },
+                    initialPage = attendanceCfg.attendancePageSelection,
+                    onPageChange = { attendanceCfg.attendancePageSelection = it },
                 )
             }
         }
