@@ -12,7 +12,8 @@ package eu.mikus.edziennik.ui.home
  * merely feature-gated-off right now is never dropped from persistence.
  *
  * Two contracts, distinguished by the first parameter's name:
- *  - [swap] and [remove] take and return ONE profile's list (`cards`).
+ *  - [swap] and [remove] take ONE profile's list (`cards`); [remove] returns null for "nothing to
+ *    write", as [applySelection] does.
  *  - [mergeForProfile] and [applySelection] take and return the FULL list (`all`), so a write for
  *    one profile never clobbers another's.
  */
@@ -30,9 +31,30 @@ object HomeCardOrder {
         }
     }
 
-    fun remove(cards: List<HomeCardModel>, cardId: Int): List<HomeCardModel> {
-        if (isPinned(cardId)) return cards
-        return cards.filterNot { it.cardId == cardId }
+    /**
+     * Drop [cardId] from one profile's [cards].
+     *
+     * Returns null when there is nothing to write, for three separate reasons:
+     *  - [cardId] is pinned. Pinned cards are never dropped from persistence, so the request is
+     *    refused outright. This guard is NOT subsumed by the trailing `takeIf`: for a pinned id that
+     *    is present, `filterNot` would happily drop it and the result would differ from [cards].
+     *  - [cardId] is absent, so the result would equal [cards].
+     *  - dropping it would leave the profile with no cards, which HomeViewModel.seedIfEmpty would
+     *    immediately revert to the defaults — undoing every removal the user had made. The same
+     *    refusal as [applySelection], for the same reason: swiping cards away one at a time is the
+     *    other way to empty a profile.
+     *
+     * The caller must act on the refusal rather than swallow it. HomeScreen resets its
+     * SwipeToDismissBox when HomeViewModel.removeCard returns false; without that the card stays
+     * dismissed off a list that still holds it, and the box disables its own gestures while settled
+     * away from Settled, so it could not even be swiped again.
+     */
+    fun remove(cards: List<HomeCardModel>, cardId: Int): List<HomeCardModel>? {
+        if (isPinned(cardId)) return null
+        val kept = cards.filterNot { it.cardId == cardId }
+        if (kept.isEmpty())
+            return null
+        return kept.takeIf { it != cards }
     }
 
     /**

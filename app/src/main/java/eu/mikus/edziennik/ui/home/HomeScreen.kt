@@ -52,7 +52,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 fun HomeScreen(
     state: HomeUiState,
     onReorder: (fromId: Int, toId: Int) -> Unit,
-    onRemove: (cardId: Int) -> Unit,
+    onRemove: (cardId: Int) -> Boolean,
     onConfigureCards: () -> Unit,
     gradeColor: (Grade) -> Color,
     onLuckyClick: () -> Unit,
@@ -116,7 +116,12 @@ fun HomeScreen(
                 if (draggable) {
                     val dismiss = rememberSwipeToDismissBoxState()
                     LaunchedEffect(dismiss.settledValue) {
-                        if (dismiss.settledValue != SwipeToDismissBoxValue.Settled) onRemove(card.cardId)
+                        // A refused removal (the profile's last card) must spring back. Without the
+                        // reset the box stays settled at Dismissed: the card sits off screen while
+                        // the list still holds it, and SwipeToDismissBox gates its own gestures on
+                        // settledValue == Settled, so it could not be swiped again either.
+                        if (dismiss.settledValue != SwipeToDismissBoxValue.Settled && !onRemove(card.cardId))
+                            dismiss.reset()
                     }
                     SwipeToDismissBox(state = dismiss, backgroundContent = {}) {
                         HomeCardItem(card, cardModifier, gradeColor, onLuckyClick, onEventClick, onEventEditClick,

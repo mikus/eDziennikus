@@ -38,8 +38,20 @@ class HomeCardOrderTest {
 
     @Test
     fun `remove refuses pinned ids and missing ids`() {
-        assertEquals(listOf(1, 101), ids(HomeCardOrder.remove(cards(1, 101), cardId = 101)))
-        assertEquals(listOf(1, 101), ids(HomeCardOrder.remove(cards(1, 101), cardId = 50)))
+        assertNull(HomeCardOrder.remove(cards(1, 101), cardId = 101))
+        assertNull(HomeCardOrder.remove(cards(1, 101), cardId = 50))
+    }
+
+    /**
+     * The deliberate twin of `applySelection writes nothing when every card would be unchecked`.
+     * Swiping cards away one at a time is the other way to empty a profile, and HomeViewModel
+     * .seedIfEmpty would revert an empty slice to the defaults, undoing every removal the user made.
+     */
+    @Test
+    fun `remove writes nothing when the profile's last card would be dropped`() {
+        assertNull(HomeCardOrder.remove(cards(5), cardId = 5))
+        // The floor is "not empty", not "more than one": dropping to a single survivor is allowed.
+        assertEquals(listOf(1), ids(HomeCardOrder.remove(cards(1, 2), cardId = 2)))
     }
 
     @Test

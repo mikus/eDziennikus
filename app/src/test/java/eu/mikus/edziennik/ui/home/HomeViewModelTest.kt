@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.AfterEach
@@ -123,7 +124,7 @@ class HomeViewModelTest {
         val model = vm(initialCards = listOf(HomeCardModel(1, 3), HomeCardModel(1, 5)), saved = saved)
         val job = launch { model.uiState.collect {} }
         advanceUntilIdle()
-        model.removeCard(cardId = 3)
+        assertTrue(model.removeCard(cardId = 3))
         advanceUntilIdle()
         assertEquals(listOf(5), (model.uiState.value as HomeUiState.Content).cards.map { it.cardId })
         assertEquals(listOf(5), saved.last().map { it.cardId })
@@ -314,5 +315,48 @@ class HomeViewModelTest {
         val card = luckyCard(model.uiState.value as HomeUiState.Content)
         assertEquals(listOf<Any>("Jan", 13), card.subTextArgs)   // not cleared
         job.cancel()
+    }
+
+    /**
+     * The reproduction. Swiping the last card away used to persist an empty slice, and the NEXT
+     * construction's seedIfEmpty saw empty and wrote back the full defaults — every removal the user
+     * had made was undone, with no message.
+     *
+     * `store` is shared by loadCards and saveCards on purpose: the vm() helper keeps them separate,
+     * so a rebuild there re-reads its own argument and could not see the write at all. `defaults`
+     * must differ from what is stored, or the rebuild assertion passes even with the bug.
+     */
+    @Test
+    fun `removing the last card persists nothing and survives a rebuild`() = runTest(dispatcher) {
+        val store = mutableListOf(HomeCardModel(1, HomeCard.CARD_NOTES))
+        val defaults = listOf(HomeCardModel(1, HomeCard.CARD_LUCKY_NUMBER), HomeCardModel(1, HomeCard.CARD_NOTES))
+        fun build() = HomeViewModel(
+            luckyNumberSource = { flowOf<LuckyNumberFull?>(null) }, eventsSource = { flowOf(emptyList()) },
+            gradesSource = { flowOf(emptyList()) }, notesSource = { flowOf(emptyList()) },
+            timetableSource = { flowOf(emptyList()) }, profileSource = { flowOf(profile(studentNumber = 7)) },
+            loadCards = { store.toList() },
+            saveCards = { store.clear(); store.addAll(it) },
+            availableFeatures = allFeatures, seedProfile = ProfileInputs(7, "Jan", false),
+            updateAvailable = false, locked = false, today = today, config = cfg,
+            defaultCards = defaults, profileId = 1, dispatcher = dispatcher,
+        )
+
+        val model = build()
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+
+        assertFalse(model.removeCard(HomeCard.CARD_NOTES))
+        advanceUntilIdle()
+        assertEquals(listOf(HomeCard.CARD_NOTES), store.map { it.cardId })
+        job.cancel()
+
+        val rebuilt = build()
+        val job2 = launch { rebuilt.uiState.collect {} }
+        advanceUntilIdle()
+        assertEquals(
+            listOf(HomeCard.CARD_NOTES),
+            (rebuilt.uiState.value as HomeUiState.Content).cards.map { it.cardId },
+        )
+        job2.cancel()
     }
 }

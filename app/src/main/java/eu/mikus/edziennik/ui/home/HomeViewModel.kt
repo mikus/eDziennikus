@@ -108,7 +108,17 @@ class HomeViewModel(
     }.flowOn(dispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState.Loading)
 
     fun reorder(fromId: Int, toId: Int) = update(HomeCardOrder.swap(_cards.value, fromId, toId))
-    fun removeCard(cardId: Int) = update(HomeCardOrder.remove(_cards.value, cardId))
+
+    /**
+     * Returns false when the removal was refused — [HomeCardOrder.remove] returns null rather than
+     * persist an empty slice. HomeScreen resets its SwipeToDismissBox on false so the card springs
+     * back; swallowing it would leave the card swiped off a list that still contains it.
+     */
+    fun removeCard(cardId: Int): Boolean {
+        val kept = HomeCardOrder.remove(_cards.value, cardId) ?: return false
+        update(kept)
+        return true
+    }
 
     private fun update(newCards: List<HomeCardModel>) {
         if (newCards == _cards.value) return
