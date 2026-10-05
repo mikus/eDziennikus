@@ -13,10 +13,8 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.config.Config
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.LoginType
-import eu.mikus.edziennik.ext.getStudentData
 import eu.mikus.edziennik.ext.getSyncInterval
 import eu.mikus.edziennik.ext.hasUIFeature
-import eu.mikus.edziennik.ext.set
 import eu.mikus.edziennik.utils.BigNightUtil
 import eu.mikus.edziennik.utils.Themes
 import eu.mikus.edziennik.utils.models.Date
@@ -101,7 +99,7 @@ internal fun readSettingsSnapshot(app: App): SettingsSnapshot {
         bellSync = bellSyncSummary(app, cfg),
         countInSeconds = cfg.timetable.countInSeconds,
         isLibrus = profile.loginStoreType == LoginType.LIBRUS,
-        showTeacherAbsences = profile.getStudentData("showTeacherAbsences", true),
+        showTeacherAbsences = profile.config.ui.agendaTeacherAbsence,
         devMode = App.devMode,
         hideSticksFromOld = profile.config.grades.hideSticksFromOld,
         versionText = BuildConfig.VERSION_NAME + ", " + BuildConfig.BUILD_TYPE,
@@ -120,10 +118,7 @@ internal fun writeSettingsToggle(app: App, toggle: SettingsToggle, value: Boolea
         SettingsToggle.QUIET_HOURS -> cfg.sync.quietHoursEnabled = value
         SettingsToggle.NOTIFY_UPDATES -> cfg.sync.notifyAboutUpdates = value
         SettingsToggle.COUNT_IN_SECONDS -> cfg.timetable.countInSeconds = value
-        SettingsToggle.SHOW_TEACHER_ABSENCES -> {
-            app.profile["showTeacherAbsences"] = value
-            app.profileSave()
-        }
+        SettingsToggle.SHOW_TEACHER_ABSENCES -> app.profile.config.ui.agendaTeacherAbsence = value
         SettingsToggle.HIDE_STICKS_FROM_OLD -> app.profile.config.grades.hideSticksFromOld = value
     }
 }

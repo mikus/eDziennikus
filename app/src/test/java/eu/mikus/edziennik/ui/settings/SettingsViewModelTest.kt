@@ -4,12 +4,19 @@
 
 package eu.mikus.edziennik.ui.settings
 
+import eu.mikus.edziennik.App
+import eu.mikus.edziennik.config.ProfileConfig
+import eu.mikus.edziennik.data.db.entity.Profile
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -79,5 +86,23 @@ class SettingsViewModelTest {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.effects.collect { effects.add(it) } }
         vm.onToggle(SettingsToggle.COUNT_IN_SECONDS, true)
         assertTrue(effects.isEmpty())
+    }
+
+    /**
+     * SHOW_TEACHER_ABSENCES wrote profile.studentData["showTeacherAbsences"], which has no consumers;
+     * the Agenda gates on ProfileConfigUI.agendaTeacherAbsence. Both assertions are red at d4d013a5.
+     */
+    @Test
+    fun `teacher-absences toggle writes the key the Agenda reads`() {
+        val cfg = ProfileConfig(mockk(relaxed = true), 1, emptyList())
+        val profile = mockk<Profile>(relaxed = true)
+        every { profile.config } returns cfg
+        val app = mockk<App>(relaxed = true)
+        every { app.profile } returns profile
+
+        writeSettingsToggle(app, SettingsToggle.SHOW_TEACHER_ABSENCES, false)
+
+        assertFalse(cfg.ui.agendaTeacherAbsence)    // red today: the write goes to studentData
+        verify(exactly = 0) { app.profileSave() }   // red today: the studentData branch calls it
     }
 }
