@@ -39,10 +39,11 @@ object HomeCardOrder {
      *    refused outright. This guard is NOT subsumed by the trailing `takeIf`: for a pinned id that
      *    is present, `filterNot` would happily drop it and the result would differ from [cards].
      *  - [cardId] is absent, so the result would equal [cards].
-     *  - dropping it would leave the profile with no cards, which HomeViewModel.seedIfEmpty would
-     *    immediately revert to the defaults — undoing every removal the user had made. The same
-     *    refusal as [applySelection], for the same reason: swiping cards away one at a time is the
-     *    other way to empty a profile.
+     *  - dropping it would leave the profile with no cards. Swiping the cards away one at a time is
+     *    one of the two ways to empty a profile, and [applySelection] refuses the other for the same
+     *    reason. Home now reads its card list from config, so an empty slice is stored and honoured
+     *    rather than reseeded; the refusal is kept because "one more swipe empties Home" is a poor
+     *    outcome either way, not because something would undo it.
      *
      * The caller must act on the refusal rather than swallow it. HomeScreen resets its
      * SwipeToDismissBox when HomeViewModel.removeCard returns false; without that the card stays
@@ -75,13 +76,7 @@ object HomeCardOrder {
      * LazyColumn by cardId, so a duplicate id crashes the screen.
      *
      * Returns null when there is nothing to write: the result equals [all], or it would leave
-     * [profileId] with no cards, which HomeViewModel.seedIfEmpty would immediately revert to the
-     * defaults, overwriting the stored order.
-     *
-     * The caller must also make sure the Home ViewModel is rebuilt after a write —
-     * `HomeViewModel._cards` is a construction-time snapshot that never observes config, so a
-     * ViewModel that survives the write would saveCards() its stale copy on the next reorder and
-     * discard this one.
+     * [profileId] with no cards. Same refusal as [remove], for the same reason.
      */
     fun applySelection(
         all: List<HomeCardModel>,

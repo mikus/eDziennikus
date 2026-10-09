@@ -27,7 +27,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
 import eu.mikus.edziennik.ui.dialogs.settings.bellSyncActualDiff
@@ -85,7 +84,6 @@ class BellSyncDialog(
             .setPositiveButton(R.string.ok) { resultsDialog, _ ->
                 resultsDialog.dismiss()
                 dialog.dismiss()
-                if (activity is MainActivity) activity.reloadTarget()
             }
             .show()
     }

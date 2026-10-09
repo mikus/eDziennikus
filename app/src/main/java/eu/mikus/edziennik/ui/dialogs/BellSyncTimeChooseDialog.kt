@@ -23,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import eu.mikus.edziennik.App
-import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
@@ -119,7 +118,6 @@ class BellSyncTimeChooseDialog(
                 app.config.timetable.bellSyncMultiplier = 0
                 d.dismiss()
                 dialog.dismiss()
-                if (activity is MainActivity) activity.reloadTarget()
             }
             .setNegativeButton(R.string.no, null)
             .show()

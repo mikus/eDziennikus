@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import eu.mikus.edziennik.App
-import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.config.ProfileConfigUI
 import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
@@ -32,7 +31,6 @@ import eu.mikus.edziennik.ui.home.HomeCardsDialog
 
 class HomeConfigDialog(
     activity: AppCompatActivity,
-    private val reloadOnDismiss: Boolean = true,
     onShowListener: ((tag: String) -> Unit)? = null,
     onDismissListener: ((tag: String) -> Unit)? = null,
 ) : ComposeDialog(activity, onShowListener, onDismissListener) {
@@ -44,9 +42,6 @@ class HomeConfigDialog(
     @Composable
     override fun Content() = HomeConfigContent(activity, activity.applicationContext as App)
 
-    override fun onDismiss() {
-        if (reloadOnDismiss && activity is MainActivity) activity.reloadTarget()
-    }
 }
 
 @Composable
@@ -64,7 +59,7 @@ private fun HomeConfigContent(activity: AppCompatActivity, app: App) {
             style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 48.dp, bottom = 4.dp),
         )
-        OutlinedButton(onClick = { HomeCardsDialog(activity, reloadOnDismiss = false).show() }) {
+        OutlinedButton(onClick = { HomeCardsDialog(activity).show() }) {
             Text(stringResource(R.string.home_configure_add_remove))
         }
 

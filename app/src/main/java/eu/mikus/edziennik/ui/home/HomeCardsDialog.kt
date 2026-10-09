@@ -6,7 +6,6 @@ package eu.mikus.edziennik.ui.home
 
 import androidx.appcompat.app.AppCompatActivity
 import eu.mikus.edziennik.App
-import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.ui.dialogs.base.BaseDialog
 import eu.mikus.edziennik.ui.home.HomeCard.Companion.CARD_EVENTS
@@ -17,7 +16,6 @@ import eu.mikus.edziennik.ui.home.HomeCard.Companion.CARD_TIMETABLE
 
 class HomeCardsDialog(
     activity: AppCompatActivity,
-    private val reloadOnDismiss: Boolean = true,
     onShowListener: ((tag: String) -> Unit)? = null,
     onDismissListener: ((tag: String) -> Unit)? = null,
 ) : BaseDialog<Int>(activity, onShowListener, onDismissListener) {
@@ -62,24 +60,14 @@ class HomeCardsDialog(
 
     override suspend fun onShow() = Unit
 
-    /** Set only where the write happens, so Cancel and a toggle-and-revert do not rebuild Home. */
-    private var configChanged = false
-
     override suspend fun onPositiveClick(): Boolean {
         HomeCardOrder.applySelection(
             all = app.profile.config.ui.homeCards,
             profileId = App.profileId,
             selected = getMultiSelection(),
             offered = OFFERED_IDS,
-        )?.let {
-            app.profile.config.ui.homeCards = it
-            configChanged = true
-        }
+        )?.let { app.profile.config.ui.homeCards = it }
         return DISMISS
     }
 
-    override fun onDismiss() {
-        if (configChanged && reloadOnDismiss && activity is MainActivity)
-            activity.reloadTarget()
-    }
 }

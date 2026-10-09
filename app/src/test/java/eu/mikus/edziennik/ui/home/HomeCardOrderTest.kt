@@ -44,8 +44,7 @@ class HomeCardOrderTest {
 
     /**
      * The deliberate twin of `applySelection writes nothing when every card would be unchecked`.
-     * Swiping cards away one at a time is the other way to empty a profile, and HomeViewModel
-     * .seedIfEmpty would revert an empty slice to the defaults, undoing every removal the user made.
+     * Swiping cards away one at a time is the other way to empty a profile; both paths refuse it.
      */
     @Test
     fun `remove writes nothing when the profile's last card would be dropped`() {

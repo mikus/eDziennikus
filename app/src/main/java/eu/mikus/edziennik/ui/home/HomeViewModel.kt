@@ -28,7 +28,6 @@ import eu.mikus.edziennik.utils.models.Date
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -38,7 +37,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * The [Profile] fields HomeBuilder renders, in one value so [distinctUntilChanged] compares them
@@ -137,17 +135,34 @@ class HomeViewModel(
     timetableSource: () -> Flow<List<LessonFull>>,
     profileSource: () -> Flow<Profile?>,
     seedProfile: ProfileInputs,
-    private val loadCards: () -> List<HomeCardModel>,
+    private val loadCards: () -> List<HomeCardModel>?,
     private val saveCards: (List<HomeCardModel>) -> Unit,
     private val availableFeatures: Set<FeatureType>,
     inputs: Flow<HomeInputs>,
+    profileConfig: ProfileConfig,
     private val today: Date,
     private val defaultCards: List<HomeCardModel>,
     private val profileId: Int,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
 
-    private val _cards = MutableStateFlow(seedIfEmpty(loadCards()))
+    /**
+     * The `?: defaultCards` fallback is defensive, not load-bearing: [init] below guarantees a stored
+     * row before anything collects this, so `loadCards()` is non-null by then. A mutation replacing
+     * it with `emptyList()` reddens nothing — it survives only because [saveCards] is an injected
+     * seam a caller could stub out.
+     */
+    private val cardsFlow = configFlow(profileConfig) { loadCards() ?: defaultCards }
+
+    /** The mutators need the value the delegate cache holds *now*, not the last emission. */
+    private fun cardsNow(): List<HomeCardModel> = loadCards() ?: defaultCards
+
+    init {
+        // Seed once per profile, ever. `has` flips to true permanently on the first set, whereas
+        // emptiness is a value the write itself changes — an emptiness-gated write inside the reader
+        // would be a feedback edge, because the reader now runs on EVERY config write.
+        if (!profileConfig.has("homeCards")) saveCards(defaultCards)
+    }
 
     private val dataFlow = combine(
         luckyNumberSource(), eventsSource(), gradesSource(), notesSource(), timetableSource(),
@@ -157,7 +172,7 @@ class HomeViewModel(
 
     private val profileFlow = profileInputsFlow(profileSource(), seedProfile)
 
-    val uiState = combine(dataFlow, _cards, profileFlow, inputs) { data, cards, profile, cfg ->
+    val uiState = combine(dataFlow, cardsFlow, profileFlow, inputs) { data, cards, profile, cfg ->
         HomeBuilder.build(
             cards = cards, availableFeatures = availableFeatures, archived = profile.archived,
             updateAvailable = cfg.updateAvailable, locked = cfg.locked, studentNumber = profile.studentNumber,
@@ -165,7 +180,7 @@ class HomeViewModel(
         )
     }.flowOn(dispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState.Loading)
 
-    fun reorder(fromId: Int, toId: Int) = update(HomeCardOrder.swap(_cards.value, fromId, toId))
+    fun reorder(fromId: Int, toId: Int) = update(HomeCardOrder.swap(cardsNow(), fromId, toId))
 
     /**
      * Returns false when the removal was refused — [HomeCardOrder.remove] returns null rather than
@@ -173,21 +188,28 @@ class HomeViewModel(
      * back; swallowing it would leave the card swiped off a list that still contains it.
      */
     fun removeCard(cardId: Int): Boolean {
-        val kept = HomeCardOrder.remove(_cards.value, cardId) ?: return false
+        val kept = HomeCardOrder.remove(cardsNow(), cardId) ?: return false
         update(kept)
         return true
     }
 
+    /**
+     * The write runs on the calling thread on purpose. With the card list read from config rather
+     * than a StateFlow, `cardsNow()` reads the delegate cache, and the cache only reflects a write
+     * that has actually run — so a deferred write leaves a window where a second drag step computes
+     * from the pre-write list and silently discards the first. (Other writers reach the same cache:
+     * HomeCardsDialog and ProfileConfigMigration both assign `ui.homeCards`. They are not racing
+     * this, but the cache is not this class's private channel.) Reproduced by `a second reorder before the write lands computes
+     * from a stale list` before this line was changed; its control, `two reorders with the first
+     * write landed in between compose in order`, pins that the expectation itself is right.
+     *
+     * The expensive half is already off this thread: BaseConfig.set does the DB row on
+     * Dispatchers.IO. What runs here is a gson serialize of a <=5-element list, which every config
+     * dialog already does on main.
+     */
     private fun update(newCards: List<HomeCardModel>) {
-        if (newCards == _cards.value) return
-        _cards.value = newCards
-        viewModelScope.launch(dispatcher) { saveCards(newCards) }
-    }
-
-    private fun seedIfEmpty(loaded: List<HomeCardModel>): List<HomeCardModel> {
-        if (loaded.isNotEmpty()) return loaded
-        viewModelScope.launch(dispatcher) { saveCards(defaultCards) }
-        return defaultCards
+        if (newCards == cardsNow()) return
+        saveCards(newCards)
     }
 
     class Factory(appContext: Context) : ViewModelProvider.Factory {
@@ -227,10 +249,14 @@ class HomeViewModel(
                 },
                 profileSource = { app.db.profileDao().getById(profileId).asFlow() },
                 seedProfile = ProfileInputs(profile.studentNumber, profile.name, profile.archived),
-                loadCards = { ui.homeCards.filter { it.profileId == profileId } },
+                loadCards = {
+                    if (profile.config.has("homeCards")) ui.homeCards.filter { it.profileId == profileId }
+                    else null
+                },
                 saveCards = { cards -> ui.homeCards = HomeCardOrder.mergeForProfile(ui.homeCards, profileId, cards) },
                 availableFeatures = available,
                 inputs = configFlow(app.config, profile.config) { readHomeInputs(app.config, profile.config, notPublic) },
+                profileConfig = profile.config,
                 today = today,
                 defaultCards = defaults,
                 profileId = profileId,
