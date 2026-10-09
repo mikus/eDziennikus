@@ -14,11 +14,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.os.Build
 import android.util.SparseArray
 import android.view.View
 import android.widget.RemoteViews
@@ -45,7 +43,6 @@ import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.ItemWidgetTimetableModel
 import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.models.Week
-import java.lang.reflect.InvocationTargetException
 
 
 class WidgetTimetableProvider : AppWidgetProvider() {
@@ -149,36 +146,12 @@ class WidgetTimetableProvider : AppWidgetProvider() {
         // get the current bell-synced time
         val now = Time.fromMillis(Time.getNow().inMillis + bellSyncDiffMillis)
 
-        // set the widget transparency
-        val mode = PorterDuff.Mode.DST_IN
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            // this code seems to crash the launcher on >= P
-            val transparency = widgetConfig.opacity  //0...1
-            val colorFilter = 0x01000000L * (255f * transparency).toLong()
-            try {
-                val declaredMethods = Class.forName("android.widget.RemoteViews").declaredMethods
-                val len = declaredMethods.size
-                if (len > 0) {
-                    for (m in 0 until len) {
-                        val method = declaredMethods[m]
-                        if (method.name == "setDrawableParameters") {
-                            method.isAccessible = true
-                            method.invoke(views, R.id.widgetTimetableBackground, true, -1, colorFilter.toInt(), mode, -1)
-                            method.invoke(views, R.id.widgetTimetableHeader, true, -1, colorFilter.toInt(), mode, -1)
-                            break
-                        }
-                    }
-                }
-            } catch (e: ClassNotFoundException) {
-                e.printStackTrace()
-            } catch (e: InvocationTargetException) {
-                e.printStackTrace()
-            } catch (e: IllegalAccessException) {
-                e.printStackTrace()
-            } catch (e: IllegalArgumentException) {
-                e.printStackTrace()
-            }
-        }
+        // Whole-widget alpha, which is what the config dialog's preview has always shown: it applies
+        // a DST_IN colour filter to the entire preview image, not to the background alone. Replaces a
+        // reflective call to the hidden RemoteViews.setDrawableParameters that was gated to
+        // SDK_INT < P because it crashed launchers, i.e. dead on every device since Android 9.
+        // View.setAlpha is @RemotableViewMethod, so setFloat reaches it without reflection.
+        views.setFloat(R.id.root, "setAlpha", widgetConfig.opacity)
 
         val unified = widgetConfig.profileId == -1
 

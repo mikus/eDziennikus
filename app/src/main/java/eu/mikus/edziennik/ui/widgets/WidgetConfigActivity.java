@@ -80,10 +80,10 @@ public class WidgetConfigActivity extends Activity {
             if (widgetType == -1)
                 finish();
 
-            if (widgetType == WIDGET_LUCKY_NUMBER)
-                opacity = 0.6f;
-            else
-                opacity = 0.8f;
+            // Fully opaque by default. The 0.6f/0.8f that used to be set here were stored into every
+            // widget config for years while nothing read them; now that opacity is honoured, a
+            // default below 1 would make every newly placed widget translucent without being asked.
+            opacity = 1.0f;
 
             AsyncTask.execute(() -> {
                 profileList = App.Companion.getDb().profileDao().getAllNow();

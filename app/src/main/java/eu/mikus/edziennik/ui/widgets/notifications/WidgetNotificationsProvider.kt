@@ -47,6 +47,12 @@ class WidgetNotificationsProvider : AppWidgetProvider() {
             } else {
                 RemoteViews(app.packageName, if (config.darkTheme) R.layout.widget_notifications_dark else R.layout.widget_notifications)
             }
+        // Whole-widget alpha, which is what the config dialog's preview has always shown: it applies
+        // a DST_IN colour filter to the entire preview image, not to the background alone. Replaces a
+        // reflective call to the hidden RemoteViews.setDrawableParameters that was gated to
+        // SDK_INT < P because it crashed launchers, i.e. dead on every device since Android 9.
+        // View.setAlpha is @RemotableViewMethod, so setFloat reaches it without reflection.
+            views.setFloat(R.id.root, "setAlpha", config.opacity)
 
             val syncIntent = SzkolnyReceiver.getIntent(context, Bundle(
                     "task" to "SyncRequest"
