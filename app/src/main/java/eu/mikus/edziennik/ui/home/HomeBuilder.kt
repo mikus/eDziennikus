@@ -22,7 +22,9 @@ object HomeBuilder {
 
     data class Config(
         val agendaSubjectImportant: Boolean,
+        val homeEventsLimit: Int,
         val homeEventsWeeks: Int,
+        val homeGradesWeeks: Int,
         val bellSyncDiffMillis: Long,
         val countInSeconds: Boolean,
         val notPublic: Boolean,
@@ -71,7 +73,7 @@ object HomeBuilder {
                     if (FeatureType.AGENDA in availableFeatures) eventsCard(data.events, today, config) else null
                 HomeCard.CARD_GRADES ->
                     if (FeatureType.GRADES in availableFeatures)
-                        HomeCardUi.Grades(HomeGradesGrouper.group(data.grades)) else null
+                        HomeCardUi.Grades(HomeGradesGrouper.group(recentGrades(data.grades, today, config))) else null
                 HomeCard.CARD_NOTES ->
                     HomeCardUi.Notes(data.notes.take(4))
                 else -> null   // unknown/dev card ids: not shown by the native dashboard
@@ -92,11 +94,28 @@ object HomeBuilder {
 
     private fun eventsCard(events: List<EventFull>, today: Date, config: Config): HomeCardUi.Events {
         val toDate = Date.fromValue(today.value).stepForward(0, 0, config.homeEventsWeeks * 7)
-        val rows = events.filter { it.date <= toDate }
+        // take mirrors the SQL LIMIT, which applied before any date window. The two operations
+        // COMMUTE here and that is worth stating so nobody "fixes" the order: EventDao.ORDER_BY is
+        // `ORDER BY eventDate, eventTime, addedDate ASC`, so the list arrives sorted ascending by
+        // date; `filter { it.date <= toDate }` therefore keeps a prefix, `take` keeps a prefix, and
+        // prefix-of-prefix is the shorter prefix either way. Order is chosen to match what SQL did,
+        // not because the result depends on it.
+        val rows = events.take(config.homeEventsLimit).filter { it.date <= toDate }
         return HomeCardUi.Events(
             rows = rows,
             showType = !config.agendaSubjectImportant,
             showSubject = config.agendaSubjectImportant,
         )
+    }
+
+    /**
+     * The grades window, which used to be `addedDate > N` inside the @RawQuery. The query now fetches
+     * a fixed ceiling of weeks and this narrows to the stored value.
+     *
+     * `Date.stepForward` mutates, so step a copy — never [today] itself, which the caller reuses.
+     */
+    private fun recentGrades(grades: List<GradeFull>, today: Date, config: Config): List<GradeFull> {
+        val from = Date.fromValue(today.value).stepForward(0, 0, -config.homeGradesWeeks * 7)
+        return grades.filter { it.addedDate > from.inMillis }
     }
 }

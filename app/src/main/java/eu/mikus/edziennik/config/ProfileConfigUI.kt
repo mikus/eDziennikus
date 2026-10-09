@@ -34,4 +34,21 @@ class ProfileConfigUI(base: ProfileConfig) {
     var timetableShowEvents by base.config<Boolean>(true)
     var timetableTrimHourRange by base.config<Boolean>(false)
     var timetableColorSubjectName by base.config<Boolean>(false)
+
+    companion object {
+        /**
+         * Ceilings for the two keys Home bakes into its queries.
+         *
+         * Home freezes `getNearestNotDone(..., MAX_HOME_EVENTS_LIMIT)` and a
+         * `MAX_HOME_GRADES_WEEKS`-wide grades window, then narrows to the stored value in
+         * HomeBuilder. That is only correct while the stored value cannot exceed the ceiling, so
+         * HomeConfigDialog's sliders read these same constants as their maxima — the slider maximum
+         * IS the ceiling by construction. Raising one here raises both together.
+         *
+         * Declared beside the keys they bound rather than on HomeBuilder: the builder consumes the
+         * user's stored value and never references the ceiling.
+         */
+        const val MAX_HOME_EVENTS_LIMIT = 20
+        const val MAX_HOME_GRADES_WEEKS = 16
+    }
 }

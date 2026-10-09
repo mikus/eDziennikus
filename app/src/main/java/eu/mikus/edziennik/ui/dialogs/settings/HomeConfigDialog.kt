@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.MainActivity
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.config.ProfileConfigUI
 import eu.mikus.edziennik.ui.dialogs.base.ComposeDialog
 import eu.mikus.edziennik.ui.home.HomeCardsDialog
 
@@ -68,11 +69,11 @@ private fun HomeConfigContent(activity: AppCompatActivity, app: App) {
         }
 
         SectionHeader(R.string.home_events_config_title)
-        SliderRow(R.string.home_config_events_limit, cfg.homeEventsLimit, 1, 20) { cfg.homeEventsLimit = it }
+        SliderRow(R.string.home_config_events_limit, cfg.homeEventsLimit, 1, ProfileConfigUI.MAX_HOME_EVENTS_LIMIT) { cfg.homeEventsLimit = it }
         SliderRow(R.string.home_config_events_weeks, cfg.homeEventsWeeks, 1, 16) { cfg.homeEventsWeeks = it }
 
         SectionHeader(R.string.home_grades_config_title)
-        SliderRow(R.string.home_config_grades_weeks, cfg.homeGradesWeeks, 1, 16) { cfg.homeGradesWeeks = it }
+        SliderRow(R.string.home_config_grades_weeks, cfg.homeGradesWeeks, 1, ProfileConfigUI.MAX_HOME_GRADES_WEEKS) { cfg.homeGradesWeeks = it }
     }
 }
 

@@ -5,6 +5,7 @@
 package eu.mikus.edziennik.ui.home
 
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.config.ProfileConfigUI
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.data.db.full.EventFull
@@ -40,9 +41,12 @@ class HomeViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val today = Date(2026, 6, 1)
     private val cfg = HomeBuilder.Config(
-        agendaSubjectImportant = false, homeEventsWeeks = 4,
+        agendaSubjectImportant = false,
+        homeEventsLimit = ProfileConfigUI.MAX_HOME_EVENTS_LIMIT, homeEventsWeeks = 4,
+        homeGradesWeeks = ProfileConfigUI.MAX_HOME_GRADES_WEEKS,
         bellSyncDiffMillis = 0L, countInSeconds = false, notPublic = false,
     )
+    private val defaultInputs = HomeInputs(updateAvailable = false, locked = false, config = cfg)
     private val allFeatures = setOf(FeatureType.LUCKY_NUMBER, FeatureType.TIMETABLE, FeatureType.AGENDA, FeatureType.GRADES)
 
     private fun vm(
@@ -50,6 +54,7 @@ class HomeViewModelTest {
         defaults: List<HomeCardModel> = listOf(HomeCardModel(1, HomeCard.CARD_NOTES)),
         saved: MutableList<List<HomeCardModel>> = mutableListOf(),
         profileSource: () -> Flow<Profile?> = { flowOf(profile(studentNumber = 7)) },
+        inputs: Flow<HomeInputs> = flowOf(defaultInputs),
     ) = HomeViewModel(
         luckyNumberSource = { flowOf<LuckyNumberFull?>(null) },
         eventsSource = { flowOf(emptyList<EventFull>()) },
@@ -60,11 +65,9 @@ class HomeViewModelTest {
         loadCards = { initialCards },
         saveCards = { saved.add(it) },
         availableFeatures = allFeatures,
+        inputs = inputs,
         seedProfile = ProfileInputs(7, "Jan", false),
-        updateAvailable = false,
-        locked = false,
         today = today,
-        config = cfg,
         defaultCards = defaults,
         profileId = 1,
         dispatcher = dispatcher,
@@ -140,8 +143,8 @@ class HomeViewModelTest {
             timetableSource = { flowOf(emptyList()) },
             profileSource = { flow {} },
             loadCards = { listOf(HomeCardModel(1, HomeCard.CARD_GRADES), HomeCardModel(1, HomeCard.CARD_NOTES)) },
-            saveCards = { saved.add(it) }, availableFeatures = emptySet(), updateAvailable = false,
-            locked = false, seedProfile = ProfileInputs(7, "Jan", false), today = today, config = cfg,
+            saveCards = { saved.add(it) }, availableFeatures = emptySet(), inputs = flowOf(defaultInputs),
+            seedProfile = ProfileInputs(7, "Jan", false), today = today,
             defaultCards = emptyList(), profileId = 1, dispatcher = dispatcher,
         )
         val job = launch { model.uiState.collect {} }
@@ -336,8 +339,8 @@ class HomeViewModelTest {
             timetableSource = { flowOf(emptyList()) }, profileSource = { flowOf(profile(studentNumber = 7)) },
             loadCards = { store.toList() },
             saveCards = { store.clear(); store.addAll(it) },
-            availableFeatures = allFeatures, seedProfile = ProfileInputs(7, "Jan", false),
-            updateAvailable = false, locked = false, today = today, config = cfg,
+            availableFeatures = allFeatures, inputs = flowOf(defaultInputs),
+            seedProfile = ProfileInputs(7, "Jan", false), today = today,
             defaultCards = defaults, profileId = 1, dispatcher = dispatcher,
         )
 
@@ -358,5 +361,27 @@ class HomeViewModelTest {
             (rebuilt.uiState.value as HomeUiState.Content).cards.map { it.cardId },
         )
         job2.cancel()
+    }
+
+    /**
+     * The point of the phase: a config write re-derives uiState on the SAME ViewModel. `locked` and
+     * `config` used to be constructor values, so a change reached the screen only once the fragment
+     * (and with it the ViewModel) was rebuilt. `locked` is the field that differs because
+     * HomeUiState.Content carries it straight through — no card data has to move for the assertion
+     * to see it. Mirrors AttendanceViewModelTest's `re-derives when the config flow emits a new value`.
+     */
+    @Test
+    fun `a config change re-derives uiState without rebuilding`() = runTest(dispatcher) {
+        val inputs = MutableSharedFlow<HomeInputs>(replay = 1)
+        inputs.emit(defaultInputs)
+        val model = vm(initialCards = listOf(HomeCardModel(1, HomeCard.CARD_NOTES)), inputs = inputs)
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        assertFalse((model.uiState.value as HomeUiState.Content).locked)
+
+        inputs.emit(defaultInputs.copy(locked = true))
+        advanceUntilIdle()
+        assertTrue((model.uiState.value as HomeUiState.Content).locked)   // same `model`, never rebuilt
+        job.cancel()
     }
 }

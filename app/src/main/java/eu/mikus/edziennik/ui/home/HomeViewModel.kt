@@ -11,6 +11,10 @@ import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.BuildConfig
+import eu.mikus.edziennik.config.Config
+import eu.mikus.edziennik.config.ProfileConfig
+import eu.mikus.edziennik.config.ProfileConfigUI
+import eu.mikus.edziennik.config.configFlow
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.GradeFull
@@ -69,6 +73,62 @@ internal fun profileInputsFlow(source: Flow<Profile?>, seed: ProfileInputs): Flo
         .onStart { emit(seed) }
         .distinctUntilChanged()
 
+/**
+ * Everything Home derives from config, in one value so [configFlow]'s `distinctUntilChanged` can
+ * dedupe on it.
+ *
+ * Nine keys across BOTH config trees. Per-profile: `homeCardsLocked`, `agendaSubjectImportant`,
+ * `homeEventsWeeks`, `homeEventsLimit`, `homeGradesWeeks`. Global: `update`, `bellSyncDiff`,
+ * `bellSyncMultiplier`, `countInSeconds`. `App.config` and `App.profile.config` are distinct
+ * `BaseConfig` instances with separate value maps, so the Factory passes BOTH to [configFlow] — a
+ * reader of both that subscribes to one silently misses half its changes.
+ *
+ * [notPublic] is NOT config; it comes from `profile.getStudentData` and is captured. It rides along
+ * because [HomeBuilder.Config] carries it, and re-reading a captured constant per config write is a
+ * no-op.
+ *
+ * Public rather than `internal` because [HomeViewModel]'s constructor takes one, and a public
+ * constructor cannot expose an internal parameter type (EXPOSED_PARAMETER_TYPE). Same reason
+ * [ProfileInputs] above is public; mirrors `GradesInputs`.
+ */
+data class HomeInputs(
+    val updateAvailable: Boolean,
+    val locked: Boolean,
+    val config: HomeBuilder.Config,
+)
+
+/**
+ * Top-level so a test can drive it without a real [App], exactly as `readGradesInputs` is.
+ *
+ * `bellSyncDiffMillis` collapses TWO global keys through Time arithmetic into one field, so both
+ * must be re-read here; a reader that captured the multiplier would never react to it changing.
+ */
+internal fun readHomeInputs(
+    global: Config,
+    profileConfig: ProfileConfig,
+    notPublic: Boolean,
+): HomeInputs {
+    val ui = profileConfig.ui
+    val tt = global.timetable
+    val update = global.update
+    val bellSyncDiffMillis = tt.bellSyncDiff?.let {
+        (it.hour * 3600L + it.minute * 60L + it.second) * 1000L * tt.bellSyncMultiplier
+    } ?: 0L
+    return HomeInputs(
+        updateAvailable = update != null && update.versionCode > BuildConfig.VERSION_CODE,
+        locked = ui.homeCardsLocked,
+        config = HomeBuilder.Config(
+            agendaSubjectImportant = ui.agendaSubjectImportant,
+            homeEventsLimit = ui.homeEventsLimit,
+            homeEventsWeeks = ui.homeEventsWeeks,
+            homeGradesWeeks = ui.homeGradesWeeks,
+            bellSyncDiffMillis = bellSyncDiffMillis,
+            countInSeconds = tt.countInSeconds,
+            notPublic = notPublic,
+        ),
+    )
+}
+
 class HomeViewModel(
     luckyNumberSource: () -> Flow<LuckyNumberFull?>,
     eventsSource: () -> Flow<List<EventFull>>,
@@ -80,10 +140,8 @@ class HomeViewModel(
     private val loadCards: () -> List<HomeCardModel>,
     private val saveCards: (List<HomeCardModel>) -> Unit,
     private val availableFeatures: Set<FeatureType>,
-    private val updateAvailable: Boolean,
-    private val locked: Boolean,
+    inputs: Flow<HomeInputs>,
     private val today: Date,
-    private val config: HomeBuilder.Config,
     private val defaultCards: List<HomeCardModel>,
     private val profileId: Int,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -99,11 +157,11 @@ class HomeViewModel(
 
     private val profileFlow = profileInputsFlow(profileSource(), seedProfile)
 
-    val uiState = combine(dataFlow, _cards, profileFlow) { data, cards, profile ->
+    val uiState = combine(dataFlow, _cards, profileFlow, inputs) { data, cards, profile, cfg ->
         HomeBuilder.build(
             cards = cards, availableFeatures = availableFeatures, archived = profile.archived,
-            updateAvailable = updateAvailable, locked = locked, studentNumber = profile.studentNumber,
-            profileName = profile.profileName, today = today, config = config, data = data,
+            updateAvailable = cfg.updateAvailable, locked = cfg.locked, studentNumber = profile.studentNumber,
+            profileName = profile.profileName, today = today, config = cfg.config, data = data,
         )
     }.flowOn(dispatcher).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState.Loading)
 
@@ -141,7 +199,7 @@ class HomeViewModel(
             val profileId = App.profileId
             val ui = profile.config.ui
             val today = Date.getToday()
-            val gradesFrom = Date.getToday().stepForward(0, 0, -ui.homeGradesWeeks * 7)
+            val gradesFrom = Date.getToday().stepForward(0, 0, -ProfileConfigUI.MAX_HOME_GRADES_WEEKS * 7)
             val available = setOf(
                 FeatureType.LUCKY_NUMBER, FeatureType.TIMETABLE, FeatureType.AGENDA, FeatureType.GRADES,
             ).filter { profile.hasUIFeature(it) }.toSet()
@@ -152,16 +210,11 @@ class HomeViewModel(
                 HomeCardModel(profileId, HomeCard.CARD_GRADES).takeIf { profile.hasUIFeature(FeatureType.GRADES) },
                 HomeCardModel(profileId, HomeCard.CARD_NOTES),
             )
-            val update = app.config.update
-            val tt = app.config.timetable
-            val bellSyncDiffMillis = tt.bellSyncDiff?.let {
-                (it.hour * 3600L + it.minute * 60L + it.second) * 1000L * tt.bellSyncMultiplier
-            } ?: 0L
             val notPublic = profile.getStudentData("timetableNotPublic", false)
             return HomeViewModel(
                 luckyNumberSource = { app.db.luckyNumberDao().getNearestFuture(profileId, today).asFlow() },
                 eventsSource = {
-                    app.db.eventDao().getNearestNotDone(profileId, today, ui.homeEventsLimit).asFlow()
+                    app.db.eventDao().getNearestNotDone(profileId, today, ProfileConfigUI.MAX_HOME_EVENTS_LIMIT).asFlow()
                         .map { list -> list.onEach { it.filterNotes() } }
                 },
                 gradesSource = { app.db.gradeDao().getAllFromDate(profileId, gradesFrom).asFlow() },
@@ -177,16 +230,8 @@ class HomeViewModel(
                 loadCards = { ui.homeCards.filter { it.profileId == profileId } },
                 saveCards = { cards -> ui.homeCards = HomeCardOrder.mergeForProfile(ui.homeCards, profileId, cards) },
                 availableFeatures = available,
-                updateAvailable = update != null && update.versionCode > BuildConfig.VERSION_CODE,
-                locked = ui.homeCardsLocked,
+                inputs = configFlow(app.config, profile.config) { readHomeInputs(app.config, profile.config, notPublic) },
                 today = today,
-                config = HomeBuilder.Config(
-                    agendaSubjectImportant = ui.agendaSubjectImportant,
-                    homeEventsWeeks = ui.homeEventsWeeks,
-                    bellSyncDiffMillis = bellSyncDiffMillis,
-                    countInSeconds = tt.countInSeconds,
-                    notPublic = notPublic,
-                ),
                 defaultCards = defaults,
                 profileId = profileId,
             ) as T
