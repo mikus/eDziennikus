@@ -57,6 +57,50 @@ Single Room database `AppDb` (`data/db/`). Two kapt processors generate DAO code
 > first replacing `.fallbackToDestructiveMigration()` with real `Migration` objects wired through
 > `addMigrations(...)`, which is its own piece of work — not a step inside a feature.
 
+### Config (`config/`)
+
+Config lives in the Room `config` table and is read through delegates, **not** SharedPreferences.
+
+**There are two instances and they are different objects.** Global `App.config` (a `Config`, stored
+with `profileId = -1`) and per-profile `App.profile.config` (a `ProfileConfig`). `BaseConfig.init`
+filters the table by `profileId`, so each instance's value map holds only its own rows — which is
+also why `profileConfig.has(key)` answers "has *this profile* stored this", not "does the key exist".
+
+**A screen must not snapshot config.** The historical way to make a change visible was to destroy and
+rebuild the Fragment (`MainActivity.reloadTarget()` → `navigate()` → `newInstance()` +
+`transaction.replace`), which gave a fresh `ViewModelStore`. All five screens whose rendered state
+derives from config — Attendance, Agenda, Grades, Timetable, Home — have been converted away from
+that. (Homework and Behaviour read no config; Messages reads it at the point of use, when composing,
+rather than to render.) Use `config/ConfigFlow.kt`:
+
+```kotlin
+inputs = configFlow(app.config, profileConfig) { readXInputs(app.config, profileConfig) }
+```
+
+The house shape (see `readGradesInputs`, `readHomeInputs`): a **top-level** reader function returning
+a `data class` of everything the screen derives from config, taken by the ViewModel as
+`inputs: Flow<XInputs>` and folded into its `combine`. Top-level because `Factory.create()` needs a
+real `App`, so that is the only seam a JVM test can drive. The data class must be **public** — a
+public constructor cannot expose an internal parameter type.
+
+Four things that have each caused a real bug:
+
+- **Pass every instance whose keys the reader touches.** A reader of both that subscribes to one
+  silently misses half its changes.
+- **Write through the delegate setter, never raw `config.set(...)`.** `ConfigDelegate` caches after
+  the first read and `BaseConfig.set` does not invalidate that cache, so a raw write emits a key
+  whose re-read is stale — `distinctUntilChanged` then drops it. This makes tests pass against
+  broken code and fail against correct code.
+- **`onStart { emit(read()) }` is load-bearing.** Without it a `combine` never produces anything
+  until the user happens to change a setting.
+- **Gate every key by name.** `GradesInputsTest` / `HomeInputsTest` assert one named `step` per key
+  over the real `configFlow` and the real reader; a key left captured in the Factory still compiles,
+  still renders on cold start, and silently never updates.
+
+`reloadTarget()` still exists and is still correct for dialogs belonging to surfaces that were never
+converted (Attendance/Agenda/Grades/Messages/Timetable config dialogs reached from Settings pass
+`reloadOnDismiss = false`; the pattern is to flip the **call site**, not the dialog's default).
+
 ### UI
 Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timetable, widgets, etc.). Shared scaffolding in `ui/base/`, `ui/dialogs/`, `ui/views/`.
 
