@@ -87,7 +87,16 @@ fun HomeworkScreen(
                 HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
                     val items = if (page == 0) state.current else state.past
                     val listState = if (page == 0) currentListState else pastListState
-                    HomeworkList(items, state.query, listState, onEventClick, onEventEditClick, onItemSeen)
+                    // Seen-marking is gated on `settledPage`, not `currentPage`, for the reason
+                    // TimetableScreen records at its own gate: the pager composes neighbouring pages
+                    // ahead of time (no `beyondViewportPageCount` is set, so the default prefetch
+                    // applies), and EventRow's `onAppear` is a LaunchedEffect that fires on
+                    // COMPOSITION, not on entering the viewport. Ungated, sitting on Current marked a
+                    // screenful of Past homework seen -- clearing its unread highlight and its share
+                    // of the badge for items the user never opened. Current and Past are disjoint, so
+                    // unlike a day pager this never corrects itself.
+                    val markSeen = if (pagerState.settledPage == page) onItemSeen else ({ _: EventFull -> })
+                    HomeworkList(items, state.query, listState, onEventClick, onEventEditClick, markSeen)
                 }
             }
         }
