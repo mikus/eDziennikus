@@ -35,7 +35,7 @@ class LibrusApiPointGrades(override val data: DataLibrus,
                 val semester = grade.getInt("Semester") ?: return@forEach
                 val subjectId = grade.getJsonObject("Subject")?.getLong("Id") ?: return@forEach
                 val name = grade.getString("Grade") ?: return@forEach
-                val value = grade.getFloat("GradeValue") ?: 0f
+                val value = grade.getFloat("GradeValue") ?: return@forEach
 
                 val categoryId = grade.getJsonObject("Category")?.getLong("Id") ?: return@forEach
 
