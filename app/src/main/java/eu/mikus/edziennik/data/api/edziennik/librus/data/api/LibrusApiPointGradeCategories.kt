@@ -28,7 +28,7 @@ class LibrusApiPointGradeCategories(override val data: DataLibrus,
                 val color = category.getJsonObject("Color")?.getInt("Id")
                         ?.let { data.getColor(it) } ?: Color.BLUE
                 val countToAverage = category.getBoolean("CountToTheAverage") ?: true
-                val weight = if (countToAverage) category.getFloat("Weight") ?: 0f else 0f
+                val weight = librusCategoryWeight(category, countToAverage)
                 val valueFrom = category.getFloat("ValueFrom") ?: 0f
                 val valueTo = category.getFloat("ValueTo") ?: 0f
 

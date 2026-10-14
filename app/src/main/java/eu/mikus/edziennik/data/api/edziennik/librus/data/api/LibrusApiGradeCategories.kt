@@ -26,10 +26,10 @@ class LibrusApiGradeCategories(override val data: DataLibrus,
             json.getJsonArray("Categories")?.asJsonObjectList()?.forEach { category ->
                 val id = category.getLong("Id") ?: return@forEach
                 val name = category.getString("Name")?.fixWhiteSpaces() ?: ""
-                val weight = when (category.getBoolean("CountToTheAverage")) {
-                    true -> category.getFloat("Weight") ?: 0f
-                    else -> 0f
-                }
+                val weight = librusCategoryWeight(
+                        category,
+                        countToAverage = category.getBoolean("CountToTheAverage") == true,
+                )
                 val color = category.getJsonObject("Color")?.getInt("Id")
                         ?.let { data.getColor(it) } ?: Color.BLUE
 
