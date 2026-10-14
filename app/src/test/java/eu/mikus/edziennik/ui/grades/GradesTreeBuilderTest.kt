@@ -111,6 +111,36 @@ class GradesTreeBuilderTest {
         assertEquals(5.5f, sem.averages.normalAvg)
     }
 
+    /** Phase 69 (finding RR): `weight = 0f` contributes to neither term of the weighted average,
+     *  so a category whose Weight was substituted with 0f disappears from the number the user
+     *  checks most — while still being listed and still counted in the arithmetic mean. */
+    @Test fun `zero weight grade is listed and averaged arithmetically but invisible to the weighted average`() {
+        val withZero = listOf(
+            grade(1, 10, value = 5f, weight = 1f),
+            grade(2, 10, value = 2f, weight = 0f),
+        )
+        val content = GradesTreeBuilder.build(withZero, cfg(), math) as GradesUiState.Content
+        val sem = content.subjects[0].semesters[0]
+
+        // the grade is not filtered out, and it does move the arithmetic mean
+        assertEquals(listOf(1L, 2L), sem.grades.map { it.id }.sorted())
+        assertEquals(7f, sem.averages.normalSum)
+        assertEquals(2, sem.averages.normalCount)
+
+        // but it contributes to neither term of the weighted average
+        assertEquals(5f, sem.averages.normalWeightedSum)
+        assertEquals(1f, sem.averages.normalWeightedCount)
+        assertEquals(5f, sem.averages.normalAvg)
+
+        // identical to simply omitting it
+        val withoutZero = listOf(grade(1, 10, value = 5f, weight = 1f))
+        val lone = (GradesTreeBuilder.build(withoutZero, cfg(), math) as GradesUiState.Content)
+            .subjects[0].semesters[0]
+        assertEquals(lone.averages.normalWeightedSum, sem.averages.normalWeightedSum)
+        assertEquals(lone.averages.normalWeightedCount, sem.averages.normalWeightedCount)
+        assertEquals(lone.averages.normalAvg, sem.averages.normalAvg)
+    }
+
     @Test fun `hideNoGrade drops TYPE_NO_GRADE`() {
         val grades = listOf(
             grade(1, 10, type = Grade.TYPE_NORMAL),
