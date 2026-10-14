@@ -40,6 +40,16 @@ class LibrusCategoryWeightTest {
         assertEquals(0f, librusCategoryWeight(category("""{"Weight":null}"""), countToAverage = true))
     }
 
+    /** A non-primitive Weight was silent in every prior version too - pre-phase-68 `getFloat`
+     *  guarded on `!it.isJsonPrimitive`, so an object or array gave null and then 0f. */
+    @Test fun `a counting category whose Weight is an object keeps its long-standing zero`() {
+        assertEquals(0f, librusCategoryWeight(category("""{"Weight":{}}"""), countToAverage = true))
+    }
+
+    @Test fun `a counting category whose Weight is an array keeps its long-standing zero`() {
+        assertEquals(0f, librusCategoryWeight(category("""{"Weight":[]}"""), countToAverage = true))
+    }
+
     /** Phase 69: this is the behaviour change - present, but unreadable. */
     @Test fun `a counting category whose Weight cannot be read fails loudly`() {
         assertFailsWith<IllegalStateException> {

@@ -23,16 +23,18 @@ import eu.mikus.edziennik.ext.getFloat
  * reports EXCEPTION_LIBRUS_API_REQUEST with the whole response attached, so the failure is loud
  * and diagnosable rather than a quietly wrong number.
  *
- * Only a Weight that is present and cannot be read is a failure. An absent or JSON-null Weight
+ * Only a Weight that is a primitive and cannot be read is a failure. An absent or JSON-null Weight
  * keeps its long-standing `0f`: it was never an error in any version, because the accessor's safe
- * call short-circuited on a missing key even before phase 68. `getFloat` returns null for all three
- * cases, which is why this takes the category rather than the already-read value.
+ * call short-circuited on a missing key even before phase 68. So does a Weight that is an object
+ * or an array: pre-phase-68 `getFloat` guarded on `!it.isJsonPrimitive` and gave null, and
+ * `asFloatOrNull` still does, so that was equally silent in every prior version. `getFloat` returns
+ * null for all four cases, which is why this takes the category rather than the already-read value.
  */
 internal fun librusCategoryWeight(category: JsonObject?, countToAverage: Boolean): Float {
     if (!countToAverage)
         return 0f
     val raw = category.get("Weight")
-    if (raw == null || raw.isJsonNull)
+    if (raw == null || raw.isJsonNull || !raw.isJsonPrimitive)
         return 0f
     return category.getFloat("Weight") ?: error("malformed grade category Weight")
 }
