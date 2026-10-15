@@ -251,6 +251,48 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
                         data.setSyncNext(ENDPOINT_LIBRUS_API_TEACHER_FREE_DAYS, 1 * WEEK, FeatureType.AGENDA)
                         data()
                     }
+                    /* A parser threw: the response arrived and was well formed at the transport
+                     * level, and one FIELD in it could not be read. That is one endpoint's problem,
+                     * not the profile's - but LibrusApi.apiGet wraps the whole parser, so the throw
+                     * also skipped the endpoint's own setSyncNext() and, worse, its
+                     * onSuccess(endpointId), which is LibrusData.nextEndpoint's continuation and the
+                     * only thing that advances the chain from inside it. With the error critical,
+                     * ApiService cancels the task and every endpoint with a higher id never runs -
+                     * on every sync, forever, because targetEndpoints is a sorted map walked by
+                     * firstKey().
+                     *
+                     * So both halves are decided here, together: non-critical (ApiService then
+                     * leaves the task alone) AND data(), which re-enters LibrusData. They cannot
+                     * disagree, and marking without resuming would hang the sync - ApiService's
+                     * non-critical arm counts the error and returns, and runTask() is the only
+                     * caller of checkIfTaskFrozen(). nextEndpoint() removes the id from
+                     * targetEndpoints BEFORE running the endpoint, so the re-entry resumes at the
+                     * NEXT one and cannot loop.
+                     *
+                     * setSyncNext is deliberately NOT called for the failed endpoint: it did not
+                     * sync, so it stays due and is retried. What this buys is that every OTHER
+                     * endpoint reaches its own setSyncNext and the chain reaches completed() ->
+                     * saveData().
+                     *
+                     * afterLogin != null means a single-operation task (getMessage, sendMessage,
+                     * getAttachment, ...). There is no rest-of-the-profile to go on with, and data()
+                     * would re-invoke the OPERATION: sendMessage would send the message a second
+                     * time. Those stay critical, exactly as before.
+                     * firstLogin() leaves afterLogin null too, so a throw in its own apiGet takes this arm and
+                     * runs data() on an empty endpoint map: reported, harmless, no profile created either way.
+                     *
+                     * The guard above this when() keeps it bounded to once per code per task.
+                     * Deliberate: ApiService.errorList is never drained and each ApiError retains
+                     * the entire response body. */
+                    EXCEPTION_LIBRUS_API_REQUEST,
+                    EXCEPTION_LIBRUS_SYNERGIA_REQUEST,
+                    EXCEPTION_LIBRUS_MESSAGES_REQUEST -> if (afterLogin != null) {
+                        callback.onError(apiError)
+                    } else {
+                        d(TAG, "A parser failed on one endpoint; skipping it and going on")
+                        callback.onError(apiError.setCritical(false))
+                        data()
+                    }
                     else -> callback.onError(apiError)
                 }
             }
