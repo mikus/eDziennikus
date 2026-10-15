@@ -70,7 +70,11 @@ open class EdziennikTask(override val profileId: Int, val request: Any) : IApiTa
 
     private var edziennikInterface: EdziennikInterface? = null
 
-    internal fun run(app: App, taskCallback: EdziennikCallback) {
+    /* `open` only so a test can hand ApiService's private taskCallback an ApiError it controls -
+     * it is the only seam that does not reach for reflection. Deliberately NOT @VisibleForTesting:
+     * the annotation would raise a VisibleForTests warning at the real production call site in
+     * ApiService.runTask(). */
+    internal open fun run(app: App, taskCallback: EdziennikCallback) {
         profile?.let { profile ->
             if (profile.archived) {
                 d(TAG, "The profile $profileId is archived")
