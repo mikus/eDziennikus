@@ -22,10 +22,11 @@ import org.robolectric.annotation.Config
  * rest of the notification alone.
  *
  * `addError()` used to be `errorCount++` and nothing else, and `post()` re-posts the builder
- * unchanged - so the first caller of ApiService's non-critical arm would have reported nothing at
- * all in the shade. The count was only ever rendered by `setCriticalError()` and `setCurrentTask()`,
- * i.e. from the NEXT task onwards - on a single-profile sync, the tail `SzkolnyTask`, under that
- * task's title rather than the failing one's. During the failing task itself it never appeared.
+ * unchanged - so the first caller of ApiService's non-critical arm would have reported nothing in
+ * the shade at the moment of the error. The count was only ever rendered by `setCriticalError()`
+ * and `setCurrentTask()`, i.e. from the NEXT task onwards - on a single-profile sync, the tail
+ * `SzkolnyTask`, under that task's title rather than the failing one's. During the failing task
+ * itself it never appeared.
  *
  * Text and style only. Not the title and not the progress bar, unlike `setCriticalError()` - during
  * a non-critical error the sync is still running, the title is the current endpoint's progress text

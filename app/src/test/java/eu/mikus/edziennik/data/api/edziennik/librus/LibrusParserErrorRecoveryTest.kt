@@ -8,6 +8,7 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.data.api.ERROR_REQUEST_FAILURE
 import eu.mikus.edziennik.data.api.EXCEPTION_LIBRUS_API_REQUEST
 import eu.mikus.edziennik.data.api.EXCEPTION_LIBRUS_MESSAGES_REQUEST
+import eu.mikus.edziennik.data.api.EXCEPTION_LIBRUS_SYNERGIA_REQUEST
 import eu.mikus.edziennik.data.api.events.UserActionRequiredEvent
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
 import eu.mikus.edziennik.data.api.models.ApiError
@@ -28,10 +29,10 @@ import org.robolectric.annotation.Config
  *
  * `LibrusApi.apiGet` wraps an endpoint's whole parser in one try/catch, and the parser's last two
  * statements are `data.setSyncNext(...)` and `onSuccess(endpointId)` - the latter being
- * `LibrusData.nextEndpoint`'s continuation, the only thing that advances the endpoint chain. A throw
- * inside the loop skips both. `targetEndpoints` is a sorted map walked by `firstKey()`, so with the
- * error critical every endpoint with a higher id never runs, on every sync, forever: a bad `Weight`
- * at 1021 takes grades, homework, attendance, announcements, Synergia and messages with it.
+ * `LibrusData.nextEndpoint`'s continuation, the only thing that advances the chain from inside it. A
+ * throw inside the loop skips both. `targetEndpoints` is a sorted map walked by `firstKey()`, so with
+ * the error critical every endpoint with a higher id never runs, on every sync, forever: a bad
+ * `Weight` at 1021 takes grades, homework, attendance, announcements, Synergia and messages with it.
  *
  * **Marking the error non-critical is only half the fix, and the half alone is worse than the bug.**
  * `ApiService`'s non-critical arm counts the error and returns - it does not cancel, clear, or call
@@ -93,6 +94,16 @@ class LibrusParserErrorRecoveryTest {
         val librus = librusWithOnePendingEndpoint(spy)
 
         librus.data.callback.onError(ApiError("T", EXCEPTION_LIBRUS_MESSAGES_REQUEST))
+
+        assertFalse(spy.errors[0].isCritical)
+        assertEquals("a messages-transport parse failure must recover like an API one", 1, spy.completed)
+    }
+
+    @Test fun `a Synergia parse failure recovers the same way`() {
+        val spy = Spy()
+        val librus = librusWithOnePendingEndpoint(spy)
+
+        librus.data.callback.onError(ApiError("T", EXCEPTION_LIBRUS_SYNERGIA_REQUEST))
 
         assertFalse(spy.errors[0].isCritical)
         assertEquals("the arm must cover every parser transport, not just the API one", 1, spy.completed)

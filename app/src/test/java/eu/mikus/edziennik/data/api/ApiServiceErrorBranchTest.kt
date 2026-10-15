@@ -31,8 +31,9 @@ import org.robolectric.annotation.Config
  * is the only caller of `checkIfTaskFrozen()`. So an `ApiError` marked non-critical by a caller that
  * does not itself resume whatever it was doing leaves the service with `taskIsRunning` still true and
  * nothing scheduled to change that: no terminal event, a foreground service that never stops, and a
- * `bindAndAwait` that burns its whole timeout. `ApiError.isCritical` defaults to true and no
- * production caller in the current tree sets it false - the last was removed in `3defe2d3`.
+ * `bindAndAwait` that burns its whole timeout. `ApiError.isCritical` defaults to true, and until this
+ * phase's `Librus` arm no production caller set it false (the previous one went with `3defe2d3`), so
+ * `ApiService`'s non-critical arm had gone unexercised since.
  *
  * Driven by DIRECT calls, never `EventBus.post`: all three `@Subscribe` methods are `ThreadMode.ASYNC`
  * and `throwSubscriberException` defaults to false, so a posted event would swallow a failure and read
