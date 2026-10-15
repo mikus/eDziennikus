@@ -103,9 +103,28 @@ class EdziennikNotification(val app: App) {
         return this
     }
 
+    /**
+     * A non-critical error: count it and say so, without disturbing a sync that is still running.
+     *
+     * Text and style only - deliberately NOT the title or the progress bar, both of which
+     * [setCriticalError] resets. A non-critical error does not end the task, so the title is still
+     * the running endpoint's progress text and the bar is still live. Nothing between here and the
+     * next [setCurrentTask] / [setIdle] / [setCriticalError] touches text or style, so this survives
+     * for the rest of the task.
+     *
+     * Before this, the method was `errorCount++` alone and [post] re-posted the builder unchanged,
+     * so the count first appeared only when the NEXT task called [setCurrentTask] - on a
+     * single-profile sync, the tail `SzkolnyTask`, under that task's title rather than the failing
+     * one's.
+     */
     @Synchronized
     fun addError(): EdziennikNotification {
         errorCount++
+        notificationBuilder.apply {
+            val str = errorCountText()
+            setStyle(NotificationCompat.BigTextStyle().bigText(str))
+            setContentText(str)
+        }
         return this
     }
 
