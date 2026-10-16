@@ -31,7 +31,10 @@ class LibrusApiLuckyNumber(override val data: DataLibrus,
             } else {
                 json.getJsonObject("LuckyNumber")?.also { luckyNumberEl ->
 
-                    val luckyNumberDate = Date.fromY_m_d(luckyNumberEl.getString("LuckyNumberDay")) ?: Date.getToday()
+                    val luckyNumberDate = Date.fromY_m_dOrNull(luckyNumberEl.getString("LuckyNumberDay")) ?: run {
+                        nextSync = System.currentTimeMillis() + 6* HOUR *1000
+                        return@also
+                    }
                     val luckyNumber = luckyNumberEl.getInt("LuckyNumber") ?: run {
                         nextSync = System.currentTimeMillis() + 6* HOUR *1000
                         return@also
