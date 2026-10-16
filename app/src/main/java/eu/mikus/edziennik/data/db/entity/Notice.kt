@@ -33,7 +33,10 @@ open class Notice(
         var addedDate: Long = System.currentTimeMillis()
 ) : Keepable() {
     companion object {
-        /** A notice whose `Positive` could not be read. Counted toward no summary bucket. */
+        /**
+         * A notice whose type the provider's data does not determine. Counted toward no summary
+         * bucket.
+         */
         const val TYPE_UNKNOWN = -1
         const val TYPE_NEUTRAL = 0
         const val TYPE_POSITIVE = 1
