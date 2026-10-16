@@ -89,13 +89,33 @@ public class Date implements Comparable<Date>, Noteable {
         return Calendar.getInstance().getTimeInMillis();
     }
 
-    public static Date fromY_m_d(String dateTime) {
+    /**
+     * Reads a {@code yyyy-MM-dd} date from the first ten characters of the argument.
+     * Positions are read, separators are not checked, and the calendar is not validated.
+     *
+     * @return the parsed date, or {@code null} when the argument is {@code null} or cannot be read
+     */
+    @Nullable
+    public static Date fromY_m_dOrNull(@Nullable String dateTime) {
+        if (dateTime == null)
+            return null;
         try {
             return new Date(Integer.parseInt(dateTime.substring(0, 4)), Integer.parseInt(dateTime.substring(5, 7)), Integer.parseInt(dateTime.substring(8, 10)));
         }
         catch (Exception e) {
-            return new Date(2019, 1, 1);
+            return null;
         }
+    }
+
+    /**
+     * Same reading as {@link #fromY_m_dOrNull(String)}, but this one cannot report failure:
+     * an unreadable argument yields 2019-01-01, which a caller cannot tell apart from a school
+     * that really says 2019-01-01. Use it only where a non-null date is required and a wrong one
+     * is harmless; where the difference matters, call {@link #fromY_m_dOrNull(String)}.
+     */
+    public static Date fromY_m_d(String dateTime) {
+        Date date = fromY_m_dOrNull(dateTime);
+        return date != null ? date : new Date(2019, 1, 1);
     }
 
     public Calendar getAsCalendar() {
