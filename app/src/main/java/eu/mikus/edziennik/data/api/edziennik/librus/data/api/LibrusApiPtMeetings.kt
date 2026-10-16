@@ -32,7 +32,7 @@ class LibrusApiPtMeetings(override val data: DataLibrus,
                 val id = meeting.getLong("Id") ?: return@forEach
                 val topic = meeting.getString("Topic") ?: ""
                 val teacherId = meeting.getJsonObject("Teacher")?.getLong("Id") ?: -1
-                val eventDate = meeting.getString("Date")?.let { Date.fromY_m_d(it) } ?: return@forEach
+                val eventDate = Date.fromY_m_dOrNull(meeting.getString("Date")) ?: return@forEach
                 val startTime = meeting.getString("Time")?.let {
                     if (it == "00:00:00")
                         null
