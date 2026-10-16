@@ -94,17 +94,35 @@ public class Time implements Comparable<Time> {
     }
 
     /**
-     * HH:MM
+     * Reads an {@code HH:MM} time from the first five characters of the argument.
+     * Positions are read, separators are not checked, and the clock is not validated.
+     *
+     * @return the parsed time, or {@code null} when the argument is {@code null} or cannot be read
      */
-    public static Time fromH_m(String time)
+    @Nullable
+    public static Time fromH_mOrNull(@Nullable String time)
     {
+        if (time == null)
+            return null;
         try {
             return new Time(Integer.parseInt(time.substring(0, 2)), Integer.parseInt(time.substring(3, 5)), 0);
         }
         catch (Exception e) {
-            e.printStackTrace();
-            return new Time(0, 0, 0);
+            return null;
         }
+    }
+
+    /**
+     * Same reading as {@link #fromH_mOrNull(String)}, but this one cannot report failure:
+     * an unreadable argument yields 00:00:00, which a caller cannot tell apart from a school
+     * that really says 00:00. Failure is also silent: it no longer prints a stack trace. Use it
+     * only where a non-null time is required and a wrong one is harmless; where the difference
+     * matters, call {@link #fromH_mOrNull(String)}.
+     */
+    public static Time fromH_m(String time)
+    {
+        Time parsed = fromH_mOrNull(time);
+        return parsed != null ? parsed : new Time(0, 0, 0);
     }
 
     /**

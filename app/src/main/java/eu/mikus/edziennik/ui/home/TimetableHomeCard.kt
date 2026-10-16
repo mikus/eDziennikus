@@ -194,7 +194,7 @@ private fun TimetableContent(
                 // Padded with U+2007 FIGURE SPACE, which is defined as exactly one digit wide, so a
                 // single-digit hour occupies the same width as a two-digit one: the colons line up
                 // and every row's minutes end the same distance from the text. `getStringHM()`
-                // zero-pads minutes but not hours (`Time.java:177-183` - "8:20", "10:10"), so the
+                // zero-pads minutes but not hours (`Time.getStringHM()` — "8:20", "10:10"), so the
                 // hour is the only column that varies and one pad character covers it.
                 //
                 // A fixed-width column with `TextAlign.End` would do the same at the default font
