@@ -32,8 +32,8 @@ class LibrusApiAnnouncements(override val data: DataLibrus,
                 val id = longId.crc32()
                 val subject = announcement.getString("Subject") ?: ""
                 val text = announcement.getString("Content") ?: ""
-                val startDate = Date.fromY_m_d(announcement.getString("StartDate"))
-                val endDate = Date.fromY_m_d(announcement.getString("EndDate"))
+                val startDate = Date.fromY_m_dOrNull(announcement.getString("StartDate"))
+                val endDate = Date.fromY_m_dOrNull(announcement.getString("EndDate"))
                 val teacherId = announcement.getJsonObject("AddedBy")?.getLong("Id") ?: -1
                 val addedDate = announcement.getString("CreationDate")?.let { Date.fromIso(it) }
                         ?: System.currentTimeMillis()
