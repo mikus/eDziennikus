@@ -43,11 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.mikepenz.iconics.typeface.IIcon
-import com.mikepenz.iconics.typeface.library.community.material.CommunityMaterial
-import eu.szkolny.font.SzkolnyFont
 import eu.mikus.edziennik.R
-import eu.mikus.edziennik.data.db.entity.Notice
 import eu.mikus.edziennik.data.db.full.NoticeFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
 import eu.mikus.edziennik.utils.models.Date
@@ -164,12 +160,8 @@ private fun NoticeRow(notice: NoticeFull) {
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val (icon: IIcon, iconTint) = when (notice.type) {
-                Notice.TYPE_POSITIVE -> CommunityMaterial.Icon3.cmd_plus_circle_outline to colorResource(R.color.md_green_600)
-                Notice.TYPE_NEGATIVE -> CommunityMaterial.Icon.cmd_alert_decagram_outline to colorResource(R.color.md_red_600)
-                else -> SzkolnyFont.Icon.szf_message_processing_outline to colorResource(R.color.md_blue_500)
-            }
-            IconicsIcon(icon, contentDescription = null, sizeDp = 36, tint = iconTint)
+            val style = noticeTypeStyle(notice.type)
+            IconicsIcon(style.icon, contentDescription = null, sizeDp = 36, tint = colorResource(style.color))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(

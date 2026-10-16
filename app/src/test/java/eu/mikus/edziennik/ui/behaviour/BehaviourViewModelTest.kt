@@ -79,6 +79,29 @@ class BehaviourViewModelTest {
     }
 
     @Test
+    fun `an unknown notice is listed but counted in no bucket`() = runTest(dispatcher) {
+        val notices = listOf(
+            notice(1, Notice.TYPE_POSITIVE, 1),
+            notice(2, Notice.TYPE_NEGATIVE, 1),
+            notice(3, Notice.TYPE_NEUTRAL, 1),
+            notice(4, Notice.TYPE_UNKNOWN, 1),
+        )
+        val vm = BehaviourViewModel(
+            source = { flowOf(notices) },
+            onMarkSeen = mockk(relaxed = true),
+            dispatcher = dispatcher,
+        )
+        val job = launch { vm.uiState.collect {} }
+        advanceUntilIdle()
+        val content = vm.uiState.value as BehaviourUiState.Content
+        assertEquals(4, content.notices.size)
+        assertEquals(1, content.summary.praises)
+        assertEquals(1, content.summary.warnings)
+        assertEquals(1, content.summary.other)
+        job.cancel()
+    }
+
+    @Test
     fun `markSeen delegates once and is idempotent`() = runTest(dispatcher) {
         val seam: (NoticeFull) -> Unit = mockk(relaxed = true)
         val n = notice(1, Notice.TYPE_POSITIVE, 1, seen = false)

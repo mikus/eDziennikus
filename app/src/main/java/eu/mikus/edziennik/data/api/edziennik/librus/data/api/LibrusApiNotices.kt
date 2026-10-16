@@ -39,11 +39,7 @@ class LibrusApiNotices(override val data: DataLibrus,
                 val teacherId = note.getJsonObject("Teacher")?.getLong("Id") ?: -1
                 val addedDate = note.getString("Date")?.let { Date.fromY_m_d(it) } ?: return@forEach
 
-                val type = when (note.getInt("Positive")) {
-                    0 -> Notice.TYPE_NEGATIVE
-                    1 -> Notice.TYPE_POSITIVE
-                    /*2*/else -> Notice.TYPE_NEUTRAL
-                }
+                val type = librusNoticeType(note)
                 val categoryText = data.noticeTypes[categoryId]?.name ?: ""
                 val semester = profile?.dateToSemester(addedDate) ?: 1
 
