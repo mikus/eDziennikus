@@ -65,4 +65,45 @@ class LibrusAccountNameTest {
         assertEquals("Jan Kowalski", librusMeAccountName(null, stored = "Jan Kowalski"))
         assertNull(librusMeAccountName(null, stored = null))
     }
+
+    @Test fun `first login reads GroupId 5 as a parent`() {
+        assertEquals("Anna Nowak", librusFirstLoginAccountName(PARENT))
+    }
+
+    @Test fun `first login reads GroupId 6 as a parent`() {
+        val six = account("""{"GroupId":6,"FirstName":"anna","LastName":"NOWAK"}""")
+        assertEquals("Anna Nowak", librusFirstLoginAccountName(six))
+    }
+
+    @Test fun `first login reads a readable student GroupId as a student`() {
+        val student = account("""{"GroupId":8,"FirstName":"anna","LastName":"NOWAK"}""")
+        assertNull(librusFirstLoginAccountName(student))
+    }
+
+    @Test fun `first login takes the owner's own name when GroupId is missing`() {
+        val noGroup = account("""{"FirstName":"anna","LastName":"NOWAK"}""")
+        assertEquals("Anna Nowak", librusFirstLoginAccountName(noGroup))
+    }
+
+    @Test fun `first login takes the owner's own name when GroupId is JSON null`() {
+        val jsonNull = account("""{"GroupId":null,"FirstName":"anna","LastName":"NOWAK"}""")
+        assertEquals("Anna Nowak", librusFirstLoginAccountName(jsonNull))
+    }
+
+    @Test fun `first login takes the owner's own name when GroupId is unreadable`() {
+        val unreadable = account("""{"GroupId":"abc","FirstName":"anna","LastName":"NOWAK"}""")
+        assertEquals("Anna Nowak", librusFirstLoginAccountName(unreadable))
+    }
+
+    @Test fun `first login with an unreadable GroupId and no readable name stores no name`() {
+        assertNull(librusFirstLoginAccountName(account("""{"GroupId":"abc"}""")))
+    }
+
+    @Test fun `first login with an unreadable GroupId and only one readable name stores no name`() {
+        assertNull(librusFirstLoginAccountName(account("""{"GroupId":"abc","FirstName":"anna"}""")))
+    }
+
+    @Test fun `first login without an Account object still stores no name`() {
+        assertNull(librusFirstLoginAccountName(null))
+    }
 }

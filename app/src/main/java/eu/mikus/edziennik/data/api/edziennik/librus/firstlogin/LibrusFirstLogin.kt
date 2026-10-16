@@ -6,6 +6,7 @@ import eu.mikus.edziennik.data.api.*
 import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusApi
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusPortal
+import eu.mikus.edziennik.data.api.edziennik.librus.data.api.librusFirstLoginAccountName
 import eu.mikus.edziennik.data.api.edziennik.librus.login.LibrusLoginApi
 import eu.mikus.edziennik.data.api.edziennik.librus.login.LibrusLoginPortal
 import eu.mikus.edziennik.data.api.events.FirstLoginFinishedEvent
@@ -97,13 +98,10 @@ class LibrusFirstLogin(val data: DataLibrus, val onSuccess: () -> Unit) {
                     val user = me?.getJsonObject("User")
 
                     val login = account.getString("Login")
-                    val isParent = account?.getInt("GroupId") in 5..6
 
                     val studentNameLong = buildFullName(user?.getString("FirstName"), user?.getString("LastName"))
                     val studentNameShort = studentNameLong.getShortName()
-                    val accountNameLong = if (isParent)
-                        buildFullName(account?.getString("FirstName"), account?.getString("LastName"))
-                    else null
+                    val accountNameLong = librusFirstLoginAccountName(account)
 
                     val profile = Profile(
                             firstProfileId++,
