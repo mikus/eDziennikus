@@ -47,12 +47,12 @@ class LibrusApiClasses(override val data: DataLibrus,
                 data.unitId = studentClass.getJsonObject("Unit").getLong("Id") ?: 0L
 
                 profile?.apply {
-                    dateSemester1Start = Date.fromY_m_d(studentClass.getString("BeginSchoolYear")
-                            ?: return@apply)
-                    dateSemester2Start = Date.fromY_m_d(studentClass.getString("EndFirstSemester")
-                            ?: return@apply)
-                    dateYearEnd = Date.fromY_m_d(studentClass.getString("EndSchoolYear")
-                            ?: return@apply)
+                    dateSemester1Start = Date.fromY_m_dOrNull(studentClass.getString("BeginSchoolYear"))
+                            ?: return@apply
+                    dateSemester2Start = Date.fromY_m_dOrNull(studentClass.getString("EndFirstSemester"))
+                            ?: return@apply
+                    dateYearEnd = Date.fromY_m_dOrNull(studentClass.getString("EndSchoolYear"))
+                            ?: return@apply
                 }
             }
 
