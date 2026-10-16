@@ -42,7 +42,7 @@ class LibrusApiTimetables(override val data: DataLibrus,
 
         val getDate = data.arguments?.getString("weekStart") ?: currentWeekStart.stringY_m_d
 
-        val weekStart = Date.fromY_m_d(getDate)
+        val weekStart = Date.fromY_m_dOrNull(getDate) ?: currentWeekStart
         val weekEnd = weekStart.clone().stepForward(0, 0, 6)
 
         apiGet(TAG, "Timetables?weekStart=${weekStart.stringY_m_d}") { json ->
@@ -51,7 +51,7 @@ class LibrusApiTimetables(override val data: DataLibrus,
             days?.entrySet()?.forEach { (dateString, dayEl) ->
                 val day = dayEl?.asJsonArray
 
-                val lessonDate = dateString?.let { Date.fromY_m_d(it) } ?: return@forEach
+                val lessonDate = Date.fromY_m_dOrNull(dateString) ?: return@forEach
 
                 var lessonsFound = false
                 day?.forEach { lessonRangeEl ->
@@ -86,8 +86,8 @@ class LibrusApiTimetables(override val data: DataLibrus,
         val isCancelled = lesson.getBoolean("IsCanceled") ?: false
 
         val lessonNo = lesson.getInt("LessonNo") ?: return
-        val startTime = lesson.getString("HourFrom")?.let { Time.fromH_m(it) } ?: return
-        val endTime = lesson.getString("HourTo")?.let { Time.fromH_m(it) } ?: return
+        val startTime = Time.fromH_mOrNull(lesson.getString("HourFrom")) ?: return
+        val endTime = Time.fromH_mOrNull(lesson.getString("HourTo")) ?: return
         val subjectId = lesson.getJsonObject("Subject")?.getLong("Id")
         val teacherId = lesson.getJsonObject("Teacher")?.getLong("Id")
         val classroomId = lesson.getJsonObject("Classroom")?.getLong("Id") ?: -1
@@ -98,10 +98,10 @@ class LibrusApiTimetables(override val data: DataLibrus,
 
         if (isSubstitution && isCancelled) {
             // shifted lesson - source
-            val newDate = lesson.getString("NewDate")?.let { Date.fromY_m_d(it) } ?: return
+            val newDate = Date.fromY_m_dOrNull(lesson.getString("NewDate")) ?: return
             val newLessonNo = lesson.getInt("NewLessonNo") ?: return
-            val newStartTime = lesson.getString("NewHourFrom")?.let { Time.fromH_m(it) } ?: return
-            val newEndTime = lesson.getString("NewHourTo")?.let { Time.fromH_m(it) } ?: return
+            val newStartTime = Time.fromH_mOrNull(lesson.getString("NewHourFrom")) ?: return
+            val newEndTime = Time.fromH_mOrNull(lesson.getString("NewHourTo")) ?: return
             val newSubjectId = lesson.getJsonObject("NewSubject")?.getLong("Id")
             val newTeacherId = lesson.getJsonObject("NewTeacher")?.getLong("Id")
             val newClassroomId = lesson.getJsonObject("NewClassroom")?.getLong("Id") ?: -1
@@ -131,10 +131,10 @@ class LibrusApiTimetables(override val data: DataLibrus,
         }
         else if (isSubstitution) {
             // lesson change OR shifted lesson - target
-            val oldDate = lesson.getString("OrgDate")?.let { Date.fromY_m_d(it) } ?: return
+            val oldDate = Date.fromY_m_dOrNull(lesson.getString("OrgDate")) ?: return
             val oldLessonNo = lesson.getInt("OrgLessonNo") ?: return
-            val oldStartTime = lesson.getString("OrgHourFrom")?.let { Time.fromH_m(it) } ?: return
-            val oldEndTime = lesson.getString("OrgHourTo")?.let { Time.fromH_m(it) } ?: return
+            val oldStartTime = Time.fromH_mOrNull(lesson.getString("OrgHourFrom")) ?: return
+            val oldEndTime = Time.fromH_mOrNull(lesson.getString("OrgHourTo")) ?: return
             val oldSubjectId = lesson.getJsonObject("OrgSubject")?.getLong("Id")
             val oldTeacherId = lesson.getJsonObject("OrgTeacher")?.getLong("Id")
             val oldClassroomId = lesson.getJsonObject("OrgClassroom")?.getLong("Id") ?: -1

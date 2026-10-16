@@ -35,15 +35,15 @@ class LibrusApiSchools(override val data: DataLibrus,
                 data.lessonRanges.clear()
                 ranges.forEachIndexed { index, rangeEl ->
                     val range = rangeEl.asJsonObject
-                    val from = range.getString("From") ?: return@forEachIndexed
-                    val to = range.getString("To") ?: return@forEachIndexed
+                    val from = Time.fromH_mOrNull(range.getString("From")) ?: return@forEachIndexed
+                    val to = Time.fromH_mOrNull(range.getString("To")) ?: return@forEachIndexed
                     data.lessonRanges.put(
                             index,
                             LessonRange(
                                     profileId,
                                     index,
-                                    Time.fromH_m(from),
-                                    Time.fromH_m(to)
+                                    from,
+                                    to
                             ))
                 }
             }
