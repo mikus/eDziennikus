@@ -51,7 +51,13 @@ fun Profile.getStudentData(key: String, defaultValue: Char) =
  * August, so before September it is the previous calendar year. A new [Profile] computes its
  * default `studentSchoolYearStart` the same way.
  */
-fun currentSchoolYearStart() = Date.getToday().let { if (it.month < 9) it.year - 1 else it.year }
+fun currentSchoolYearStart() = schoolYearOf(Date.getToday())
+
+/**
+ * The calendar year in which the school year containing [date] started. The September rule lives
+ * here alone: [currentSchoolYearStart] and the archived anchor of [getSchoolYear] both read it.
+ */
+private fun schoolYearOf(date: Date) = if (date.month < 9) date.year - 1 else date.year
 
 /**
  * Whether this profile's stored semester 1 start, semester 2 start and year end read as a school
@@ -110,10 +116,54 @@ fun Profile.getSemesterEnd(semester: Int) = when {
 fun Profile.dateToSemester(date: Date) = if (date >= getSemesterStart(2)) 2 else 1
 fun Profile.isBeforeYear() = false && Date.getToday() < dateSemester1Start
 
-fun Profile.getSchoolYearConstrains(): CalendarConstraints {
-    return CalendarConstraints.Builder()
-        .setStart(dateSemester1Start.inMillisUtc)
-        .setEnd(dateYearEnd.inMillisUtc)
+/**
+ * The first and last day of this profile's school year, always with `start < endInclusive`. This is
+ * the one answer for every reader of the outer bounds: the Agenda's calendar, the Timetable's day
+ * pager and the date pickers.
+ *
+ * The stored semester 1 start and year end are trusted only when the year starts before it ends and
+ * ends before the anniversary of its own start. A legal Polish school year runs 1 September to
+ * 31 August, 364 days or 365 across a leap day, so the cap sits one day above it. The predicate
+ * reads two fields the same parser wrote from the same response, never the wall clock, so an
+ * archived profile's old but coherent year passes unchanged. The strict first comparison rejects a
+ * one-day year, which is what several keys collapsing onto 2019-01-01 look like.
+ *
+ * It tests the pair and not the trio because the readers never read semester 2: a damaged semester
+ * 2 start alone leaves the outer bounds good, and discarding them for it would be wrong by months.
+ *
+ * Both bounds come from this one decision. Guarded separately, an archived profile with only its
+ * start unreadable would take that start from today and its end from storage, the range would
+ * invert, and the Agenda's calendar would crash in `checkRange`. When the pair fails, both bounds
+ * are 1 September to 30 June of one school year.
+ *
+ * That year is the current one for a live profile. An archived profile is never synced again, so
+ * its year is frozen and today is the wrong anchor: it uses the school year of the latest of its
+ * three stored dates. Every substitute the old parsers wrote was 2019-01-01, earlier than any date
+ * a school sent, so the latest date is a real one in every shape except all three unreadable.
+ * An archived profile with all three unreadable cannot be recovered and falls back to 2018/19,
+ * where before it showed a single day.
+ *
+ * Nothing is written back, so a school that later sends a readable year has it picked up by the
+ * next Classes sync. [getSemesterStart] with semester 1 still honours a bad semester 1 start. That
+ * is deliberate: its two consumers cannot be reached on a profile that is already damaged, and
+ * routing it here would give two notions of the year start that disagree where only semester 1
+ * is bad.
+ */
+fun Profile.getSchoolYear(): ClosedRange<Date> {
+    val start = dateSemester1Start
+    val end = dateYearEnd
+    if (start < end && end < Date(start.year + 1, start.month, start.day))
+        return start..end
+    val year =
+        if (archived) schoolYearOf(maxOf(dateSemester1Start, dateSemester2Start, dateYearEnd))
+        else currentSchoolYearStart()
+    return Date(year, 9, 1)..Date(year + 1, 6, 30)
+}
+
+fun Profile.getSchoolYearConstrains() = getSchoolYear().let { year ->
+    CalendarConstraints.Builder()
+        .setStart(year.start.inMillisUtc)
+        .setEnd(year.endInclusive.inMillisUtc)
         .build()
 }
 
