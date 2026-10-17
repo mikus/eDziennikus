@@ -46,6 +46,24 @@ fun Profile.getStudentData(key: String, defaultValue: Float) =
 fun Profile.getStudentData(key: String, defaultValue: Char) =
     studentData.getChar(key) ?: defaultValue
 
+/**
+ * The calendar year in which the current school year started. A school year runs September to
+ * August, so before September it is the previous calendar year. A new [Profile] computes its
+ * default `studentSchoolYearStart` the same way.
+ */
+fun currentSchoolYearStart() = Date.getToday().let { if (it.month < 9) it.year - 1 else it.year }
+
+/**
+ * Whether this profile's stored semester 1 start, semester 2 start and year end read as a school
+ * year, that is they are in order.
+ *
+ * The first comparison is strict on purpose. Before the date parsers learned to report an
+ * unreadable value, three keys that were present but unparseable all collapsed onto 2019-01-01,
+ * and a `<=` there would accept that trio as a school year.
+ */
+fun Profile.hasConsistentSchoolYear() =
+    dateSemester1Start < dateSemester2Start && dateSemester2Start <= dateYearEnd
+
 fun Profile.getSemesterStart(semester: Int) =
     if (semester == 1) dateSemester1Start else dateSemester2Start
 

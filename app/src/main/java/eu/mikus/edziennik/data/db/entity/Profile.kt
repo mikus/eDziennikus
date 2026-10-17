@@ -12,6 +12,7 @@ import androidx.room.Ignore
 import com.google.gson.JsonObject
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.data.db.enums.LoginType
+import eu.mikus.edziennik.ext.currentSchoolYearStart
 import eu.mikus.edziennik.ext.dateToSemester
 import eu.mikus.edziennik.ext.getDrawable
 import eu.mikus.edziennik.utils.models.Date
@@ -64,7 +65,7 @@ open class Profile(
      */
     var studentNumber = -1
     var studentClassName: String? = null
-    var studentSchoolYearStart = Date.getToday().let { if (it.month < 9) it.year - 1 else it.year }
+    var studentSchoolYearStart = currentSchoolYearStart()
     var dateSemester1Start = Date(studentSchoolYearStart, 9, 1)
     var dateSemester2Start = Date(studentSchoolYearStart + 1, 2, 1)
     var dateYearEnd = Date(studentSchoolYearStart + 1, 6, 30)
