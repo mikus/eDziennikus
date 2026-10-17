@@ -122,8 +122,9 @@ fun Profile.isBeforeYear() = false && Date.getToday() < dateSemester1Start
  * pager and the date pickers.
  *
  * The stored semester 1 start and year end are trusted only when the year starts before it ends and
- * ends before the anniversary of its own start. A legal Polish school year runs 1 September to
- * 31 August, 364 days or 365 across a leap day, so the cap sits one day above it. The predicate
+ * ends before the anniversary of its own start. A legal Polish school year, 1 September to
+ * 31 August, ends 364 days after it starts (365 across a leap day), so the anniversary, one day
+ * later still, is the first date that cannot be a school year's end. The predicate
  * reads two fields the same parser wrote from the same response, never the wall clock, so an
  * archived profile's old but coherent year passes unchanged. The strict first comparison rejects a
  * one-day year, which is what several keys collapsing onto 2019-01-01 look like.
@@ -142,6 +143,10 @@ fun Profile.isBeforeYear() = false && Date.getToday() < dateSemester1Start
  * a school sent, so the latest date is a real one in every shape except all three unreadable.
  * An archived profile with all three unreadable cannot be recovered and falls back to 2018/19,
  * where before it showed a single day.
+ *
+ * When the stored year is trusted the bounds are the profile's own [Date] objects, not copies, so a
+ * caller that steps one forward must `clone()` it first: `Data.kt` persists the profile on every
+ * sync and would write the walked date to the database. The fallback range is freshly built.
  *
  * Nothing is written back, so a school that later sends a readable year has it picked up by the
  * next Classes sync. [getSemesterStart] with semester 1 still honours a bad semester 1 start. That

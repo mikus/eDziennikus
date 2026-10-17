@@ -60,8 +60,10 @@ class ProfileSchoolYearTest {
 
     @Test
     fun `a school year running to 31 August is honoured`() {
-        // 364 days, and 365 across a leap day: the anniversary cap sits one day above the longest
-        // legal Polish school year
+        // 1 September to 31 August ends 364 days after it starts, the longest legal Polish school
+        // year and one day under the anniversary cap. Date compares year*10000+month*100+day and
+        // never sees the calendar, so the second, leap-spanning case pins nothing the first does
+        // not; it documents that 29 February does not move the cap.
         val plain = profile(Date(2026, 9, 1), Date(2027, 2, 1), Date(2027, 8, 31))
         assertEquals(Date(2026, 9, 1)..Date(2027, 8, 31), plain.getSchoolYear())
         val leap = profile(Date(2027, 9, 1), Date(2028, 2, 1), Date(2028, 8, 31))
@@ -111,13 +113,18 @@ class ProfileSchoolYearTest {
     @Test
     fun `reading the school year never mutates the profile`() {
         // Date.stepForward mutates its receiver and Data.kt persists the profile on every sync, so
-        // a bound handed out by reference and walked would be written to the database.
-        val seeds = listOf(Date(y, 9, 2), Date(y + 1, 1, 15), Date(y + 1, 6, 21))
-        val healthy = profile(seeds[0], seeds[1], seeds[2])
-        val broken = profile(damaged, seeds[1], seeds[2])
+        // a bound handed out by reference and walked would be written to the database. The profiles
+        // are seeded with their own objects and compared against fresh literals: comparing against
+        // the seeds would pass, as a walked field and its seed are the same object.
+        val healthy = profile(Date(y, 9, 2), Date(y + 1, 1, 15), Date(y + 1, 6, 21))
+        val broken = profile(Date(2019, 1, 1), Date(y + 1, 1, 15), Date(y + 1, 6, 21))
         healthy.getSchoolYear()
         broken.getSchoolYear()
-        assertEquals(seeds, listOf(healthy.dateSemester1Start, healthy.dateSemester2Start, healthy.dateYearEnd))
-        assertEquals(listOf(damaged, seeds[1], seeds[2]), listOf(broken.dateSemester1Start, broken.dateSemester2Start, broken.dateYearEnd))
+        assertEquals(Date(y, 9, 2), healthy.dateSemester1Start)
+        assertEquals(Date(y + 1, 1, 15), healthy.dateSemester2Start)
+        assertEquals(Date(y + 1, 6, 21), healthy.dateYearEnd)
+        assertEquals(Date(2019, 1, 1), broken.dateSemester1Start)
+        assertEquals(Date(y + 1, 1, 15), broken.dateSemester2Start)
+        assertEquals(Date(y + 1, 6, 21), broken.dateYearEnd)
     }
 }
