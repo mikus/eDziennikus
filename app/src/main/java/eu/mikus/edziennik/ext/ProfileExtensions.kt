@@ -65,19 +65,31 @@ fun Profile.hasConsistentSchoolYear() =
     dateSemester1Start < dateSemester2Start && dateSemester2Start <= dateYearEnd
 
 /**
- * The first day of [semester], or, when the stored dates are not a school year (see
- * [hasConsistentSchoolYear]), the usual 1 September / 1 February of the current school year.
+ * The first day of [semester], or, when the stored semester starts are not in order, the usual
+ * 1 September / 1 February of the current school year.
+ *
+ * This guards on the order of the two semester starts alone, not on [hasConsistentSchoolYear].
+ * A boundary depends on those two dates and not on the year end, and the year end is the date
+ * that is written last, so a school year whose end cannot be read can still carry a boundary the
+ * school did send. Discarding it for 1 February would be wrong by weeks for a school whose
+ * semester 2 starts in January.
  *
  * The fallback is a guess and is deliberately never written back to the profile: a school that
  * later reports a readable boundary has it picked up by the next Classes sync, with nothing of
  * ours in the way.
  */
 fun Profile.getSemesterStart(semester: Int) = when {
-    hasConsistentSchoolYear() -> if (semester == 1) dateSemester1Start else dateSemester2Start
+    dateSemester1Start < dateSemester2Start ->
+        if (semester == 1) dateSemester1Start else dateSemester2Start
     semester == 1 -> Date(currentSchoolYearStart(), 9, 1)
     else -> Date(currentSchoolYearStart() + 1, 2, 1)
 }
 
+/**
+ * The last day of [semester]. Unlike [getSemesterStart] this guards on [hasConsistentSchoolYear],
+ * because the year end is the value it returns and is only trusted when the whole school year is
+ * in order.
+ */
 fun Profile.getSemesterEnd(semester: Int) = when {
     semester == 1 -> getSemesterStart(2).clone().stepForward(0, 0, -1)
     hasConsistentSchoolYear() -> dateYearEnd

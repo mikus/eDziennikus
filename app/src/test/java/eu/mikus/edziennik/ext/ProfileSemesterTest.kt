@@ -27,9 +27,17 @@ class ProfileSemesterTest {
     private val damaged = profile(Date(y, 9, 1), Date(2019, 1, 1), Date(y + 1, 6, 30))
     private val fallbackSem2 = Date(y + 1, 2, 1)
 
-    // its year end is not the 30 June the fallback would give, so an accessor that ignores the
-    // stored year end of a consistent profile cannot pass by coincidence
-    private val healthy = profile(Date(y, 9, 1), Date(y + 1, 1, 15), Date(y + 1, 6, 21))
+    // Neither its year start nor its year end is what the fallback would give (1 September,
+    // 30 June), so an accessor that ignores a stored value of a consistent profile cannot pass by
+    // coincidence. Polish school years do start on 2 September.
+    private val healthy = profile(Date(y, 9, 2), Date(y + 1, 1, 15), Date(y + 1, 6, 21))
+
+    // every key present but unreadable, the shape that collapsed onto 2019-01-01 together
+    private val unreadable = profile(Date(2019, 1, 1), Date(2019, 1, 1), Date(2019, 1, 1))
+
+    // both semester starts readable, only the year end not: EndSchoolYear is written last, so the
+    // first two assignments had already succeeded. 15 January is not the 1 February fallback.
+    private val endUnreadable = profile(Date(y, 9, 2), Date(y + 1, 1, 15), Date(2019, 1, 1))
 
     @Test
     fun `a default-constructed profile has a consistent school year`() {
@@ -45,17 +53,28 @@ class ProfileSemesterTest {
 
     @Test
     fun `a boundary before the year start is not a school year`() {
-        assertFalse(profile(Date(y, 9, 1), Date(2019, 1, 1), Date(y + 1, 6, 30)).hasConsistentSchoolYear())
+        assertFalse(damaged.hasConsistentSchoolYear())
     }
 
     @Test
     fun `three identical dates are not a school year`() {
-        assertFalse(profile(Date(2019, 1, 1), Date(2019, 1, 1), Date(2019, 1, 1)).hasConsistentSchoolYear())
+        assertFalse(unreadable.hasConsistentSchoolYear())
+    }
+
+    @Test
+    fun `a year that ends before semester 2 starts is not a school year`() {
+        assertFalse(profile(Date(y, 9, 1), Date(y + 1, 2, 1), Date(y + 1, 1, 31)).hasConsistentSchoolYear())
+    }
+
+    @Test
+    fun `a year that ends the day semester 2 starts is still a school year`() {
+        // the second comparison is non-strict on purpose
+        assertTrue(profile(Date(y, 9, 1), Date(y + 1, 6, 30), Date(y + 1, 6, 30)).hasConsistentSchoolYear())
     }
 
     @Test
     fun `a stored school year is honoured`() {
-        assertEquals(Date(y, 9, 1), healthy.getSemesterStart(1))
+        assertEquals(Date(y, 9, 2), healthy.getSemesterStart(1))
         assertEquals(Date(y + 1, 1, 15), healthy.getSemesterStart(2))
         assertEquals(Date(y + 1, 6, 21), healthy.getSemesterEnd(2))
     }
@@ -65,9 +84,23 @@ class ProfileSemesterTest {
         assertEquals(Date(y, 9, 1), damaged.getSemesterStart(1))
         assertEquals(fallbackSem2, damaged.getSemesterStart(2))
         assertEquals(Date(y + 1, 6, 30), damaged.getSemesterEnd(2))
-        // a year end that is itself unreadable falls back too, rather than reporting 2019
-        val unreadable = profile(Date(2019, 1, 1), Date(2019, 1, 1), Date(2019, 1, 1))
+        // every key unreadable falls back too, rather than reporting 2019
+        assertEquals(Date(y, 9, 1), unreadable.getSemesterStart(1))
+        assertEquals(fallbackSem2, unreadable.getSemesterStart(2))
         assertEquals(Date(y + 1, 6, 30), unreadable.getSemesterEnd(2))
+    }
+
+    @Test
+    fun `a readable semester boundary survives an unreadable year end`() {
+        // the boundary depends on the two semester starts alone, so a year end that cannot be
+        // read must not throw away a boundary the school did send
+        assertEquals(Date(y, 9, 2), endUnreadable.getSemesterStart(1))
+        assertEquals(Date(y + 1, 1, 15), endUnreadable.getSemesterStart(2))
+        assertEquals(Date(y + 1, 1, 14), endUnreadable.getSemesterEnd(1))
+        assertEquals(1, endUnreadable.dateToSemester(Date(y + 1, 1, 14)))
+        assertEquals(2, endUnreadable.dateToSemester(Date(y + 1, 1, 20)))
+        // the year end itself is not readable, so it alone falls back
+        assertEquals(Date(y + 1, 6, 30), endUnreadable.getSemesterEnd(2))
     }
 
     @Test
