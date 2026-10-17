@@ -102,7 +102,7 @@ class AttendanceViewModel(
                     groupConsecutiveDays = it.groupConsecutiveDays,
                     showPresenceInMonth = it.showPresenceInMonth,
                     // Not config-derived: Profile.currentSemester is a wall-clock getter
-                    // (Profile.kt:74-75). Re-reading it on a config write is a no-op.
+                    // (Profile.kt:75-76). Re-reading it on a config write is a no-op.
                     currentSemester = app.profile.currentSemester,
                 )
             }

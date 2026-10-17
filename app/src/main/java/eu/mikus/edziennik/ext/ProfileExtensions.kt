@@ -64,13 +64,27 @@ fun currentSchoolYearStart() = Date.getToday().let { if (it.month < 9) it.year -
 fun Profile.hasConsistentSchoolYear() =
     dateSemester1Start < dateSemester2Start && dateSemester2Start <= dateYearEnd
 
-fun Profile.getSemesterStart(semester: Int) =
-    if (semester == 1) dateSemester1Start else dateSemester2Start
+/**
+ * The first day of [semester], or, when the stored dates are not a school year (see
+ * [hasConsistentSchoolYear]), the usual 1 September / 1 February of the current school year.
+ *
+ * The fallback is a guess and is deliberately never written back to the profile: a school that
+ * later reports a readable boundary has it picked up by the next Classes sync, with nothing of
+ * ours in the way.
+ */
+fun Profile.getSemesterStart(semester: Int) = when {
+    hasConsistentSchoolYear() -> if (semester == 1) dateSemester1Start else dateSemester2Start
+    semester == 1 -> Date(currentSchoolYearStart(), 9, 1)
+    else -> Date(currentSchoolYearStart() + 1, 2, 1)
+}
 
-fun Profile.getSemesterEnd(semester: Int) =
-    if (semester == 1) dateSemester2Start.clone().stepForward(0, 0, -1) else dateYearEnd
+fun Profile.getSemesterEnd(semester: Int) = when {
+    semester == 1 -> getSemesterStart(2).clone().stepForward(0, 0, -1)
+    hasConsistentSchoolYear() -> dateYearEnd
+    else -> Date(currentSchoolYearStart() + 1, 6, 30)
+}
 
-fun Profile.dateToSemester(date: Date) = if (date >= dateSemester2Start) 2 else 1
+fun Profile.dateToSemester(date: Date) = if (date >= getSemesterStart(2)) 2 else 1
 fun Profile.isBeforeYear() = false && Date.getToday() < dateSemester1Start
 
 fun Profile.getSchoolYearConstrains(): CalendarConstraints {
