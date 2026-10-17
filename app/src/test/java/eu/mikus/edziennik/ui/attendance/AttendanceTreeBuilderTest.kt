@@ -190,4 +190,44 @@ class AttendanceTreeBuilderTest {
         val june = months(state).months.first { it.month == 6 }
         assertEquals(2, june.leaves.size)                        // PRESENT retained as a leaf
     }
+
+    // --- backlog item 50: duplicate LazyColumn key crash -------------------------------
+    //
+    // AttendanceType is a data class, so grouping by it compares all seven fields, while
+    // NodeKey.TypeKey.stableId compares only id, typeName and typeSymbol. Two types that
+    // differ solely in typeShort or typeColor therefore become two groups sharing one key,
+    // and LazyColumn throws IllegalArgumentException. A school defining two flavours of the
+    // same type is one row to the user, so the grouping narrows to match the key.
+
+    /** Same (id, name, symbol) as [absentType]; differs only in short label and colour. */
+    private val absentVariant =
+        AttendanceType(1, 1, Attendance.TYPE_ABSENT, "nieobecno\u015b\u0107", "n", "nb", 0xFFFF0000.toInt())
+
+    @Test
+    fun `types differing only in short label and colour collapse into one row`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(
+                row(1, Date(2026, 6, 1), type = absentType),
+                row(2, Date(2026, 6, 2), type = absentVariant),
+            ),
+            config, Period.ALL,
+        )
+        val types = types(state).types
+        assertEquals(1, types.size)
+        assertEquals(2, types.single().yearCount)
+    }
+
+    @Test
+    fun `every type row has a unique key`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(
+                row(1, Date(2026, 6, 1), type = absentType),
+                row(2, Date(2026, 6, 2), type = absentVariant),
+                row(3, Date(2026, 6, 3), baseType = Attendance.TYPE_PRESENT, type = presentType),
+            ),
+            config, Period.ALL,
+        )
+        val ids = types(state).types.map { it.key.stableId }
+        assertEquals(ids.size, ids.distinct().size, "duplicate LazyColumn keys: $ids")
+    }
 }

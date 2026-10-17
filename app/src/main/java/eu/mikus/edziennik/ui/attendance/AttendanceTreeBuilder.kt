@@ -103,8 +103,15 @@ object AttendanceTreeBuilder {
     private fun buildTypes(rows: List<AttendanceFull>, config: Config): List<TypeHeader> {
         val total = rows.size
         return rows
-            .groupBy { it.typeObject }
-            .map { (type, typeRows) ->
+            // Grouped by the same three fields NodeKey.TypeKey keys on, NOT by the whole
+            // AttendanceType. It is a data class, so grouping by it compares all seven fields
+            // while the key compares three - two types differing only in typeShort or typeColor
+            // then became two rows sharing one key, and LazyColumn threw. A school defining two
+            // flavours of one type is a single row to the user, so the pill takes the first
+            // variant in encounter order; the DAO's ORDER BY makes that stable.
+            .groupBy { it.typeObject.let { type -> Triple(type.id, type.typeName, type.typeSymbol) } }
+            .map { (_, typeRows) ->
+                val type = typeRows.first().typeObject
                 val leaves = typeRows.map(::leafOf)
                 TypeHeader(
                     key = NodeKey.TypeKey(type),
