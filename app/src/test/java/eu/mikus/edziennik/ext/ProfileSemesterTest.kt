@@ -81,6 +81,11 @@ class ProfileSemesterTest {
 
     @Test
     fun `semester starts fall back instead of reporting 2019`() {
+        // Of the `damaged` assertions, the first and third document intent and pin nothing: its
+        // stored semester 1 start and year end already equal the fallback values, so they pass
+        // whether the accessor falls back or reads the stored field. The `unreadable` assertions
+        // below are the pin for those two slots (stored values 2019-01-01). Keep both sets; the
+        // middle `damaged` line does pin, as its stored semester 2 start is 2019-01-01 too.
         assertEquals(Date(y, 9, 1), damaged.getSemesterStart(1))
         assertEquals(fallbackSem2, damaged.getSemesterStart(2))
         assertEquals(Date(y + 1, 6, 30), damaged.getSemesterEnd(2))
@@ -101,6 +106,20 @@ class ProfileSemesterTest {
         assertEquals(2, endUnreadable.dateToSemester(Date(y + 1, 1, 20)))
         // the year end itself is not readable, so it alone falls back
         assertEquals(Date(y + 1, 6, 30), endUnreadable.getSemesterEnd(2))
+    }
+
+    @Test
+    fun `reading a semester boundary never mutates the profile`() {
+        // getSemesterStart hands out the stored Date itself and Date.stepForward mutates its
+        // receiver, so getSemesterEnd(1) is only safe because it clones first. Data.kt persists
+        // the profile on every sync, so a walked-back date would be written to the database.
+        val p = profile(Date(y, 9, 2), Date(y + 1, 1, 15), Date(y + 1, 6, 21))
+        p.getSemesterEnd(1)
+        p.getSemesterStart(1)
+        p.getSemesterStart(2)
+        assertEquals(Date(y, 9, 2), p.dateSemester1Start)
+        assertEquals(Date(y + 1, 1, 15), p.dateSemester2Start)
+        assertEquals(Date(y + 1, 6, 21), p.dateYearEnd)
     }
 
     @Test

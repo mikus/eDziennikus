@@ -60,6 +60,11 @@ fun currentSchoolYearStart() = Date.getToday().let { if (it.month < 9) it.year -
  * The first comparison is strict on purpose. Before the date parsers learned to report an
  * unreadable value, three keys that were present but unparseable all collapsed onto 2019-01-01,
  * and a `<=` there would accept that trio as a school year.
+ *
+ * The second comparison is non-strict on purpose too, but for the opposite reason. A school year
+ * whose semester 2 is a single day, starting on the year end, is odd, but it is the school's word
+ * and not evidence of a parse failure: dates collapsed onto one value already fail the first
+ * comparison and never reach this one.
  */
 fun Profile.hasConsistentSchoolYear() =
     dateSemester1Start < dateSemester2Start && dateSemester2Start <= dateYearEnd
@@ -86,9 +91,15 @@ fun Profile.getSemesterStart(semester: Int) = when {
 }
 
 /**
- * The last day of [semester]. Unlike [getSemesterStart] this guards on [hasConsistentSchoolYear],
- * because the year end is the value it returns and is only trusted when the whole school year is
- * in order.
+ * The last day of [semester]. The two arms do not use the same guard.
+ *
+ * Semester 1 is the day before [getSemesterStart] of semester 2, so it inherits that function's
+ * guard, the order of the two semester starts alone, and not [hasConsistentSchoolYear]. A boundary
+ * the school did send is therefore kept when only the year end cannot be read.
+ *
+ * Only the semester 2 arm consults [hasConsistentSchoolYear]. The year end is the value that arm
+ * returns, and it is trusted only when the whole school year is in order; otherwise the answer is
+ * 30 June of the current school year.
  */
 fun Profile.getSemesterEnd(semester: Int) = when {
     semester == 1 -> getSemesterStart(2).clone().stepForward(0, 0, -1)
