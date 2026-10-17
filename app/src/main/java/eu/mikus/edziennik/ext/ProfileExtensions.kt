@@ -125,12 +125,12 @@ fun Profile.isBeforeYear() = false && Date.getToday() < dateSemester1Start
  * ends before the anniversary of its own start. A legal Polish school year, 1 September to
  * 31 August, ends 364 days after it starts (365 across a leap day), so the anniversary, one day
  * later still, is the first date that cannot be a school year's end. The predicate
- * reads two fields the same parser wrote from the same response, never the wall clock, so an
+ * reads two fields the same parser writes, never the wall clock, so an
  * archived profile's old but coherent year passes unchanged. The strict first comparison rejects a
  * one-day year, which is what several keys collapsing onto 2019-01-01 look like.
  *
  * It tests the pair and not the trio because the readers never read semester 2: a damaged semester
- * 2 start alone leaves the outer bounds good, and discarding them for it would be wrong by months.
+ * 2 start alone leaves the outer bounds good, and discarding them for it would replace the school's own dates with a guess.
  *
  * Both bounds come from this one decision. Guarded separately, an archived profile with only its
  * start unreadable would take that start from today and its end from storage, the range would
@@ -142,17 +142,20 @@ fun Profile.isBeforeYear() = false && Date.getToday() < dateSemester1Start
  * three stored dates. Every substitute the old parsers wrote was 2019-01-01, earlier than any date
  * a school sent, so the latest date is a real one in every shape except all three unreadable.
  * An archived profile with all three unreadable cannot be recovered and falls back to 2018/19,
- * where before it showed a single day.
+ * where before it showed a single day in the Timetable and a single month in the Agenda.
  *
  * When the stored year is trusted the bounds are the profile's own [Date] objects, not copies, so a
- * caller that steps one forward must `clone()` it first: `Data.kt` persists the profile on every
- * sync and would write the walked date to the database. The fallback range is freshly built.
+ * caller that steps one forward must `clone()` it first: `App.profileSave()` (the profile settings
+ * dialog, the student-number dialog, LAB) writes `app.profile` to the database and would persist
+ * the walked date. The fallback range is freshly built.
  *
  * Nothing is written back, so a school that later sends a readable year has it picked up by the
  * next Classes sync. [getSemesterStart] with semester 1 still honours a bad semester 1 start. That
- * is deliberate: its two consumers cannot be reached on a profile that is already damaged, and
- * routing it here would give two notions of the year start that disagree where only semester 1
- * is bad.
+ * is deliberate: its two consumers do no harm with it. The behaviour grades sync runs on a
+ * damaged profile and writes the `-101` row's `addedDate`, but `GradeDao` skips that column on
+ * update, so an existing row never changes; the Synergia homework `dataOd` is sent only while
+ * `profile.empty`. Routing it here would give two notions of the year start that disagree where
+ * only semester 1 is bad.
  */
 fun Profile.getSchoolYear(): ClosedRange<Date> {
     val start = dateSemester1Start

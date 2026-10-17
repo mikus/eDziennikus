@@ -71,6 +71,13 @@ class ProfileSchoolYearTest {
     }
 
     @Test
+    fun `a school year ending on the anniversary of its start falls back`() {
+        // one day past the longest legal year: the cap is strict, and it is one year, not two
+        val live = profile(Date(2026, 9, 1), Date(2027, 2, 1), Date(2027, 9, 1))
+        assertEquals(current, live.getSchoolYear())
+    }
+
+    @Test
     fun `an archived profile keeps its own coherent year`() {
         val archived = profile(Date(2024, 9, 2), Date(2025, 1, 15), Date(2025, 6, 21), archived = true)
         assertEquals(Date(2024, 9, 2)..Date(2025, 6, 21), archived.getSchoolYear())
@@ -87,6 +94,20 @@ class ProfileSchoolYearTest {
         // the year end is unreadable, so semester 2 is the latest real date. Anchoring on the
         // year end alone would land in 2018/19.
         val archived = profile(Date(2024, 9, 2), Date(2025, 1, 15), damaged, archived = true)
+        assertEquals(Date(2024, 9, 1)..Date(2025, 6, 30), archived.getSchoolYear())
+    }
+
+    @Test
+    fun `a damaged archived profile anchors on its semester 2 start when both others are unreadable`() {
+        // only semester 2 is real, so a max over the year start and end alone would land in 2018/19
+        val archived = profile(damaged, Date(2025, 1, 15), damaged, archived = true)
+        assertEquals(Date(2024, 9, 1)..Date(2025, 6, 30), archived.getSchoolYear())
+    }
+
+    @Test
+    fun `an archived anchor in August belongs to the school year that began the September before`() {
+        // pins the September rule of schoolYearOf with a fixed date, not today's
+        val archived = profile(damaged, Date(2025, 1, 15), Date(2025, 8, 31), archived = true)
         assertEquals(Date(2024, 9, 1)..Date(2025, 6, 30), archived.getSchoolYear())
     }
 
@@ -112,8 +133,9 @@ class ProfileSchoolYearTest {
 
     @Test
     fun `reading the school year never mutates the profile`() {
-        // Date.stepForward mutates its receiver and Data.kt persists the profile on every sync, so
-        // a bound handed out by reference and walked would be written to the database. The profiles
+        // Date.stepForward mutates its receiver and App.profileSave() (profile settings dialog,
+        // student-number dialog, LAB) writes app.profile to the database, so a bound handed out by
+        // reference and walked would be persisted. The profiles
         // are seeded with their own objects and compared against fresh literals: comparing against
         // the seeds would pass, as a walked field and its seed are the same object.
         val healthy = profile(Date(y, 9, 2), Date(y + 1, 1, 15), Date(y + 1, 6, 21))
