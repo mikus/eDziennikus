@@ -23,6 +23,7 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.config.configFlow
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.databinding.AgendaFragmentBinding
+import eu.mikus.edziennik.ext.getSchoolYear
 import eu.mikus.edziennik.ui.agenda.lessonchanges.LessonChangesDialog
 import eu.mikus.edziennik.ui.agenda.teacherabsence.TeacherAbsenceDialog
 import eu.mikus.edziennik.ui.base.ScreenAction
@@ -90,8 +91,9 @@ class AgendaFragment : Fragment() {
         })
         activity.gainAttentionFAB()
 
-        val startMonth = YearMonth.of(app.profile.dateSemester1Start.year, app.profile.dateSemester1Start.month)
-        val endMonth = YearMonth.of(app.profile.dateYearEnd.year, app.profile.dateYearEnd.month)
+        val year = app.profile.getSchoolYear()
+        val startMonth = YearMonth.of(year.start.year, year.start.month)
+        val endMonth = YearMonth.of(year.endInclusive.year, year.endInclusive.month)
 
         b.composeView.setAppThemeContent {
             val state by viewModel.uiState.collectAsStateWithLifecycle()

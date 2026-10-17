@@ -38,6 +38,7 @@ import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.databinding.TimetableFragmentBinding
 import eu.mikus.edziennik.ext.JsonObject
+import eu.mikus.edziennik.ext.getSchoolYear
 import eu.mikus.edziennik.ext.getSchoolYearConstrains
 import eu.mikus.edziennik.ext.getStudentData
 import eu.mikus.edziennik.ui.base.ScreenAction
@@ -96,8 +97,9 @@ class TimetableFragment : Fragment() {
 
             val (days, startHour, endHour) = withContext(Dispatchers.Default) {
                 val list = mutableListOf<Date>()
-                val cursor = app.profile.dateSemester1Start.clone()
-                val yearEnd = app.profile.dateYearEnd
+                val year = app.profile.getSchoolYear()
+                val cursor = year.start.clone()
+                val yearEnd = year.endInclusive
                 while (cursor.value <= yearEnd.value) {
                     list += cursor.clone()
                     cursor.stepForward(0, 0, 1)
