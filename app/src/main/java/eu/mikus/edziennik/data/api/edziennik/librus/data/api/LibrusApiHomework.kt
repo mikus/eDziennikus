@@ -27,10 +27,12 @@ class LibrusApiHomework(override val data: DataLibrus,
     init {
         apiGet(TAG, "HomeWorkAssignments") { json ->
             val homeworkList = json.getJsonArray("HomeWorkAssignments")?.asJsonObjectList()
+            // one clock read per sync, so unknown dates filed in the same sync land on the same day
+            val today = Date.getToday()
 
             homeworkList?.forEach { homework ->
                 val id = homework.getLong("Id") ?: return@forEach
-                val eventDate = librusEventDate(homework.getString("DueDate"), Date.getToday())
+                val eventDate = librusEventDate(homework.getString("DueDate"), today)
                 val topic = homework.getString("Topic") + "\n" + homework.getString("Text")
                 val teacherId = homework.getJsonObject("Teacher")?.getLong("Id") ?: -1
                 val addedDate = Date.fromY_m_d(homework.getString("Date"))

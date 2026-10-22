@@ -57,7 +57,8 @@ class LibrusEventDateTest {
     /**
      * LibrusSynergiaHomework computes `seen = eventDate < today`, so a fallback in the past would
      * mark the homework seen AND notified — no notification, no unread badge.
-     * HomeworkViewModel:70 reads `date >= today` for the Current tab and would hide it there too.
+     * HomeworkViewModel.classify keeps a homework in the Current tab only while
+     * `event.date >= todayDate`, so a past fallback would hide it there too.
      */
     @Test fun `the invented date is never in the past`() {
         listOf(null, "", "2026-09", "not-a-date").forEach { raw ->

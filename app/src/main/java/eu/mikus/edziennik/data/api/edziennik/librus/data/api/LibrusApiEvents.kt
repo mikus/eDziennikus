@@ -33,10 +33,12 @@ class LibrusApiEvents(override val data: DataLibrus,
 
         apiGet(TAG, "HomeWorks") { json ->
             val events = json.getJsonArray("HomeWorks")?.asJsonObjectList()
+            // one clock read per sync, so unknown dates filed in the same sync land on the same day
+            val today = Date.getToday()
 
             events?.forEach { event ->
                 val id = event.getLong("Id") ?: return@forEach
-                val eventDate = librusEventDate(event.getString("Date"), Date.getToday())
+                val eventDate = librusEventDate(event.getString("Date"), today)
                 var topic = event.getString("Content")?.trim() ?: ""
                 val type = event.getJsonObject("Category")?.getLong("Id") ?: -1
                 val teacherId = event.getJsonObject("CreatedBy")?.getLong("Id") ?: -1

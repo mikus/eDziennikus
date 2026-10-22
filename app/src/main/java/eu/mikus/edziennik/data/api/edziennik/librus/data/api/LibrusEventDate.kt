@@ -28,9 +28,9 @@ internal data class LibrusEventDate(val date: Date, val unknown: Boolean)
  * The fallback is [today] and not a sentinel because two readers treat the date as a position in
  * time, and a date in the past is wrong for both. The `seen` computation in
  * `LibrusSynergiaHomework` is `eventDate < today`, so a past date marks the homework seen and
- * notified: no notification, no unread badge. `HomeworkViewModel:70` puts a homework in the
- * Current tab only when `date >= today`, so a past date hides it there too. Filed at today the
- * record stays in the Current tab, stays unseen and notifiable, and stays inside the
+ * notified: no notification, no unread badge. `HomeworkViewModel.classify` puts a homework in
+ * the Current tab only when `event.date >= todayDate`, so a past date hides it there too. Filed
+ * at today the record stays in the Current tab, stays unseen and notifiable, and stays inside the
  * `eventDate >= today` window that `DataRemoveModel.Events` marks `keep = 0` before each sync, so
  * a record the school stops sending is pruned instead of lingering in the past forever.
  * [unknown] is what tells the UI the date is not the school's.
