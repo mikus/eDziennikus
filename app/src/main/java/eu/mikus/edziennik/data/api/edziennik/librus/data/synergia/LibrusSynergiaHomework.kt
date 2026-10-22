@@ -9,6 +9,7 @@ import eu.mikus.edziennik.data.api.POST
 import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.ENDPOINT_LIBRUS_SYNERGIA_HOMEWORK
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusSynergia
+import eu.mikus.edziennik.data.api.edziennik.librus.data.api.librusEventDate
 import eu.mikus.edziennik.data.api.models.DataRemoveModel
 import eu.mikus.edziennik.data.db.entity.Event
 import eu.mikus.edziennik.data.db.entity.Metadata
@@ -40,6 +41,8 @@ class LibrusSynergiaHomework(override val data: DataLibrus,
 
         )) { text ->
             val doc = Jsoup.parse(text)
+            // one clock read for the whole callback: the date fallback and `seen` below must agree
+            val today = Date.getToday()
 
             doc.select("table.myHomeworkTable > tbody").firstOrNull()?.also { homeworkTable ->
                 val homeworkElements = homeworkTable.children()
@@ -55,23 +58,26 @@ class LibrusSynergiaHomework(override val data: DataLibrus,
                             ?: -1
                     val topic = elements[2].text().trim()
                     val addedDate = Date.fromY_m_d(elements[4].text().trim())
-                    val eventDate = Date.fromY_m_d(elements[6].text().trim())
+                    val eventDate = librusEventDate(elements[6].text().trim(), today)
                     val id = "/podglad/([0-9]+)'".toRegex().find(
                             elements[9].select("input").attr("onclick")
                     )?.get(1)?.toLong() ?: return@forEach
 
-                    val lessons = data.db.timetableDao().getAllForDateNow(profileId, eventDate)
-                    val startTime = lessons.firstOrNull { it.subjectId == subjectId }?.startTime
+                    // an unknown date is filed at today, which must not lend the homework today's lesson time
+                    val startTime = if (eventDate.unknown) null else {
+                        val lessons = data.db.timetableDao().getAllForDateNow(profileId, eventDate.date)
+                        lessons.firstOrNull { it.subjectId == subjectId }?.startTime
+                    }
 
                     val seen = when (profile.empty) {
                         true -> true
-                        else -> eventDate < Date.getToday()
+                        else -> eventDate.date < today
                     }
 
                     val eventObject = Event(
                             profileId = profileId,
                             id = id,
-                            date = eventDate,
+                            date = eventDate.date,
                             time = startTime,
                             topic = topic,
                             color = null,
@@ -82,6 +88,8 @@ class LibrusSynergiaHomework(override val data: DataLibrus,
                             addedDate = addedDate.inMillis
                     )
                     eventObject.isDownloaded = false
+                    // assigned on every path: a later readable sync must clear a flag set earlier
+                    eventObject.dateUnknown = eventDate.unknown
 
                     data.eventList.add(eventObject)
                     data.metadataList.add(Metadata(

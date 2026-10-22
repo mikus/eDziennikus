@@ -30,7 +30,7 @@ class LibrusApiHomework(override val data: DataLibrus,
 
             homeworkList?.forEach { homework ->
                 val id = homework.getLong("Id") ?: return@forEach
-                val eventDate = Date.fromY_m_d(homework.getString("DueDate"))
+                val eventDate = librusEventDate(homework.getString("DueDate"), Date.getToday())
                 val topic = homework.getString("Topic") + "\n" + homework.getString("Text")
                 val teacherId = homework.getJsonObject("Teacher")?.getLong("Id") ?: -1
                 val addedDate = Date.fromY_m_d(homework.getString("Date"))
@@ -38,7 +38,7 @@ class LibrusApiHomework(override val data: DataLibrus,
                 val eventObject = Event(
                         profileId = profileId,
                         id = id,
-                        date = eventDate,
+                        date = eventDate.date,
                         time = null,
                         topic = topic,
                         color = null,
@@ -48,6 +48,8 @@ class LibrusApiHomework(override val data: DataLibrus,
                         teamId = -1,
                         addedDate = addedDate.inMillis
                 )
+                // assigned on every path: a later readable sync must clear a flag set earlier
+                eventObject.dateUnknown = eventDate.unknown
 
                 data.eventList.add(eventObject)
                 data.metadataList.add(Metadata(

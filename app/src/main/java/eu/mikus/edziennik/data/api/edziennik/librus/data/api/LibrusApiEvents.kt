@@ -36,7 +36,7 @@ class LibrusApiEvents(override val data: DataLibrus,
 
             events?.forEach { event ->
                 val id = event.getLong("Id") ?: return@forEach
-                val eventDate = Date.fromY_m_d(event.getString("Date"))
+                val eventDate = librusEventDate(event.getString("Date"), Date.getToday())
                 var topic = event.getString("Content")?.trim() ?: ""
                 val type = event.getJsonObject("Category")?.getLong("Id") ?: -1
                 val teacherId = event.getJsonObject("CreatedBy")?.getLong("Id") ?: -1
@@ -57,7 +57,7 @@ class LibrusApiEvents(override val data: DataLibrus,
                 val eventObject = Event(
                         profileId = profileId,
                         id = id,
-                        date = eventDate,
+                        date = eventDate.date,
                         time = startTime,
                         topic = topic,
                         color = null,
@@ -67,6 +67,8 @@ class LibrusApiEvents(override val data: DataLibrus,
                         teamId = teamId,
                         addedDate = addedDate
                 )
+                // assigned on every path: a later readable sync must clear a flag set earlier
+                eventObject.dateUnknown = eventDate.unknown
 
                 data.eventList.add(eventObject)
                 data.metadataList.add(
