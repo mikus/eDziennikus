@@ -30,9 +30,17 @@ internal data class LibrusEventDate(val date: Date, val unknown: Boolean)
  * `LibrusSynergiaHomework` is `eventDate < today`, so a past date marks the homework seen and
  * notified: no notification, no unread badge. `HomeworkViewModel.classify` puts a homework in
  * the Current tab only when `event.date >= todayDate`, so a past date hides it there too. Filed
- * at today the record stays in the Current tab, stays unseen and notifiable, and stays inside the
- * `eventDate >= today` window that `DataRemoveModel.Events` marks `keep = 0` before each sync, so
- * a record the school stops sending is pruned instead of lingering in the past forever.
+ * at today the record stays unseen and notifiable, and because `eventDate` is not among the
+ * selective update's `skippedColumns`, every sync that still sees the record re-files it at that
+ * day - so it keeps its place in the Current tab and inside the `eventDate >= today` window that
+ * `DataRemoveModel.Events` marks `keep = 0` before each sync.
+ *
+ * Those last two hold only while the school keeps sending it. The filing date is frozen at the
+ * last sync that saw the record, while `DataRemoveModel.Events.commit` re-reads `Date.getToday()`
+ * at prune time, so a record the school stops sending is pruned only if it disappears on its
+ * filing day; across a midnight the mark pass skips it, `keep` stays 1, and nothing deletes it.
+ * That is no worse than the 2019-01-01 this replaces, which never matched the window at all - but
+ * it is not a cure for it either.
  * [unknown] is what tells the UI the date is not the school's.
  *
  * [today] is a parameter so that a caller which also compares against today can hold one clock

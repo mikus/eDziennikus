@@ -130,8 +130,10 @@ class EventRowDetailsTest {
         // surface that really does imply the date, a KNOWN date stays hidden exactly as it did
         // before this phase. Without this case the condition is indistinguishable from `if (true)`,
         // because every other case here has showDate = true or dateUnknown = true.
-        // showWeekDay is false too, as both real callers pass it — LessonDetailsDialog.kt:348 and
-        // DayDialog.kt:151 — so the line is the time and the subject alone.
+        // showWeekDay is false too, as the one EventRow call site that reaches this combination
+        // passes it — LessonDetailsDialog.kt:348-349 — so the line is the time and the subject
+        // alone. DayDialog.kt:151-152 passes the same pair, but it configures an EventListAdapter
+        // and so renders through EventViewHolder.onBind, the twin the KDoc above excludes.
         val text = render(event(farDate(), unknown = false), showWeekDay = false, showDate = false)
 
         assertEquals(
