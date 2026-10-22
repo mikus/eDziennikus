@@ -91,8 +91,9 @@ class Config(db: AppDb) : BaseConfig(db) {
      * A `dataVersion` gate would therefore fire on the wrong devices and record nothing.
      *
      * [widgetBindingsRepaired] is a config **row**, not a column - the `config` table is
-     * `(profileId, key, value)` - so this needs no schema change, which matters because `AppDb` is
-     * `version = 1` with `fallbackToDestructiveMigration()` and no `Migration` objects.
+     * `(profileId, key, value)` - so this needs no schema change, which matters because a version
+     * bump without a registered `Migration(n, n + 1)` still wipes the database: `AppDb` has one
+     * migration (`MIGRATION_1_2`) and keeps `fallbackToDestructiveMigration()`.
      *
      * The flag is set after the call, not before it, so a failure leaves the repair to retry on the
      * next launch rather than recording a sweep that did not happen. The repair is idempotent, so a
