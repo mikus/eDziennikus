@@ -67,11 +67,15 @@ class EventViewHolder(
         // because EventListAdapter.kt:23 defaults showWeekDay to false, NoteManager.kt:143-146
         // omits it and DayDialog.kt:151 passes it false — a guard there would be dead code.
         // showDate IS reachable, via the note header (NoteManager.kt:146).
+        // The unknown label survives showDate = false: that flag means "the date is implied by the
+        // surface", which an unknown date makes false, and the row is filed at today — so staying
+        // silent in DayDialog.kt:149 (the only caller here that passes it false, under a title
+        // printing the weekday and date) would read as "due today".
         b.details.text = mutableListOf(
             if (adapter.showWeekDay)
                 Week.getFullDayName(item.date.weekDay)
             else null,
-            if (adapter.showDate)
+            if (adapter.showDate || item.dateUnknown)
                 when {
                     item.dateUnknown -> app.getString(R.string.event_date_unknown)
                     else -> item.date.getRelativeString(activity, 7) ?: item.date.formattedStringShort

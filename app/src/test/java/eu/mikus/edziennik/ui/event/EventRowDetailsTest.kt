@@ -104,16 +104,24 @@ class EventRowDetailsTest {
     }
 
     @Test
-    fun `showDate false still hides the unknown label`() {
-        // showWeekDay is left at true: an unknown date suppresses the weekday on its own, so the
-        // line is the time and the subject only.
+    fun `showDate false still shows the unknown label`() {
+        // showDate = false means "the date is implied by what you are looking at" — a day dialog
+        // (DayDialog.kt:149) under a title printing the weekday and date, or today's lesson details
+        // (LessonDetailsDialog.kt:345). For an unknown date that implication is false, and the row
+        // is filed at today, so staying silent here reads as "due today" — the exact confident wrong
+        // answer this phase removes. The label must survive showDate = false.
+        // showWeekDay is left at true: an unknown date suppresses the weekday on its own.
         val text = render(event(Date.getToday(), unknown = true), showDate = false)
 
-        assertFalse(text.contains(context.getString(R.string.event_date_unknown)))
         assertEquals(
-            listOf(context.getString(R.string.event_all_day), SUBJECT).joinToString(BULLET),
+            listOf(
+                context.getString(R.string.event_date_unknown),
+                context.getString(R.string.event_all_day),
+                SUBJECT,
+            ).joinToString(BULLET),
             text,
         )
+        assertFalse(text.contains(Week.getFullDayName(Date.getToday().weekDay)))
     }
 
     private companion object {

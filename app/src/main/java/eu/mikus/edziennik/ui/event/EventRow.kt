@@ -173,7 +173,9 @@ private fun RowScope.EventTopicText(event: EventFull, query: String, highlight: 
 }
 
 /** Bullet-joined details: weekday • relative-date • [type] • time • subject(highlighted). Pure (takes
- *  Context, resolved at the composable edge). Mirrors EventViewHolder.onBind's details line.
+ *  Context, resolved at the composable edge). Mirrors EventViewHolder.onBind's details line, except
+ *  that only this side guards the weekday on dateUnknown — over there no caller can set showWeekDay,
+ *  so the guard would be dead code (the reason is spelled out at that call site).
  *  `internal`, not `private`, so EventRowDetailsTest can call it: it is not @Composable and
  *  AnnotatedString needs no composition, and a composition cannot be hosted in this test source set. */
 internal fun eventDetails(
@@ -193,7 +195,12 @@ internal fun eventDetails(
         // is left alone: it comes from the school's own TimeFrom/lessonRanges, not from the filing
         // date, so "data nieznana • 08:00" is an honest statement of a known time on an unknown day.
         if (showWeekDay && !event.dateUnknown) add(AnnotatedString(Week.getFullDayName(event.date.weekDay)))
-        if (showDate) add(
+        // `showDate = false` means "the date is implied by the surface you are looking at" — here
+        // only LessonDetailsDialog.kt:345, today's lesson. An unknown date makes that implication
+        // false, and the row is filed at today, so staying silent would read as "due today": the
+        // confident wrong answer this whole branch removes. The label therefore survives
+        // showDate = false; only the real date obeys it.
+        if (showDate || event.dateUnknown) add(
             AnnotatedString(
                 when {
                     event.dateUnknown -> context.getString(R.string.event_date_unknown)
