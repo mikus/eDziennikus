@@ -31,6 +31,7 @@ class EventFull(
         event.let {
             addedManually = it.addedManually
             blacklisted = it.blacklisted
+            dateUnknown = it.dateUnknown
             isDownloaded = it.isDownloaded
             homeworkBody = it.homeworkBody
             attachmentIds = it.attachmentIds

@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import eu.mikus.edziennik.config.db.ConfigDao
 import eu.mikus.edziennik.config.db.ConfigEntry
 import eu.mikus.edziennik.data.db.converter.*
@@ -43,7 +45,7 @@ import eu.mikus.edziennik.data.db.entity.*
     TimetableManual::class,
     Note::class,
     Metadata::class
-], version = 1)
+], version = 2)
 @TypeConverters(
         ConverterTime::class,
         ConverterDate::class,
@@ -94,10 +96,21 @@ abstract class AppDb : RoomDatabase() {
             instance ?: buildDatabase(context).also { instance = it }
         }
 
-        private fun buildDatabase(context: Context) = Room.databaseBuilder(
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE events ADD COLUMN eventDateUnknown INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        internal fun builder(context: Context, name: String) = Room.databaseBuilder(
                 context.applicationContext,
                 AppDb::class.java,
-                "edziennik.db"
-        ).fallbackToDestructiveMigration().allowMainThreadQueries().build()
+                name
+        ).addMigrations(MIGRATION_1_2)
+                // findMigrationPath runs first, so this only fires when no path exists
+                .fallbackToDestructiveMigration()
+                .allowMainThreadQueries()
+
+        private fun buildDatabase(context: Context) = builder(context, "edziennik.db").build()
     }
 }

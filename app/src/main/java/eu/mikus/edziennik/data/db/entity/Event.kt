@@ -86,6 +86,13 @@ open class Event(
     var isDone: Boolean = false
 
     /**
+     * Whether the school never gave this event a date. When true, the stored [date] is a
+     * filing date chosen by the parser, not the school's date, and must not be shown as one.
+     */
+    @ColumnInfo(name = "eventDateUnknown", defaultValue = "0")
+    var dateUnknown: Boolean = false
+
+    /**
      * Whether the full contents of the event are already stored locally.
      * There may be a need to download the full topic or body.
      */
