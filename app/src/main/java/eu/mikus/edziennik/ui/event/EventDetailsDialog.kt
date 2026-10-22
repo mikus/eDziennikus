@@ -214,9 +214,17 @@ class EventDetailsDialog(
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // The time stays: it comes from the school's own data, not from the filing date.
+                    // The day number and the month would both be today's, so they are replaced by the
+                    // label rather than shown. Not gated by a unit test — this is inside a composition
+                    // and createComposeRule cannot be hosted here (ShellPolicyTest.kt:23-26).
                     Text(ev.time?.stringHM ?: stringResource(R.string.event_all_day), style = MaterialTheme.typography.labelMedium)
-                    Text(ev.date.day.toString(), fontSize = 36.sp, fontWeight = FontWeight.Light)
-                    monthName?.let { Text(it) }
+                    if (ev.dateUnknown) {
+                        Text(stringResource(R.string.event_date_unknown), style = MaterialTheme.typography.labelMedium)
+                    } else {
+                        Text(ev.date.day.toString(), fontSize = 36.sp, fontWeight = FontWeight.Light)
+                        monthName?.let { Text(it) }
+                    }
                 }
             }
 

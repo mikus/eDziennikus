@@ -326,6 +326,7 @@
     <string name="event_added_time">Hinzugefügt:</string>
     <string name="event_all_day">den ganzen Tag</string>
     <string name="event_class_event">Klassenereignis</string>
+    <string name="event_date_unknown">Datum unbekannt</string>
     <string name="event_details_added_by_format">%1$s von %2$s</string>
     <string name="event_details_added_by_self_format">%1$s von Ihnen</string>
     <string name="event_details_shared_by_format">{cmd-share-variant} %1$s von %2$s</string>

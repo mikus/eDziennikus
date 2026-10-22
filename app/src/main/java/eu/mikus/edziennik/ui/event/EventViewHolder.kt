@@ -62,12 +62,20 @@ class EventViewHolder(
         )
         b.topic.maxLines = if (adapter.simpleMode) 2 else 3
 
+        // Mirrors EventRow.eventDetails — the two move together until this view holder retires.
+        // The weekday arm is deliberately NOT gated on item.dateUnknown: no caller can reach it,
+        // because EventListAdapter.kt:23 defaults showWeekDay to false, NoteManager.kt:143-146
+        // omits it and DayDialog.kt:151 passes it false — a guard there would be dead code.
+        // showDate IS reachable, via the note header (NoteManager.kt:146).
         b.details.text = mutableListOf(
             if (adapter.showWeekDay)
                 Week.getFullDayName(item.date.weekDay)
             else null,
             if (adapter.showDate)
-                item.date.getRelativeString(activity, 7) ?: item.date.formattedStringShort
+                when {
+                    item.dateUnknown -> app.getString(R.string.event_date_unknown)
+                    else -> item.date.getRelativeString(activity, 7) ?: item.date.formattedStringShort
+                }
             else null,
             if (adapter.showType && item.typeName != null)
                 item.typeName

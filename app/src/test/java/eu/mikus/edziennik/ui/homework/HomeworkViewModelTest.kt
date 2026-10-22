@@ -78,6 +78,21 @@ class HomeworkViewModelTest {
     }
 
     @Test
+    fun `an unknown-date homework is current, not past`() = runTest(dispatcher) {
+        // An unreadable date is filed at today, and the Current/Past split is by date — so filing at
+        // today is exactly what keeps such a row out of Past, where nobody would look for it. This
+        // pins the behaviour that fallback relies on; it is a regression guard, not new behaviour.
+        val unknownDate = event(1, at = todayDate).also { every { it.dateUnknown } returns true }
+        val model = vm(listOf(unknownDate))
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+        val state = model.uiState.value as HomeworkUiState.Content
+        assertEquals(listOf(1L), state.current.map { it.event.id })
+        assertTrue(state.past.isEmpty())
+        job.cancel()
+    }
+
+    @Test
     fun `blank query orders Current ascending and Past descending by date`() = runTest(dispatcher) {
         val c1 = event(1, at = Date(2026, 6, 18))
         val c2 = event(2, at = Date(2026, 6, 16))

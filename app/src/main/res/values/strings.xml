@@ -364,6 +364,7 @@
     <string name="event_added_time">Dodano:</string>
     <string name="event_all_day">cały dzień</string>
     <string name="event_class_event">wydarzenie klasowe</string>
+    <string name="event_date_unknown">data nieznana</string>
     <string name="event_details_added_by_format">%1$s przez %2$s</string>
     <string name="event_details_added_by_self_format">%1$s przez Ciebie</string>
     <string name="event_details_added_by_unknown_format" translatable="false">%1$s</string>

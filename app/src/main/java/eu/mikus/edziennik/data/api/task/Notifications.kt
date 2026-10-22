@@ -73,6 +73,20 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
         app.db.eventDao().getNotNotifiedNow().filter {
             it.date >= today
         }.forEach { event ->
+            // An unreadable date is filed at today, which is also what lets the `it.date >= today`
+            // filter above let the event through at all. Stating that filing date as the due date
+            // would turn a silent drop into a confident lie, so the lock screen says it is unknown.
+            // The weekday follows the file's own missing-value idiom for this format ("-", as at
+            // :53-54). Not gated by a unit test — eventNotifications() reads the DAO off `app`;
+            // it is covered by the device smoke.
+            val dateText = when {
+                event.dateUnknown -> app.getString(R.string.event_date_unknown)
+                else -> event.date.formattedString
+            }
+            val dayName = when {
+                event.dateUnknown -> "-"
+                else -> Week.getFullDayName(event.date.weekDay)
+            }
             val text = if (event.isHomework)
                 app.getString(
                     if (event.subjectLongName.isNullOrEmpty())
@@ -80,7 +94,7 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
                     else
                         R.string.notification_homework_format,
                     event.subjectLongName,
-                    event.date.formattedString
+                    dateText
                 )
             else
                 app.getString(
@@ -89,15 +103,15 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
                     else
                         R.string.notification_event_format,
                     event.typeName ?: "wydarzenie",
-                    event.date.formattedString,
+                    dateText,
                     event.subjectLongName
                 )
             val textLong = app.getString(
                 R.string.notification_event_long_format,
                 event.typeName ?: "-",
                 event.subjectLongName ?: "-",
-                event.date.formattedString,
-                Week.getFullDayName(event.date.weekDay),
+                dateText,
+                dayName,
                 event.time?.stringHM ?: app.getString(R.string.event_all_day),
                 event.topic.take(200)
             )

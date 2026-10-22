@@ -173,8 +173,10 @@ private fun RowScope.EventTopicText(event: EventFull, query: String, highlight: 
 }
 
 /** Bullet-joined details: weekday • relative-date • [type] • time • subject(highlighted). Pure (takes
- *  Context, resolved at the composable edge). Mirrors EventViewHolder.onBind's details line. */
-private fun eventDetails(
+ *  Context, resolved at the composable edge). Mirrors EventViewHolder.onBind's details line.
+ *  `internal`, not `private`, so EventRowDetailsTest can call it: it is not @Composable and
+ *  AnnotatedString needs no composition, and a composition cannot be hosted in this test source set. */
+internal fun eventDetails(
     event: EventFull,
     query: String,
     highlight: Color,
@@ -186,8 +188,19 @@ private fun eventDetails(
     context: Context,
 ): AnnotatedString {
     val parts = buildList {
-        if (showWeekDay) add(AnnotatedString(Week.getFullDayName(event.date.weekDay)))
-        if (showDate) add(AnnotatedString(event.date.getRelativeString(context, 7) ?: event.date.formattedStringShort))
+        // An unreadable date is filed at today, so both the weekday and the date would be today's —
+        // a confident lie. Say the date is unknown instead, and drop the weekday with it. The time
+        // is left alone: it comes from the school's own TimeFrom/lessonRanges, not from the filing
+        // date, so "data nieznana • 08:00" is an honest statement of a known time on an unknown day.
+        if (showWeekDay && !event.dateUnknown) add(AnnotatedString(Week.getFullDayName(event.date.weekDay)))
+        if (showDate) add(
+            AnnotatedString(
+                when {
+                    event.dateUnknown -> context.getString(R.string.event_date_unknown)
+                    else -> event.date.getRelativeString(context, 7) ?: event.date.formattedStringShort
+                }
+            )
+        )
         if (showType && event.typeName != null) add(AnnotatedString(event.typeName!!))
         if (showTime) add(AnnotatedString(event.time?.stringHM ?: context.getString(R.string.event_all_day)))
         if (showSubject && event.subjectLongName != null) {
