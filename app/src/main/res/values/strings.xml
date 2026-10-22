@@ -785,6 +785,8 @@
     <string name="notification_event_format">%1$s dnia %2$s z %3$s</string>
     <string name="notification_event_no_subject">nieznanego przedmiotu</string>
     <string name="notification_event_no_subject_format">%1$s dnia %2$s</string>
+    <string name="notification_event_unknown_date_format">%1$s z %2$s — termin nieznany</string>
+    <string name="notification_event_unknown_date_no_subject_format">%1$s — termin nieznany</string>
     <string name="notification_filter_warning">Czy na pewno chcesz zastosować te ustawienia?\n\nNie będziesz widział informacji o niektórych danych, przez co możesz przeoczyć ważne komunikaty, wiadomości lub oceny.\n\nUstawienia zostaną zastosowane dla aktualnie otwartego profilu.</string>
     <string name="notification_get_data_cancel">Przerwij</string>
     <string name="notification_get_data_error_summary">eDziennikus: błąd</string>
@@ -796,6 +798,8 @@
     <string name="notification_grade_format">Nowa ocena (%s) z %s</string>
     <string name="notification_homework_format">Zadanie domowe z %1$s na %2$s</string>
     <string name="notification_homework_no_subject_format">Zadanie domowe na %2$s</string>
+    <string name="notification_homework_unknown_date_format">Zadanie domowe z %1$s — termin nieznany</string>
+    <string name="notification_homework_unknown_date_no_subject_format">Zadanie domowe — termin nieznany</string>
     <string name="notification_lesson_change_format">%s dnia %s - %s</string>
     <string name="notification_lucky_number_format">Dzisiaj %2$d to szczęśliwy numerek.</string>
     <string name="notification_lucky_number_later_format">Szczęsliwy numerek na %1$s to %2$d.</string>

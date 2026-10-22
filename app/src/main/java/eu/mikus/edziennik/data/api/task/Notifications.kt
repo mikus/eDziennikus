@@ -77,8 +77,9 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
             // filter above let the event through at all. Stating that filing date as the due date
             // would turn a silent drop into a confident lie, so the lock screen says it is unknown.
             // The weekday follows the file's own missing-value idiom for this format ("-", as at
-            // :53-54). Not gated by a unit test — eventNotifications() reads the DAO off `app`;
-            // it is covered by the device smoke.
+            // :53-54). Which format is picked is pinned by EventNotificationFormatTest; the
+            // arguments passed to it are not — eventNotifications() reads the DAO off `app`, so
+            // that half is covered by the device smoke.
             val dateText = when {
                 event.dateUnknown -> app.getString(R.string.event_date_unknown)
                 else -> event.date.formattedString
@@ -87,25 +88,25 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
                 event.dateUnknown -> "-"
                 else -> Week.getFullDayName(event.date.weekDay)
             }
-            val text = if (event.isHomework)
-                app.getString(
-                    if (event.subjectLongName.isNullOrEmpty())
-                        R.string.notification_homework_no_subject_format
-                    else
-                        R.string.notification_homework_format,
-                    event.subjectLongName,
-                    dateText
-                )
-            else
-                app.getString(
-                    if (event.subjectLongName.isNullOrEmpty())
-                        R.string.notification_event_no_subject_format
-                    else
-                        R.string.notification_event_format,
-                    event.typeName ?: "wydarzenie",
-                    dateText,
-                    event.subjectLongName
-                )
+            val hasSubject = !event.subjectLongName.isNullOrEmpty()
+            val typeName = event.typeName ?: "wydarzenie"
+            val format = eventNotificationFormat(event.isHomework, hasSubject, event.dateUnknown)
+            // Each format takes only the arguments it reads (see eventNotificationFormat). The
+            // unknown-date ones have no date slot, so dateText is never passed to them.
+            val text = when {
+                event.isHomework && event.dateUnknown && hasSubject ->
+                    app.getString(format, event.subjectLongName)
+                event.isHomework && event.dateUnknown ->
+                    app.getString(format)
+                event.isHomework ->
+                    app.getString(format, event.subjectLongName, dateText)
+                event.dateUnknown && hasSubject ->
+                    app.getString(format, typeName, event.subjectLongName)
+                event.dateUnknown ->
+                    app.getString(format, typeName)
+                else ->
+                    app.getString(format, typeName, dateText, event.subjectLongName)
+            }
             val textLong = app.getString(
                 R.string.notification_event_long_format,
                 event.typeName ?: "-",

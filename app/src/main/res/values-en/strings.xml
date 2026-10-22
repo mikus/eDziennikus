@@ -712,6 +712,8 @@
     <string name="notification_event_format">%1$s on %2$s from %3$s</string>
     <string name="notification_event_no_subject">unknown subject</string>
     <string name="notification_event_no_subject_format">%1$s on %2$s</string>
+    <string name="notification_event_unknown_date_format">%1$s from %2$s — date unknown</string>
+    <string name="notification_event_unknown_date_no_subject_format">%1$s — date unknown</string>
     <string name="notification_filter_warning">Are you sure you want to apply these settings?\n\nYou won\'t see information about some data, so you may miss important messages or grades.\n\nThe settings will be applied to the currently selected profile.</string>
     <string name="notification_get_data_cancel">Cancel</string>
     <string name="notification_get_data_error_summary">eDziennikus: error</string>
@@ -723,6 +725,8 @@
     <string name="notification_grade_format">New grade (%s) from %s</string>
     <string name="notification_homework_format">Homework from %s for %s</string>
     <string name="notification_homework_no_subject_format">Homework for %s</string>
+    <string name="notification_homework_unknown_date_format">Homework from %1$s — date unknown</string>
+    <string name="notification_homework_unknown_date_no_subject_format">Homework — date unknown</string>
     <string name="notification_lesson_change_format">%s on %s - %s</string>
     <string name="notification_lucky_number_format">Today %2$d is the lucky number.</string>
     <string name="notification_lucky_number_later_format">The lucky number for %1$s is %2$d.</string>

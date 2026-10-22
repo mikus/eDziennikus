@@ -711,6 +711,8 @@
     <string name="notification_event_format">%1$s auf %2$s von %3$s</string>
     <string name="notification_event_no_subject">unbekanntes Subjekt</string>
     <string name="notification_event_no_subject_format">%1$s auf %2$s</string>
+    <string name="notification_event_unknown_date_format">%1$s von %2$s — Datum unbekannt</string>
+    <string name="notification_event_unknown_date_no_subject_format">%1$s — Datum unbekannt</string>
     <string name="notification_filter_warning">Sind Sie sicher, dass Sie diese Einstellungen anwenden möchten?\n\nSie werden Informationen über einige Daten nicht sehen, so dass Sie wichtige Nachrichten oder Noten verpassen könnten.\n\nDie Einstellungen werden auf das aktuell ausgewählte Profil angewendet</string>
     <string name="notification_get_data_cancel">Abbrechen</string>
     <string name="notification_get_data_error_summary">eDziennikus: Fehler</string>
@@ -722,6 +724,8 @@
     <string name="notification_grade_format">Neue Note (%s) auf %s</string>
     <string name="notification_homework_format">Hausaufgaben auf %s für %s</string>
     <string name="notification_homework_no_subject_format">Hausaufgaben für %s</string>
+    <string name="notification_homework_unknown_date_format">Hausaufgaben auf %1$s — Datum unbekannt</string>
+    <string name="notification_homework_unknown_date_no_subject_format">Hausaufgaben — Datum unbekannt</string>
     <string name="notification_lesson_change_format">%s auf %s - %s</string>
     <string name="notification_lucky_number_format">Heute ist %2$d die Glücksnummer.</string>
     <string name="notification_lucky_number_later_format">Die Glücksnummer für %1$s ist %2$d.</string>
