@@ -124,6 +124,22 @@ class EventRowDetailsTest {
         assertFalse(text.contains(Week.getFullDayName(Date.getToday().weekDay)))
     }
 
+    @Test
+    fun `showDate false still hides a known date`() {
+        // The negative half of `showDate || dateUnknown`, and the reason the flag still exists: on a
+        // surface that really does imply the date, a KNOWN date stays hidden exactly as it did
+        // before this phase. Without this case the condition is indistinguishable from `if (true)`,
+        // because every other case here has showDate = true or dateUnknown = true.
+        // showWeekDay is false too, as both real callers pass it — LessonDetailsDialog.kt:348 and
+        // DayDialog.kt:151 — so the line is the time and the subject alone.
+        val text = render(event(farDate(), unknown = false), showWeekDay = false, showDate = false)
+
+        assertEquals(
+            listOf(context.getString(R.string.event_all_day), SUBJECT).joinToString(BULLET),
+            text,
+        )
+    }
+
     private companion object {
         const val SUBJECT = "Matematyka"
         const val BULLET = " • "
