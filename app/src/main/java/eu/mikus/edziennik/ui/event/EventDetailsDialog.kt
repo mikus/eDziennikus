@@ -337,8 +337,13 @@ class EventDetailsDialog(
                         IconicsIcon(CommunityMaterial.Icon3.cmd_pencil_outline, contentDescription = stringResource(R.string.hint_edit_event))
                     }
                 }
-                IconButton(onClick = { openInCalendar(ev) }) {
-                    IconicsIcon(CommunityMaterial.Icon.cmd_calendar_export, contentDescription = stringResource(R.string.hint_save_in_calendar))
+                // Hidden, like the edit button above: an unknown date is filed at today, and exporting
+                // that into the system calendar would leave a plausible date there that dateUnknown
+                // cannot follow. goToTimetable stays — it navigates, it does not write a record.
+                if (!ev.dateUnknown) {
+                    IconButton(onClick = { openInCalendar(ev) }) {
+                        IconicsIcon(CommunityMaterial.Icon.cmd_calendar_export, contentDescription = stringResource(R.string.hint_save_in_calendar))
+                    }
                 }
                 IconButton(onClick = { goToTimetable(ev) }) {
                     IconicsIcon(CommunityMaterial.Icon.cmd_cursor_default_click_outline, contentDescription = stringResource(R.string.hint_go_to_timetable))

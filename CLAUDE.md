@@ -46,16 +46,19 @@ When changing Librus behavior, scope changes to `librus/`; cross-cutting changes
 ### Persistence
 Single Room database `AppDb` (`data/db/`). Two kapt processors generate DAO code: `androidx.room:room-compiler` and `eu.szkolny.selective-dao:codegen` (the latter generates selective-update DAOs from annotations).
 
-> **⚠ There are no Room migrations, and bumping the DB version destroys user data.**
-> `AppDb.kt:46` is `version = 1`, `AppDb.kt:101` builds with `.fallbackToDestructiveMigration()`, the tree
-> contains **zero** Room `Migration` objects and no `addMigrations(...)` call, and
-> `app/schemas/eu.mikus.edziennik.data.db.AppDb/` holds exactly one file, `1.json` — there is no "past"
-> snapshot to migrate from. Bumping the version therefore **drops and recreates every table**: the build
-> stays green and every user silently loses their local diary.
+> **⚠ There is one Room migration, and bumping the DB version without the next one still destroys user data.**
+> `AppDb.kt:48` is `version = 2`; the only `Migration` is `AppDb.MIGRATION_1_2` (`AppDb.kt:99`), registered by
+> `addMigrations(MIGRATION_1_2)` in `AppDb.builder` (`:109`), and `app/schemas/eu.mikus.edziennik.data.db.AppDb/`
+> holds `1.json` and `2.json`. The same builder **still calls `.fallbackToDestructiveMigration()`** (`:111`),
+> deliberately: `RoomOpenHelper.onUpgrade` consults `findMigrationPath` first, so the fallback fires **only when
+> no path exists** (checked against Room 2.4.3 bytecode) — which is why the two coexist safely today. It is also
+> the trap: bump to `version = 3` **without** writing a `Migration(2, 3)` and adding it to `AppDb.builder`'s
+> `addMigrations(...)` chain and there is no path, so Room **drops and recreates every table** — the build stays
+> green and every user silently loses their local diary.
 >
-> Changing the schema is a **flag-and-confirm** change (see "Safe-change rules"). Doing it safely means
-> first replacing `.fallbackToDestructiveMigration()` with real `Migration` objects wired through
-> `addMigrations(...)`, which is its own piece of work — not a step inside a feature.
+> Changing the schema is a **flag-and-confirm** change (see "Safe-change rules"): the version bump and its
+> `Migration(n, n + 1)` land together, registered in that `addMigrations(...)` chain. Don't edit any committed
+> schema JSON; Room regenerates them.
 
 ### Config (`config/`)
 
@@ -228,7 +231,7 @@ Robolectric tests can instantiate the production `App.onCreate()` directly — t
 These changes have hidden coordination cost or break things in non-obvious ways. **Flag and confirm before doing any of them**, even if the diff looks small:
 
 - **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `./gradlew assembleDebug lint` on every push/PR and uploads nothing; `release.yml` triggers on `v*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
-- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = 1` with `.fallbackToDestructiveMigration()` and there are no `Migration` objects, so **bumping the version wipes every user's data while the build stays green**. Don't edit `app/schemas/…/1.json` either; Room regenerates it.
+- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = 2` with one `Migration` (`MIGRATION_1_2`) **and** `.fallbackToDestructiveMigration()` still on the builder, so **bumping the version without a registered `Migration(n, n + 1)` wipes every user's data while the build stays green** — the fallback fires exactly when no migration path exists. Register the new migration in `AppDb.builder`'s `addMigrations(...)` chain. Don't edit any committed `app/schemas/…/*.json`; Room regenerates them.
 - **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker is the standard tool; it is compiled into every build but only captures when `devMode` **and** `enableChucker` are both true — see Networking).
 - **`eu.mikus.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and sideload identity depend on exact values. Changing the application ID forces users to reinstall and loses their data.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
