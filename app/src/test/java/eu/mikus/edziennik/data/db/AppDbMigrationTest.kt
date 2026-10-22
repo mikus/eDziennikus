@@ -52,12 +52,23 @@ class AppDbMigrationTest {
         createV1Database(context, DB_NAME)
         insertV1Event(context, DB_NAME, profileId = 1, eventId = 100L)
 
-        val row = openV2(context, DB_NAME).also { db = it }.eventDao().getByIdNow(1, 100L)
+        val appDb = openV2(context, DB_NAME).also { db = it }
+        val row = appDb.eventDao().getByIdNow(1, 100L)
 
         // if the destructive fallback fired instead of the migration, the row is gone
         assertNotNull(row)
         assertEquals("zadanie z polskiego", row!!.topic)
         assertEquals("2026-06-20", row.date.stringY_m_d)
+        // what SQLite holds for the migrated row. The entity assertion below cannot stand alone:
+        // Event.dateUnknown initialises to false, and Room's raw-query mapping skips a column
+        // missing from the cursor, so it would pass whatever the stored value is.
+        val stored = appDb.openHelper.readableDatabase
+            .query("SELECT eventDateUnknown FROM events WHERE profileId = 1 AND eventId = 100")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                cursor.getInt(0)
+            }
+        assertEquals(0, stored)
         assertFalse(row.dateUnknown)
     }
 
