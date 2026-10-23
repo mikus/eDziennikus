@@ -32,6 +32,9 @@ import org.robolectric.annotation.Config
  * schema Room validates against, and it is opened through [AppDb.builder] — the same chain
  * production uses — so these tests prove production has the migration, not that the test does.
  *
+ * Not every test here is a migration test: the flag's write round trip and the selective update
+ * that clears it share this file because they need the same Robolectric + AppDb setup.
+ *
  * It needs a real `Context` and a real SQLite file, hence Robolectric (JUnit 4, via Vintage).
  * Unit tests run with the working directory set to `app/`.
  */
@@ -103,7 +106,7 @@ class AppDbMigrationTest {
     /**
      * Not a migration test. It lives here because this file already hosts a non-migration round
      * trip (`an entity written with the flag set round-trips`), and splitting would duplicate the
-     * Robolectric + in-memory AppDb setup for one assertion.
+     * Robolectric + AppDb setup for one assertion.
      *
      * Drives EventDaoSelective directly: EventDao.update binds EventDaoSelective(App.db), a
      * lateinit global this test never initialises.
@@ -113,19 +116,26 @@ class AppDbMigrationTest {
         createV1Database(context, DB_NAME)
         val appDb = openV2(context, DB_NAME).also { db = it }
         appDb.eventDao().add(newEvent(profileId = 1, id = 300L).also { it.dateUnknown = true })
+        // the flag is set before the update, so the 0 below is a cleared 1, not a column that
+        // never held one
+        assertEquals(1, storedDateUnknown(appDb, 300L))
 
         EventDaoSelective(appDb).update(newEvent(profileId = 1, id = 300L))
 
-        // read the column, not the entity: Event.dateUnknown initialises to false, so an
-        // entity-level assertion would pass whatever SQLite holds
-        val stored = appDb.openHelper.readableDatabase
-            .query("SELECT eventDateUnknown FROM events WHERE profileId = 1 AND eventId = 300")
+        assertEquals(0, storedDateUnknown(appDb, 300L))
+    }
+
+    /**
+     * Reads the column, not the entity: Event.dateUnknown initialises to false, so an
+     * entity-level assertion would pass whatever SQLite holds. A missing row fails here.
+     */
+    private fun storedDateUnknown(appDb: AppDb, eventId: Long): Int =
+        appDb.openHelper.readableDatabase
+            .query("SELECT eventDateUnknown FROM events WHERE profileId = 1 AND eventId = $eventId")
             .use { cursor ->
                 assertTrue(cursor.moveToFirst())
                 cursor.getInt(0)
             }
-        assertEquals(0, stored)
-    }
 
     private fun newEvent(profileId: Int, id: Long) = Event(
         profileId = profileId,
