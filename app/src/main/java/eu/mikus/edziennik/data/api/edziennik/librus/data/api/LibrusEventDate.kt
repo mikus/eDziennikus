@@ -4,14 +4,17 @@
 
 package eu.mikus.edziennik.data.api.edziennik.librus.data.api
 
+import eu.mikus.edziennik.data.db.entity.Event
 import eu.mikus.edziennik.utils.models.Date
+import eu.mikus.edziennik.utils.models.Time
 
 /**
  * The date a Librus event is filed under, and whether the school actually gave it.
  *
  * When [unknown] is true, [date] is a filing date chosen by the parser, not the school's date.
  *
- * A caller must copy [unknown] onto `Event.dateUnknown` on every path, `false` included.
+ * [librusEvent] copies [unknown] onto `Event.dateUnknown` on every path, `false` included, so a
+ * caller building an event from this value never does it by hand.
  * `EventDao.update` is a selective update that writes `eventDateUnknown` on every sync, so
  * copying `false` is what clears a flag an earlier sync set once the school's date becomes
  * readable. Leaving it unassigned would only look right because the field starts false.
@@ -49,3 +52,52 @@ internal data class LibrusEventDate(val date: Date, val unknown: Boolean)
 internal fun librusEventDate(raw: String?, today: Date): LibrusEventDate =
     Date.fromY_m_dOrNull(raw)?.let { LibrusEventDate(it, unknown = false) }
         ?: LibrusEventDate(today, unknown = true)
+
+/**
+ * Builds the `Event` a Librus parser files for [eventDate], copying [LibrusEventDate.unknown]
+ * onto `Event.dateUnknown` as part of construction.
+ *
+ * It takes the whole [LibrusEventDate] rather than its date so the two halves cannot be pulled
+ * apart: a caller that has the pair has already handed over the flag, and there is no second
+ * statement left to forget. `dateUnknown` is a body property of `Event`, not a constructor
+ * parameter, so building the entity by hand leaves the write optional, and deleting it looks like
+ * tidying a redundant assignment to the default.
+ *
+ * The flag is written on every path, `false` included. The generated selective `EventDao.update`
+ * binds `eventDateUnknown` on every sync, and the column is not among its `skippedColumns`, so an
+ * event built without the write does not merely miss the flag - it clears one an earlier sync
+ * set.
+ *
+ * This is a free function and not a member of [LibrusEventDate] on purpose. A two-field value
+ * object should not know how to assemble the whole entity; the factory is a Pure Fabrication
+ * that carries the construction rule so the value object can stay a pair.
+ *
+ * No parameter has a default, so a parser cannot silently fall back on the entity's.
+ */
+internal fun librusEvent(
+    profileId: Int,
+    id: Long,
+    eventDate: LibrusEventDate,
+    time: Time?,
+    topic: String,
+    color: Int?,
+    type: Long,
+    teacherId: Long,
+    subjectId: Long,
+    teamId: Long,
+    addedDate: Long,
+): Event = Event(
+    profileId = profileId,
+    id = id,
+    date = eventDate.date,
+    time = time,
+    topic = topic,
+    color = color,
+    type = type,
+    teacherId = teacherId,
+    subjectId = subjectId,
+    teamId = teamId,
+    addedDate = addedDate,
+).also {
+    it.dateUnknown = eventDate.unknown
+}
