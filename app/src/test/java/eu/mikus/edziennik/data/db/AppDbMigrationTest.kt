@@ -7,6 +7,7 @@ import android.app.Application
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import com.google.gson.JsonParser
+import eu.mikus.edziennik.data.db.dao.EventDaoSelective
 import eu.mikus.edziennik.data.db.entity.Event
 import eu.mikus.edziennik.data.db.entity.Metadata
 import eu.mikus.edziennik.data.db.enums.MetadataType
@@ -97,6 +98,33 @@ class AppDbMigrationTest {
         val metadata = Metadata(1, MetadataType.EVENT, 200L, false, false)
         assertTrue(newEvent(profileId = 1, id = 200L).also { it.dateUnknown = true }
             .withMetadata(metadata).dateUnknown)
+    }
+
+    /**
+     * Not a migration test. It lives here because this file already hosts a non-migration round
+     * trip (`an entity written with the flag set round-trips`), and splitting would duplicate the
+     * Robolectric + in-memory AppDb setup for one assertion.
+     *
+     * Drives EventDaoSelective directly: EventDao.update binds EventDaoSelective(App.db), a
+     * lateinit global this test never initialises.
+     */
+    @Test
+    fun `the selective update clears a stored unknown flag`() {
+        createV1Database(context, DB_NAME)
+        val appDb = openV2(context, DB_NAME).also { db = it }
+        appDb.eventDao().add(newEvent(profileId = 1, id = 300L).also { it.dateUnknown = true })
+
+        EventDaoSelective(appDb).update(newEvent(profileId = 1, id = 300L))
+
+        // read the column, not the entity: Event.dateUnknown initialises to false, so an
+        // entity-level assertion would pass whatever SQLite holds
+        val stored = appDb.openHelper.readableDatabase
+            .query("SELECT eventDateUnknown FROM events WHERE profileId = 1 AND eventId = 300")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                cursor.getInt(0)
+            }
+        assertEquals(0, stored)
     }
 
     private fun newEvent(profileId: Int, id: Long) = Event(
