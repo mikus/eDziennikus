@@ -14,10 +14,8 @@ import eu.mikus.edziennik.utils.models.Time
  * When [unknown] is true, [date] is a filing date chosen by the parser, not the school's date.
  *
  * [librusEvent] copies [unknown] onto `Event.dateUnknown` on every path, `false` included, so a
- * caller building an event from this value never does it by hand.
- * `EventDao.update` is a selective update that writes `eventDateUnknown` on every sync, so
- * copying `false` is what clears a flag an earlier sync set once the school's date becomes
- * readable. Leaving it unassigned would only look right because the field starts false.
+ * caller building an event from this value never does it by hand. See [librusEvent] for why
+ * copying `false` matters.
  */
 internal data class LibrusEventDate(val date: Date, val unknown: Boolean)
 
@@ -66,7 +64,8 @@ internal fun librusEventDate(raw: String?, today: Date): LibrusEventDate =
  * The flag is written on every path, `false` included. The generated selective `EventDao.update`
  * binds `eventDateUnknown` on every sync, and the column is not among its `skippedColumns`, so an
  * event built without the write does not merely miss the flag - it clears one an earlier sync
- * set.
+ * set. Copying `false` is likewise what clears that flag once the school's date becomes readable;
+ * leaving it unassigned would only look right because the field starts false.
  *
  * This is a free function and not a member of [LibrusEventDate] on purpose. A two-field value
  * object should not know how to assemble the whole entity; the factory is a Pure Fabrication

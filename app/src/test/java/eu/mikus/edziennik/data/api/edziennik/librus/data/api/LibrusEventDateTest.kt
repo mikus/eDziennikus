@@ -92,9 +92,10 @@ class LibrusEventDateTest {
     }
 
     @Test fun `a readable date is carried as not unknown`() {
-        // Review Focus 1. Cannot fail while Event.dateUnknown initialises to false - it documents
-        // the contract, it does not pin it. What pins the clearing half is a DAO-level test of the
-        // selective update.
+        // The not-unknown half of the pair. The assertFalse below cannot fail while
+        // Event.dateUnknown initialises to false - it documents the contract, it does not pin it.
+        // What pins the clearing half is a DAO-level test of the selective update. The assertEquals
+        // below can fail: it reddens if the factory stops copying the date.
         val known = Date(2026, 9, 30)
         val built = event(LibrusEventDate(known, unknown = false))
         assertFalse(built.dateUnknown)
@@ -108,9 +109,10 @@ class LibrusEventDateTest {
     }
 
     @Test fun `every parameter reaches the entity unchanged`() {
-        // Review Focus 2: id, teacherId, subjectId, teamId, addedDate and type are all Long, so
-        // the compiler accepts any swap among them; the helper gives each a distinct value and
-        // this reads each one back. time (Time?) and color (Int?) are checked beside them.
+        // Guards against a swapped argument. id, teacherId, subjectId, teamId, addedDate and type
+        // are all Long, so the compiler accepts any swap among them; the helper gives each a
+        // distinct value and this reads each one back. time (Time?) and color (Int?) are checked
+        // beside them.
         val built = event(
             LibrusEventDate(today, unknown = false),
             time = Time(9, 5, 0),
