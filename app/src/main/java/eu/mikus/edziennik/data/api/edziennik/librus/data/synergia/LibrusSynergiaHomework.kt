@@ -9,6 +9,7 @@ import eu.mikus.edziennik.data.api.POST
 import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.ENDPOINT_LIBRUS_SYNERGIA_HOMEWORK
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusSynergia
+import eu.mikus.edziennik.data.api.edziennik.librus.data.api.librusEvent
 import eu.mikus.edziennik.data.api.edziennik.librus.data.api.librusEventDate
 import eu.mikus.edziennik.data.api.models.DataRemoveModel
 import eu.mikus.edziennik.data.db.entity.Event
@@ -74,10 +75,10 @@ class LibrusSynergiaHomework(override val data: DataLibrus,
                         else -> eventDate.date < today
                     }
 
-                    val eventObject = Event(
+                    val eventObject = librusEvent(
                             profileId = profileId,
                             id = id,
-                            date = eventDate.date,
+                            eventDate = eventDate,
                             time = startTime,
                             topic = topic,
                             color = null,
@@ -88,8 +89,6 @@ class LibrusSynergiaHomework(override val data: DataLibrus,
                             addedDate = addedDate.inMillis
                     )
                     eventObject.isDownloaded = false
-                    // assigned on every path: a later readable sync must clear a flag set earlier
-                    eventObject.dateUnknown = eventDate.unknown
 
                     data.eventList.add(eventObject)
                     data.metadataList.add(Metadata(

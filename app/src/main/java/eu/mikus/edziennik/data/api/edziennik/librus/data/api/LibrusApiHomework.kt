@@ -37,10 +37,10 @@ class LibrusApiHomework(override val data: DataLibrus,
                 val teacherId = homework.getJsonObject("Teacher")?.getLong("Id") ?: -1
                 val addedDate = Date.fromY_m_d(homework.getString("Date"))
 
-                val eventObject = Event(
+                val eventObject = librusEvent(
                         profileId = profileId,
                         id = id,
-                        date = eventDate.date,
+                        eventDate = eventDate,
                         time = null,
                         topic = topic,
                         color = null,
@@ -50,8 +50,6 @@ class LibrusApiHomework(override val data: DataLibrus,
                         teamId = -1,
                         addedDate = addedDate.inMillis
                 )
-                // assigned on every path: a later readable sync must clear a flag set earlier
-                eventObject.dateUnknown = eventDate.unknown
 
                 data.eventList.add(eventObject)
                 data.metadataList.add(Metadata(

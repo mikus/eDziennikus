@@ -56,10 +56,10 @@ class LibrusApiEvents(override val data: DataLibrus,
                     topic += "\n\n$text$url"
                 }
 
-                val eventObject = Event(
+                val eventObject = librusEvent(
                         profileId = profileId,
                         id = id,
-                        date = eventDate.date,
+                        eventDate = eventDate,
                         time = startTime,
                         topic = topic,
                         color = null,
@@ -69,8 +69,6 @@ class LibrusApiEvents(override val data: DataLibrus,
                         teamId = teamId,
                         addedDate = addedDate
                 )
-                // assigned on every path: a later readable sync must clear a flag set earlier
-                eventObject.dateUnknown = eventDate.unknown
 
                 data.eventList.add(eventObject)
                 data.metadataList.add(
