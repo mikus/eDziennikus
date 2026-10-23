@@ -93,7 +93,8 @@ class LibrusEventDateTest {
 
     @Test fun `a readable date is carried as not unknown`() {
         // Review Focus 1. Cannot fail while Event.dateUnknown initialises to false - it documents
-        // the contract, it does not pin it. Task 3 is what pins the clearing half.
+        // the contract, it does not pin it. What pins the clearing half is a DAO-level test of the
+        // selective update.
         val known = Date(2026, 9, 30)
         val built = event(LibrusEventDate(known, unknown = false))
         assertFalse(built.dateUnknown)
@@ -106,13 +107,25 @@ class LibrusEventDateTest {
         assertEquals(today, built.date)
     }
 
-    @Test fun `the nullable fields are not transposed`() {
-        // Review Focus 2: time and color are the only two nullable parameters and sit next to
-        // neither each other nor their own types' neighbours.
-        val built = event(LibrusEventDate(today, unknown = false), time = Time(9, 5, 0), color = 0x112233)
+    @Test fun `every parameter reaches the entity unchanged`() {
+        // Review Focus 2: id, teacherId, subjectId, teamId, addedDate and type are all Long, so
+        // the compiler accepts any swap among them; the helper gives each a distinct value and
+        // this reads each one back. time (Time?) and color (Int?) are checked beside them.
+        val built = event(
+            LibrusEventDate(today, unknown = false),
+            time = Time(9, 5, 0),
+            color = 0x112233,
+        )
+        assertEquals(1, built.profileId)
+        assertEquals(42L, built.id)
+        assertEquals(today, built.date)
         assertEquals(Time(9, 5, 0), built.time)
-        assertEquals(0x112233, built.color)
         assertEquals("zadanie z polskiego", built.topic)
+        assertEquals(0x112233, built.color)
         assertEquals(Event.TYPE_HOMEWORK, built.type)
+        assertEquals(7L, built.teacherId)
+        assertEquals(8L, built.subjectId)
+        assertEquals(9L, built.teamId)
+        assertEquals(1_000L, built.addedDate)
     }
 }
