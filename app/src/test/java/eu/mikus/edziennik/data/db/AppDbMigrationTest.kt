@@ -132,11 +132,19 @@ class AppDbMigrationTest {
      * Not a migration test, and it drives EventDaoSelective directly - both for the reasons given
      * on the test above.
      *
-     * Characterizes existing DAO behaviour that a commit body relies on: an event stored with
-     * "000000" (what an absent or unreadable TimeFrom with no lesson range used to be filed as)
-     * heals to NULL the next time the endpoint sends it, because `eventTime` is not among the
-     * selective update's `skippedColumns`. A row the school no longer sends is never updated and
-     * keeps "000000".
+     * Pins one DAO fact: a selective update whose event has a null `time` clears a stored "000000"
+     * to NULL, because `eventTime` is not among the selective update's `skippedColumns`. "000000"
+     * is what an absent or unreadable TimeFrom with no lesson range used to be filed as.
+     *
+     * What such a row holds after later syncs is not pinned here. A sync that saves the event from
+     * the HomeWorks endpoint again writes over it the time `LibrusApiEvents` read for it then,
+     * through `librusEventTime`: NULL only while the lesson-range lookup finds no range and
+     * TimeFrom is absent or unreadable; otherwise the range's start or the TimeFrom read, which is
+     * "000000" again for a TimeFrom of "00:00" or "00:00:00". An event the school stops sending is
+     * not rewritten by that endpoint, but need not keep "000000" either: a future one can still be
+     * deleted by a prune, such as that endpoint's own `futureExceptTypes` for a type other than
+     * `TYPE_HOMEWORK` and `TYPE_PT_MEETING`, or another endpoint's `futureWithType(TYPE_HOMEWORK)`
+     * for one stored with no category id, as `TYPE_HOMEWORK`.
      */
     @Test
     fun `the selective update clears a stored midnight time`() {
