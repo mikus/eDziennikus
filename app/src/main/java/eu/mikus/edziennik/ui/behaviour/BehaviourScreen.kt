@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -46,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.full.NoticeFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
-import eu.mikus.edziennik.utils.models.Date
 
 @Composable
 fun BehaviourScreen(
@@ -177,7 +177,10 @@ private fun NoticeRow(notice: NoticeFull) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
-                    val date = remember(notice.addedDate) { Date.fromMillis(notice.addedDate).formattedString }
+                    val context = LocalContext.current
+                    // Keyed on addedDate, the only field of the notice that the text reads, and on
+                    // context, from which the unknown label is resolved.
+                    val date = remember(notice.addedDate, context) { noticeDateText(notice, context) }
                     Text(
                         date,
                         style = MaterialTheme.typography.labelMedium,

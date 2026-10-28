@@ -329,6 +329,7 @@
     <string name="event_all_day">all day</string>
     <string name="event_class_event">class event</string>
     <string name="event_date_unknown">date unknown</string>
+    <string name="notice_date_unknown">date unknown</string>
     <string name="event_details_added_by_format">%1$s by %2$s</string>
     <string name="event_details_added_by_self_format">%1$s by you</string>
     <string name="event_details_shared_by_format">{cmd-share-variant} %1$s by %2$s</string>

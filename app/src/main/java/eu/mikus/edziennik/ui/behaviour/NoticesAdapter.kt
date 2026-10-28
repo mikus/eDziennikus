@@ -20,7 +20,6 @@ import eu.mikus.edziennik.data.db.entity.Notice
 import eu.mikus.edziennik.data.db.full.NoticeFull
 import eu.mikus.edziennik.utils.BetterLink
 import eu.mikus.edziennik.utils.Utils.bs
-import eu.mikus.edziennik.utils.models.Date
 
 class NoticesAdapter//getting the context and product list with constructor
 (private val context: Context, var noticeList: List<NoticeFull>) : RecyclerView.Adapter<NoticesAdapter.ViewHolder>() {
@@ -44,7 +43,7 @@ class NoticesAdapter//getting the context and product list with constructor
             holder.noticesItemReason.text = notice.text
             holder.noticesItemTeacherName.text = notice.teacherName
         }
-        holder.noticesItemAddedDate.text = Date.fromMillis(notice.addedDate).formattedString
+        holder.noticesItemAddedDate.text = noticeDateText(notice, context)
 
         val style = noticeTypeStyle(notice.type)
         holder.noticesItemType.setImageDrawable(
