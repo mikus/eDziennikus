@@ -9,12 +9,9 @@ import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.ENDPOINT_LIBRUS_API_TEACHER_FREE_DAYS
 import eu.mikus.edziennik.data.api.edziennik.librus.data.LibrusApi
 import eu.mikus.edziennik.data.db.entity.Metadata
-import eu.mikus.edziennik.data.db.entity.TeacherAbsence
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.ext.*
-import eu.mikus.edziennik.utils.models.Date
-import eu.mikus.edziennik.utils.models.Time
 
 class LibrusApiTeacherFreeDays(override val data: DataLibrus,
                                override val lastSync: Long?,
@@ -33,31 +30,14 @@ class LibrusApiTeacherFreeDays(override val data: DataLibrus,
             val teacherAbsences = json.getJsonArray("TeacherFreeDays")?.asJsonObjectList()
 
             teacherAbsences?.forEach { teacherAbsence ->
-                val id = teacherAbsence.getLong("Id") ?: return@forEach
-                val teacherId = teacherAbsence.getJsonObject("Teacher")?.getLong("Id")
+                val teacherAbsenceObject = librusTeacherAbsence(profileId, teacherAbsence)
                         ?: return@forEach
-                val dateFrom = Date.fromY_m_d(teacherAbsence.getString("DateFrom"))
-                val dateTo = Date.fromY_m_d(teacherAbsence.getString("DateTo"))
-                val timeFrom = Time.fromH_m_sOrNull(teacherAbsence.getString("TimeFrom"))
-                val timeTo = Time.fromH_m_sOrNull(teacherAbsence.getString("TimeTo"))
-
-                val teacherAbsenceObject = TeacherAbsence(
-                        profileId = profileId,
-                        id = id,
-                        type = -1L,
-                        name = null,
-                        dateFrom = dateFrom,
-                        dateTo = dateTo,
-                        timeFrom = timeFrom,
-                        timeTo = timeTo,
-                        teacherId = teacherId
-                )
 
                 data.teacherAbsenceList.add(teacherAbsenceObject)
                 data.metadataList.add(Metadata(
                         profileId,
                         MetadataType.TEACHER_ABSENCE,
-                        id,
+                        teacherAbsenceObject.id,
                         true,
                         profile?.empty ?: false
                 ))
