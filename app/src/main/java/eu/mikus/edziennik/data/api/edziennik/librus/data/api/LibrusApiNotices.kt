@@ -14,7 +14,6 @@ import eu.mikus.edziennik.data.db.entity.Notice
 import eu.mikus.edziennik.data.db.entity.SYNC_ALWAYS
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.ext.*
-import eu.mikus.edziennik.utils.models.Date
 
 class LibrusApiNotices(override val data: DataLibrus,
                        override val lastSync: Long?,
@@ -37,22 +36,21 @@ class LibrusApiNotices(override val data: DataLibrus,
                 val text = note.getString("Text") ?: ""
                 val categoryId = note.getJsonObject("Category")?.getLong("Id") ?: -1
                 val teacherId = note.getJsonObject("Teacher")?.getLong("Id") ?: -1
-                val addedDate = note.getString("Date")?.let { Date.fromY_m_d(it) } ?: return@forEach
+                val noticeDate = librusNoticeDate(note.getString("Date"), profile)
 
                 val type = librusNoticeType(note)
                 val categoryText = data.noticeTypes[categoryId]?.name ?: ""
-                val semester = profile?.dateToSemester(addedDate) ?: 1
 
                 val noticeObject = Notice(
                         profileId = profileId,
                         id = id,
                         type = type,
-                        semester = semester,
+                        semester = noticeDate.semester,
                         text = text,
                         category = categoryText,
                         points = null,
                         teacherId = teacherId,
-                        addedDate = addedDate.inMillis
+                        addedDate = noticeDate.addedDate
                 )
 
                 data.noticeList.add(noticeObject)
