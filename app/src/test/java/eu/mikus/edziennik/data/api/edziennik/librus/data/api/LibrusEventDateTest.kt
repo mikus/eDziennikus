@@ -92,10 +92,14 @@ class LibrusEventDateTest {
     }
 
     @Test fun `a readable date is carried as not unknown`() {
-        // The not-unknown half of the pair. The assertFalse below cannot fail while
-        // Event.dateUnknown initialises to false - it documents the contract, it does not pin it.
-        // What pins the clearing half is a DAO-level test of the selective update. The assertEquals
-        // below can fail: it reddens if the factory stops copying the date.
+        // The not-unknown half of the pair. The assertFalse below cannot catch the factory
+        // DROPPING the write, because Event.dateUnknown initialises to false - that mutation is
+        // caught by the two tests that build an unknown pair. It is, however, the only assertion
+        // in the suite that catches the factory writing a hardcoded `true`: measured, replacing
+        // the write with `it.dateUnknown = true` reddens this test alone, 1 of 958. So it pins the
+        // value written, not the fact that one is. What pins the clearing half at the DB level is a
+        // DAO-level test of the selective update. The assertEquals below reddens if the factory
+        // stops copying the date.
         val known = Date(2026, 9, 30)
         val built = event(LibrusEventDate(known, unknown = false))
         assertFalse(built.dateUnknown)

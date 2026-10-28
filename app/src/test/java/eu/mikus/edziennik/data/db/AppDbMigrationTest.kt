@@ -126,8 +126,11 @@ class AppDbMigrationTest {
     }
 
     /**
-     * Reads the column, not the entity: Event.dateUnknown initialises to false, so an
-     * entity-level assertion would pass whatever SQLite holds. A missing row fails here.
+     * Reads the column, not the entity: Event.dateUnknown initialises to false, and Room's
+     * raw-query mapping skips a column missing from the cursor, so an entity-level assertion
+     * would pass whatever SQLite holds. Both halves are load-bearing - the default alone does
+     * not make an entity read unsafe, as `an entity written with the flag set round-trips`
+     * in this same file shows. A missing row fails here.
      */
     private fun storedDateUnknown(appDb: AppDb, eventId: Long): Int =
         appDb.openHelper.readableDatabase
