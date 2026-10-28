@@ -12,11 +12,13 @@ import eu.mikus.edziennik.data.db.entity.Event
 import eu.mikus.edziennik.data.db.entity.Metadata
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.utils.models.Date
+import eu.mikus.edziennik.utils.models.Time
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,8 +34,9 @@ import org.robolectric.annotation.Config
  * schema Room validates against, and it is opened through [AppDb.builder] — the same chain
  * production uses — so these tests prove production has the migration, not that the test does.
  *
- * Not every test here is a migration test: the flag's write round trip and the selective update
- * that clears it share this file because they need the same Robolectric + AppDb setup.
+ * Not every test here is a migration test: the flag's write round trip and the selective updates
+ * that clear it and a stored time share this file because they need the same Robolectric + AppDb
+ * setup.
  *
  * It needs a real `Context` and a real SQLite file, hence Robolectric (JUnit 4, via Vintage).
  * Unit tests run with the working directory set to `app/`.
@@ -124,6 +127,42 @@ class AppDbMigrationTest {
 
         assertEquals(0, storedDateUnknown(appDb, 300L))
     }
+
+    /**
+     * Not a migration test, and it drives EventDaoSelective directly - both for the reasons given
+     * on the test above.
+     *
+     * Characterizes existing DAO behaviour that a commit body relies on: an event stored with
+     * "000000" (what an absent or unreadable TimeFrom with no lesson range used to be filed as)
+     * heals to NULL the next time the endpoint sends it, because `eventTime` is not among the
+     * selective update's `skippedColumns`. A row the school no longer sends is never updated and
+     * keeps "000000".
+     */
+    @Test
+    fun `the selective update clears a stored midnight time`() {
+        createV1Database(context, DB_NAME)
+        val appDb = openV2(context, DB_NAME).also { db = it }
+        appDb.eventDao().add(newEvent(profileId = 1, id = 301L).also { it.time = Time(0, 0, 0) })
+        // the time is stored before the update, so the NULL below is a cleared value, not a
+        // column that never held one
+        assertEquals("000000", storedEventTime(appDb, 301L))
+
+        EventDaoSelective(appDb).update(newEvent(profileId = 1, id = 301L))
+
+        assertNull(storedEventTime(appDb, 301L))
+    }
+
+    /**
+     * Reads the raw `eventTime` column, NULL as null. A missing row fails here, so a null return
+     * is a stored NULL, never an absent row.
+     */
+    private fun storedEventTime(appDb: AppDb, eventId: Long): String? =
+        appDb.openHelper.readableDatabase
+            .query("SELECT eventTime FROM events WHERE profileId = 1 AND eventId = $eventId")
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                if (cursor.isNull(0)) null else cursor.getString(0)
+            }
 
     /**
      * Reads the column, not the entity: Event.dateUnknown initialises to false, and Room's

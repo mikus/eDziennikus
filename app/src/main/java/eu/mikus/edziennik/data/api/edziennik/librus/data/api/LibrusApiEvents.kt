@@ -16,7 +16,6 @@ import eu.mikus.edziennik.data.db.entity.SYNC_ALWAYS
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.utils.models.Date
-import eu.mikus.edziennik.utils.models.Time
 
 class LibrusApiEvents(override val data: DataLibrus,
                       override val lastSync: Long?,
@@ -45,9 +44,11 @@ class LibrusApiEvents(override val data: DataLibrus,
                 val subjectId = event.getJsonObject("Subject")?.getLong("Id") ?: -1
                 val teamId = event.getJsonObject("Class")?.getLong("Id") ?: -1
 
+                // No ?: return@forEach: a missing LessonNo already falls through to TimeFrom, and a skip drops the
+                // event from this sync, which can get a stored future event pruned.
                 val lessonNo = event.getInt("LessonNo")
                 val lessonRange = data.lessonRanges.singleOrNull { it.lessonNumber == lessonNo }
-                val startTime = lessonRange?.startTime ?: Time.fromH_m(event.getString("TimeFrom"))
+                val startTime = librusEventTime(lessonRange, event.getString("TimeFrom"))
                 val addedDate = Date.fromIso(event.getString("AddDate"))
 
                 event.getJsonObject("onlineLessonUrl")?.let { onlineLesson ->

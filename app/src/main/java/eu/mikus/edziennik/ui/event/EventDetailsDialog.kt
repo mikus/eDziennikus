@@ -214,7 +214,7 @@ class EventDetailsDialog(
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // The time stays: it comes from the school's own data, not from the filing date.
+                    // The time stays: no writer derives it from the filing date (see librusEventTime).
                     // The day number and the month would both be today's, so they are replaced by the
                     // label rather than shown. Not gated by a unit test — this is inside a composition
                     // and createComposeRule cannot be hosted here (ShellPolicyTest.kt:23-26).

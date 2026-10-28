@@ -191,9 +191,11 @@ internal fun eventDetails(
 ): AnnotatedString {
     val parts = buildList {
         // An unreadable date is filed at today, so both the weekday and the date would be today's —
-        // a confident lie. Say the date is unknown instead, and drop the weekday with it. The time
-        // is left alone: it comes from the school's own TimeFrom/lessonRanges, not from the filing
-        // date, so "data nieznana • 08:00" is an honest statement of a known time on an unknown day.
+        // a confident lie. Say the date is unknown instead, and drop the weekday with it. No writer
+        // derives `time` from the filing date: Librus HomeWorks reads it in `librusEventTime` (lesson
+        // range, else the school's TimeFrom), and SynergiaHomework writes null when the date is
+        // unknown. So "data nieznana • 08:00" is a known time on an unknown day, and null reads
+        // "cały dzień".
         if (showWeekDay && !event.dateUnknown) add(AnnotatedString(Week.getFullDayName(event.date.weekDay)))
         // `showDate = false` means "the date is implied by the surface you are looking at" — here
         // only LessonDetailsDialog.kt:345, today's lesson. An unknown date makes that implication
