@@ -739,6 +739,7 @@
     <string name="notification_new_notification_title_format">New notifications: %d</string>
     <string name="notification_no_update">No update available</string>
     <string name="notification_notice_format">%s from %s from %s</string>
+    <string name="notification_notice_unknown_date_format">%1$s from %2$s — date unknown</string>
     <string name="notification_notice_new">New notice</string>
     <string name="notification_notice_praise">New praise</string>
     <string name="notification_notice_warning">New warning</string>

@@ -812,6 +812,7 @@
     <string name="notification_new_notification_title_format">Nowe powiadomienia: %d</string>
     <string name="notification_no_update">Brak dostępnej aktualizacji</string>
     <string name="notification_notice_format">%s od %s z %s</string>
+    <string name="notification_notice_unknown_date_format">%1$s od %2$s — data nieznana</string>
     <string name="notification_notice_new">Nowy wpis</string>
     <string name="notification_notice_praise">Pochwała</string>
     <string name="notification_notice_warning">Uwaga</string>

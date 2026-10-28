@@ -73,6 +73,7 @@ open class Notice(
      *
      * Asked by:
      * - `noticeDateText`, for the date in `BehaviourScreen`'s notice row and in `NoticesAdapter`.
+     * - `noticeNotificationText` and `noticeNotificationTime`, for a new-notice notification.
      */
     val addedDateUnknown: Boolean
         get() = addedDate == ADDED_DATE_UNKNOWN

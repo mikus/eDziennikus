@@ -180,12 +180,12 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
                 else -> app.getString(R.string.notification_notice_new)
             }
 
-            val text = app.getString(
-                    R.string.notification_notice_format,
-                    noticeTypeStr,
-                    notice.teacherName,
-                    Date.fromMillis(notice.addedDate).formattedString
-            )
+            // The text noticeNotificationText builds, format and arguments both, and the time
+            // noticeNotificationTime picks (`addedDate`, below) are pinned by
+            // NoticeNotificationTest. That this loop uses the two helpers at all, and what it
+            // passes them, is not: the loop reads its notices off `app`'s DAO, so pinning it needs
+            // a seeded database. That is left to a device smoke.
+            val text = noticeNotificationText(noticeTypeStr, notice, app)
             val textLong = app.getString(
                     R.string.notification_notice_long_format,
                     noticeTypeStr,
@@ -201,7 +201,7 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
                     profileId = notice.profileId,
                     profileName = profiles.singleOrNull { it.id == notice.profileId }?.name,
                     navTarget = NavTarget.BEHAVIOUR,
-                    addedDate = notice.addedDate
+                    addedDate = noticeNotificationTime(notice, System.currentTimeMillis())
             ).addExtra("noticeId", notice.id)
         }
     }
