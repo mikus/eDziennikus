@@ -65,4 +65,33 @@ class LibrusEventTimeTest {
     @Test fun `a literal midnight TimeFrom is kept as midnight`() {
         assertEquals(Time(0, 0, 0), librusEventTime(null, "00:00:00"))
     }
+
+    @Test fun `a PT meeting time is read with seconds`() {
+        assertEquals(Time(17, 30, 0), librusPtMeetingTime("17:30:00"))
+    }
+
+    @Test fun `the literal midnight is no time`() {
+        assertNull(librusPtMeetingTime("00:00:00"))
+    }
+
+    @Test fun `an absent PT meeting time is no time`() {
+        assertNull(librusPtMeetingTime(null))
+    }
+
+    @Test fun `an empty PT meeting time is no time`() {
+        assertNull(librusPtMeetingTime(""))
+    }
+
+    @Test fun `a malformed PT meeting time is no time`() {
+        assertNull(librusPtMeetingTime("garbage"))
+    }
+
+    /**
+     * Pins a limit, not a goal. The reader takes the seconds from characters 7-8, so a time sent
+     * without them is unreadable and the meeting reads "cały dzień" instead of 17:30 (before, it
+     * read "0:00"). Reading it would mean widening the reader; this test makes that a decision.
+     */
+    @Test fun `a PT meeting time without seconds is unreadable`() {
+        assertNull(librusPtMeetingTime("17:30"))
+    }
 }

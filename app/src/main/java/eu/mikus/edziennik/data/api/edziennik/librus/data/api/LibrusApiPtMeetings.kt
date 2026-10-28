@@ -14,7 +14,6 @@ import eu.mikus.edziennik.data.db.entity.Metadata
 import eu.mikus.edziennik.data.db.enums.MetadataType
 import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.utils.models.Date
-import eu.mikus.edziennik.utils.models.Time
 
 class LibrusApiPtMeetings(override val data: DataLibrus,
                           override val lastSync: Long?,
@@ -33,12 +32,7 @@ class LibrusApiPtMeetings(override val data: DataLibrus,
                 val topic = meeting.getString("Topic") ?: ""
                 val teacherId = meeting.getJsonObject("Teacher")?.getLong("Id") ?: -1
                 val eventDate = Date.fromY_m_dOrNull(meeting.getString("Date")) ?: return@forEach
-                val startTime = meeting.getString("Time")?.let {
-                    if (it == "00:00:00")
-                        null
-                    else
-                        Time.fromH_m_s(it)
-                }
+                val startTime = librusPtMeetingTime(meeting.getString("Time"))
 
                 val eventObject = Event(
                         profileId = profileId,
