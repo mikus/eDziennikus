@@ -13,7 +13,7 @@ import eu.mikus.edziennik.utils.models.Time
 class AttendanceFull(
         profileId: Int, id: Long,
         baseType: Int, typeName: String, typeShort: String, typeSymbol: String, typeColor: Int?,
-        date: Date, startTime: Time, semester: Int,
+        date: Date, startTime: Time?, semester: Int,
         teacherId: Long, subjectId: Long, addedDate: Long = System.currentTimeMillis()
 ) : Attendance(
         profileId, id,
