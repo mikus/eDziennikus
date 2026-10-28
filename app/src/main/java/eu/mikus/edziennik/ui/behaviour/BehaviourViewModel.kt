@@ -52,7 +52,11 @@ class BehaviourViewModel(
     }
 
     private fun classify(notices: List<NoticeFull>, filter: SemesterFilter): BehaviourUiState {
-        val filtered = filter.semester?.let { sem -> notices.filter { it.semester == sem } } ?: notices
+        val filtered = filter.semester?.let { sem ->
+            // Without a date a notice's stored semester is only a guess; a filter that dropped it
+            // would assert "not this semester" about a pupil's behaviour record. Keep it in both.
+            notices.filter { it.semester == sem || it.addedDateUnknown }
+        } ?: notices
         val summary = BehaviourSummary(
             praises = filtered.count { it.type == Notice.TYPE_POSITIVE },
             warnings = filtered.count { it.type == Notice.TYPE_NEGATIVE },

@@ -7,8 +7,9 @@ package eu.mikus.edziennik.ui.behaviour
 import eu.mikus.edziennik.data.db.full.NoticeFull
 
 /**
- * Semester filter modes. [semester] == null means "whole year" (no filter); otherwise it is the
- * `NoticeFull.semester` value to keep. Mirrors the legacy displayMode 0/1/2.
+ * Semester filter modes. [semester] == null means "whole year" (no filter); otherwise a notice is
+ * kept when its `NoticeFull.semester` equals it or its date is unknown (`Notice.addedDateUnknown`),
+ * see `BehaviourViewModel.classify`. The modes mirror the legacy displayMode 0/1/2.
  */
 enum class SemesterFilter(val semester: Int?) {
     YEAR(null),
