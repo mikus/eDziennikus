@@ -40,6 +40,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -54,7 +55,6 @@ import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.ui.compose.IconicsIcon
 import eu.mikus.edziennik.ui.compose.UnreadDot
 import eu.mikus.edziennik.ui.compose.toAnnotatedString
-import eu.mikus.edziennik.utils.models.Week
 import kotlinx.coroutines.launch
 
 @Composable
@@ -200,6 +200,7 @@ private fun LeafRow(
     onItemSeen: (AttendanceFull) -> Unit,
 ) {
     val att = leaf.attendance
+    val context = LocalContext.current
     LaunchedEffect(att.id) { onItemSeen(att) }
     Row(
         Modifier
@@ -217,11 +218,11 @@ private fun LeafRow(
             SubjectText(att, leaf.unseen)
             Text(att.typeName, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                text = listOfNotNull(
-                    Week.getFullDayName(att.date.weekDay),
-                    att.date.formattedStringShort,
-                    att.startTime?.stringHM,
-                    att.lessonNumber?.let { stringResource(R.string.attendance_lesson_number_format, it) },
+                text = (
+                    attendanceDayDateParts(att, context) + listOfNotNull(
+                        att.startTime?.stringHM,
+                        att.lessonNumber?.let { stringResource(R.string.attendance_lesson_number_format, it) },
+                    )
                 ).joinToString(" • "),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -384,10 +385,14 @@ private fun DaysTabContent(
 ) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
         items(tab.dayRanges, key = { it.key.stableId }) { range ->
-            val start = "${range.rangeStart.day}.${range.rangeStart.month}.${range.rangeStart.year}"
-            val end = "${range.rangeEnd.day}.${range.rangeEnd.month}.${range.rangeEnd.year}"
             HeaderRow(
-                title = if (start == end) start else "$start – $end",
+                title = if (range.dateUnknown) {
+                    stringResource(R.string.attendance_date_unknown)
+                } else {
+                    val start = "${range.rangeStart.day}.${range.rangeStart.month}.${range.rangeStart.year}"
+                    val end = "${range.rangeEnd.day}.${range.rangeEnd.month}.${range.rangeEnd.year}"
+                    if (start == end) start else "$start – $end"
+                },
                 expanded = range.expanded,
                 hasUnseen = range.hasUnseen,
                 onClick = { onNodeToggle(range.key) },
@@ -437,7 +442,11 @@ private fun MonthsTabContent(
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
         items(tab.months, key = { it.key.stableId }) { month ->
             HeaderRow(
-                title = "${month.month}.${month.year}",
+                title = if (month.dateUnknown) {
+                    stringResource(R.string.attendance_date_unknown)
+                } else {
+                    "${month.month}.${month.year}"
+                },
                 expanded = month.expanded,
                 hasUnseen = month.hasUnseen,
                 onClick = { onNodeToggle(month.key) },

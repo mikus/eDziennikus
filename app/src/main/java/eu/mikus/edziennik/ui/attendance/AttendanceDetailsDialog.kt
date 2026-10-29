@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -126,7 +127,7 @@ class AttendanceDetailsDialog(
             }
 
             LabeledRow(stringResource(R.string.attendance_details_type), attendance.typeName)
-            LabeledRow(stringResource(R.string.attendance_details_date), attendance.date.formattedString)
+            LabeledRow(stringResource(R.string.attendance_details_date), attendanceDateText(attendance, LocalContext.current))
             attendance.startTime?.let {
                 LabeledRow(stringResource(R.string.attendance_details_time), it.stringHM)
             }

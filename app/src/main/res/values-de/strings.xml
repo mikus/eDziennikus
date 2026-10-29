@@ -328,6 +328,7 @@
     <string name="event_class_event">Klassenereignis</string>
     <string name="event_date_unknown">Datum unbekannt</string>
     <string name="notice_date_unknown">Datum unbekannt</string>
+    <string name="attendance_date_unknown">Datum unbekannt</string>
     <string name="event_details_added_by_format">%1$s von %2$s</string>
     <string name="event_details_added_by_self_format">%1$s von Ihnen</string>
     <string name="event_details_shared_by_format">{cmd-share-variant} %1$s von %2$s</string>

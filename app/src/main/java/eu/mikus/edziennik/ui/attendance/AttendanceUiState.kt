@@ -114,7 +114,7 @@ data class DayRangeHeader(
     /**
      * True for the bucket of attendances whose date the school did not give; [rangeStart] and
      * [rangeEnd] are then the parser's filing date and must not be shown as a day. Derived from
-     * [key] for the reasons on [MonthHeader.dateUnknown].
+     * [key] and not stored, for the one-encoding reason on [MonthHeader.dateUnknown].
      */
     val dateUnknown get() = key == NodeKey.UnknownDayKey
 }

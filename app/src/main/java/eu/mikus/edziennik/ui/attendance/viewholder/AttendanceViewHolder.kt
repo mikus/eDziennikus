@@ -15,12 +15,12 @@ import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.databinding.AttendanceItemAttendanceBinding
 import eu.mikus.edziennik.ext.concat
 import eu.mikus.edziennik.ui.attendance.AttendanceAdapter
+import eu.mikus.edziennik.ui.attendance.attendanceDayDateParts
 import eu.mikus.edziennik.ui.attendance.models.AttendanceDayRange
 import eu.mikus.edziennik.ui.attendance.models.AttendanceMonth
 import eu.mikus.edziennik.ui.grades.models.ExpandableItemModel
 import eu.mikus.edziennik.ui.grades.viewholder.BindableViewHolder
 import eu.mikus.edziennik.utils.managers.NoteManager
-import eu.mikus.edziennik.utils.models.Week
 
 class AttendanceViewHolder(
         inflater: LayoutInflater,
@@ -43,12 +43,11 @@ class AttendanceViewHolder(
                 ?: item.lessonTopic
         if (adapter.showNotes)
             NoteManager.prependIcon(item, b.subjectName)
-        b.dateTime.text = listOf(
-                Week.getFullDayName(item.date.weekDay),
-                item.date.formattedStringShort,
+        val dateTimeParts = attendanceDayDateParts(item, app) + listOf(
                 item.startTime?.stringHM,
                 item.lessonNumber?.let { app.getString(R.string.attendance_lesson_number_format, it) }
-        ).concat(bullet)
+        )
+        b.dateTime.text = dateTimeParts.concat(bullet)
 
         if (item.showAsUnseen == null)
             item.showAsUnseen = !item.seen
