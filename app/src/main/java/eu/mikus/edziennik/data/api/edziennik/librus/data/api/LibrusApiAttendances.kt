@@ -71,6 +71,11 @@ class LibrusApiAttendances(override val data: DataLibrus,
                         addedDate = addedDate
                 ).also {
                     it.lessonNumber = lessonNo
+                    // The line that turns the unknown-date feature on, and nothing gates it. Deleting it
+                    // compiles (an unused property is no error), keeps every test and lint green, and no
+                    // device check can show it: seeded rows bypass this parser. It is worse than an unset
+                    // flag: the selective update binds attendanceDateUnknown on every sync, so a row built
+                    // without this write clears a flag an earlier sync set.
                     it.dateUnknown = lessonDate.unknown
                 }
 
