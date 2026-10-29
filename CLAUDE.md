@@ -62,8 +62,10 @@ Single Room database `AppDb` (`data/db/`). Two kapt processors generate DAO code
 >
 > A *downgrade* has no path either, and Room 2.4.3 sends it through `onUpgrade` into the same drop, so
 > `AppDb.open` (what `AppDb(context)` builds through) probes the stored `user_version` before Room sees the
-> file: a database from a newer build, or one it cannot read, is left untouched and an
-> `edziennik-v<APP_DB_VERSION>.db` sidecar is opened in its place. `AppDb.choice` records which file was chosen
+> file: a database from a newer build, or one it cannot read, is never handed to Room, deleted or moved, and an
+> `edziennik-v<APP_DB_VERSION>.db` sidecar is opened in its place. (It is not guaranteed byte-identical: the probe's
+> read-only open may checkpoint a non-empty `-wal` into the main file and truncate it, as any open of a WAL database
+> does, losing no data — measured on a device, see the `chooseDatabase` KDoc.) `AppDb.choice` records which file was chosen
 > (`DatabaseChoice`, from `chooseDatabase`), and `MainActivity.onCreate` branches on it ahead of the
 > `App.profileId == 0` check, so a parked database gets an explanation and not the login wizard.
 >
