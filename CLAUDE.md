@@ -56,9 +56,9 @@ Single Room database `AppDb` (`data/db/`). Two kapt processors generate DAO code
 > no path exists** (checked against Room 2.4.3 bytecode) — which is why the two coexist safely for an *upgrade*.
 > It is also the trap: bump `APP_DB_VERSION` to 4 **without** writing a `Migration(3, 4)` and adding it to
 > `AppDb.MIGRATIONS` and there is no path, so Room **drops and recreates every table** and every user
-> silently loses their local diary. `assembleDebug` and `lint` (all that `build.yml` runs) stay green, but
-> `./gradlew test` does not: `MigrationLadderTest` fails, naming every version left without a path to
-> `APP_DB_VERSION` and the `Migration` to add.
+> silently loses their local diary — but the build no longer stays green: `MigrationLadderTest` fails,
+> naming every version left without a path to `APP_DB_VERSION` and the `Migration` to add. `build.yml`
+> runs `testDebugUnitTest`, so this fails CI as well as a local `./gradlew test`.
 >
 > A *downgrade* has no path either, and Room 2.4.3 sends it through `onUpgrade` into the same drop, so
 > `AppDb.open` (what `AppDb(context)` builds through) probes the stored `user_version` before Room sees the
@@ -245,8 +245,8 @@ Robolectric tests can instantiate the production `App.onCreate()` directly — t
 
 These changes have hidden coordination cost or break things in non-obvious ways. **Flag and confirm before doing any of them**, even if the diff looks small:
 
-- **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `./gradlew assembleDebug lint` on every push/PR and uploads nothing; `release.yml` triggers on `v*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
-- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = APP_DB_VERSION` (3) with two `Migration`s (`MIGRATION_1_2`, `MIGRATION_2_3`) **and** `.fallbackToDestructiveMigration()` still on the builder, so **bumping the version without a registered `Migration(n, n + 1)` wipes every user's data** — the fallback fires exactly when no migration path exists. `MigrationLadderTest` now fails `./gradlew test` in that case, but `assembleDebug` and `lint` (all that `build.yml` runs) stay green. Register the new migration in `AppDb.MIGRATIONS`, the array `AppDb.builder` passes to `addMigrations(*MIGRATIONS)`; one added beside it as `.addMigrations(*MIGRATIONS, MIGRATION_3_4)` works at runtime but leaves `MigrationLadderTest`, which reads `AppDb.MIGRATIONS`, red. Don't edit any committed `app/schemas/…/*.json`: Room regenerates only the current version's file, so every earlier snapshot is a frozen fixture (`AppDbMigrationTest` reads both `1.json` and `2.json` off disk) that it will not bring back.
+- **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `./gradlew assembleDebug testDebugUnitTest lint` on every push/PR and uploads nothing; `release.yml` triggers on `v*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
+- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = APP_DB_VERSION` (3) with two `Migration`s (`MIGRATION_1_2`, `MIGRATION_2_3`) **and** `.fallbackToDestructiveMigration()` still on the builder, so **bumping the version without a registered `Migration(n, n + 1)` wipes every user's data** — the fallback fires exactly when no migration path exists. `MigrationLadderTest` fails in that case, in CI as well as locally, since `build.yml` runs `testDebugUnitTest`. Register the new migration in `AppDb.MIGRATIONS`, the array `AppDb.builder` passes to `addMigrations(*MIGRATIONS)`; one added beside it as `.addMigrations(*MIGRATIONS, MIGRATION_3_4)` works at runtime but leaves `MigrationLadderTest`, which reads `AppDb.MIGRATIONS`, red. Don't edit any committed `app/schemas/…/*.json`: Room regenerates only the current version's file, so every earlier snapshot is a frozen fixture (`AppDbMigrationTest` reads both `1.json` and `2.json` off disk) that it will not bring back.
 - **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker is the standard tool; it is compiled into every build but only captures when `devMode` **and** `enableChucker` are both true — see Networking).
 - **`eu.mikus.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and sideload identity depend on exact values. Changing the application ID forces users to reinstall and loses their data.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
@@ -256,7 +256,7 @@ These changes have hidden coordination cost or break things in non-obvious ways.
 ## CI / release pipeline
 
 Workflows in `.github/workflows/` — both are self-contained for this fork (no upstream reusable workflow indirection):
-- `build.yml` — push / PR to any branch → `./gradlew assembleDebug lint`. The smoke gate. It produces **no artifact**: there is no upload step, so don't expect to download an APK from a CI run. Note it also runs `lint`, so a new lint **error** fails CI even though the task table above lists lint separately. Warnings do not fail it — `warningsAsErrors` is not set (`app/build.gradle:73-78`).
+- `build.yml` — push / PR to any branch → `./gradlew assembleDebug testDebugUnitTest lint`. The smoke gate. It produces **no artifact**: there is no upload step, so don't expect to download an APK from a CI run. Note it also runs `lint`, so a new lint **error** fails CI even though the task table above lists lint separately. Warnings do not fail it — `warningsAsErrors` is not set (`app/build.gradle:73-78`). It runs the **debug** unit tests only; `./gradlew test` additionally runs the release variant, which CI does not.
 - `release.yml` — `v*` tag (not `v*.*`) → `./gradlew assembleRelease` with a signing config materialised from repo secrets, attaches the signed APK to the GitHub Release.
 
 There is no Play AAB upload, no nightly cron, and no Discord/Firebase distribution any more — those upstream paths were removed when the fork dropped its `play` and `official` flavors. Releases are sideload-only via GitHub Releases.
