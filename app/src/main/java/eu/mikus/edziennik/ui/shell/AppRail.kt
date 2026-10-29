@@ -91,7 +91,7 @@ private val RailShadowColors = listOf(Color(0x40000000), Color(0x00000000))
 
 /**
  * The rail's badge is the **same single `BadgeStyle`** `AppDrawer` documents: navlib builds one in
- * `NavDrawer.init` (offsets 33-57) as `#FFFFFF` on `#D32F2F` and `MainActivity.kt:1076` hands that one
+ * `NavDrawer.init` (offsets 33-57) as `#FFFFFF` on `#D32F2F` and `MainActivity.kt:1111` hands that one
  * instance to every badgeable row. `MiniDrawerItem(PrimaryDrawerItem)` copies both `badge` and
  * `badgeStyle` off the drawer item it mirrors (ctor offsets 40-51) and `bindView` applies it through
  * `BadgeStyle.style` (offsets 300-318), which writes `paddingLeftRight` = 3 dp, `paddingTopBottom` =

@@ -199,7 +199,7 @@ data class SheetRow(
 
 /**
  * navlib's `onBackPressed()` chain, plus the `config.ui.openDrawerOnBackPressed` gate that
- * `MainActivity.kt:1144-1156` wraps around it.
+ * `MainActivity.kt:1179-1191` wraps around it.
  *
  * The [OpenDrawer] outcome is the reason this takes four parameters: with the setting on and
  * nothing open, back OPENS the drawer. Resolve that to [ShellBack.Content] instead and it becomes
@@ -232,7 +232,7 @@ fun shellBackPolicy(
 /**
  * navlib's `decideDrawerMode`, decoded from the AAR: **orientation first**, then width, and the
  * two orientations read different fields - `miniDrawerVisiblePortrait` (the app's
- * `config.ui.miniMenuVisible`) and `miniDrawerVisibleLandscape`, which `MainActivity.kt:288` pins
+ * `config.ui.miniMenuVisible`) and `miniDrawerVisibleLandscape`, which `MainActivity.kt:323` pins
  * to null forever. Hence: portrait honours the setting and can never be permanent, while landscape
  * ignores it entirely.
  *

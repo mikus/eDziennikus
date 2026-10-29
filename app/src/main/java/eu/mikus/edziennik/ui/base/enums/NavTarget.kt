@@ -221,7 +221,7 @@ enum class NavTarget(
      * the Room converter - must keep resolving dev targets, or a dev-mode user's saved state stops
      * round-tripping, so they do not call this. The drawer, sheet and mini-menu filters still spell
      * the rule inline; all three now call this instead - `ShellPolicy.kt:293`,
-     * `MainActivity.kt:402` and `MiniMenuConfigDialog.kt:40`.
+     * `MainActivity.kt:437` and `MiniMenuConfigDialog.kt:40`.
      */
     fun isAvailable(devMode: Boolean) = !devModeOnly || devMode
 }

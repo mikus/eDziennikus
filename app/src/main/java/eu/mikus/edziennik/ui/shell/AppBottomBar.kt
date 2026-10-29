@@ -56,7 +56,7 @@ private val FabContentColor = Color(0xFFFFFFFF)
 private val BadgeContainerColor = Color(0xFFFF3D00)
 private val BadgeContentColor = Color(0xFFFFFFFF)
 
-/** navlib posts the sheet ripple 2 s after a screen asks for it (`MainActivity.kt:1021-1027`). */
+/** navlib posts the sheet ripple 2 s after a screen asks for it (`MainActivity.kt:1056-1062`). */
 private const val SheetHintDelayMs = 2_000L
 
 /**
@@ -67,7 +67,7 @@ private const val SheetHintGrowMs = 350
 private const val SheetHintShrinkMs = 200
 private const val SheetHintScale = 1.3f
 
-/** `gainAttentionFAB()`'s +1000 ms extend and +3000 ms collapse (`MainActivity.kt:1029-1039`). */
+/** `gainAttentionFAB()`'s +1000 ms extend and +3000 ms collapse (`MainActivity.kt:1064-1074`). */
 private const val FabExtendDelayMs = 1_000L
 private const val FabExtendedMs = 2_000L
 
@@ -77,7 +77,7 @@ private const val FabExtendedMs = 2_000L
  *
  * M3 has no bottom bar that owns a menu button *and* a centre-docked FAB, hence this small one. The
  * FAB is rendered **here**, not in `Scaffold`'s `floatingActionButton` slot: navlib docks it into the
- * bar (`fabGravity = Gravity.CENTER`, `MainActivity.kt:235`) and the slot would float it above.
+ * bar (`fabGravity = Gravity.CENTER`, `MainActivity.kt:270`) and the slot would float it above.
  *
  * The trailing sheet button is load-bearing. navlib's bar registered its own menu action for it
  * (`NavBottomBar$create$5` -> `NavBottomSheet.toggle()`) and **no app code opens the sheet**, so
@@ -89,7 +89,7 @@ private const val FabExtendedMs = 2_000L
  * @param onMenuClick opens the drawer - what `NavBottomBar$create$4` did via `NavDrawer.toggle()`.
  * @param sheetHintEnabled whether the sheet-discoverability hint may play for the current screen;
  *   pass `!app.config.ui.bottomSheetOpened`, the gate `gainAttention()` applies at
- *   `MainActivity.kt:1022`. It is a parameter because no [ShellState] field carries it and the config
+ *   `MainActivity.kt:1057`. It is a parameter because no [ShellState] field carries it and the config
  *   is not observable - see [SheetButton] for what the hint became.
  */
 @Composable
@@ -155,7 +155,7 @@ private fun barColors(): BarColors = barColorsFor(MaterialTheme.colorScheme)
 
 /**
  * `gainAttentionFAB()`, moved off the view. The original is three uncancelled `postDelayed` calls on
- * the `NavView` (`MainActivity.kt:1029-1039`) that **outlive the screen that started them**, so a
+ * the `NavView` (`MainActivity.kt:1064-1074`) that **outlive the screen that started them**, so a
  * pulse can land on the next screen's FAB; keying the effect on [ShellState.selectedTarget] means
  * navigating away cancels it. That is a deliberate behaviour fix.
  *

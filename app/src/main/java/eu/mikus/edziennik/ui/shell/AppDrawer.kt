@@ -128,7 +128,7 @@ private val DividerThickness = 1.dp
  * navlib's one `BadgeStyle`, built in `NavDrawer.init` (offsets 33-57) as
  * `textColor = ColorHolder.fromColor(-1)` and `color = ColorHolder.fromColor(4292030255)`, i.e.
  * `#FFFFFF` on **`#D32F2F`**. `updateProfileList` hands the same instance to every
- * `ProfileDrawerItem` (`withBadgeStyle`, offset 330) and `MainActivity.kt:1079` to every badgeable row.
+ * `ProfileDrawerItem` (`withBadgeStyle`, offset 330) and `MainActivity.kt:1114` to every badgeable row.
  *
  * Hardcoded there, so hardcoded here: M3's [androidx.compose.material3.Badge] would default to
  * `colorScheme.error`, which `appColorScheme` keeps at the brand Blue value on every theme, so the
@@ -272,7 +272,7 @@ fun AppDrawer(
 
             // navlib swaps the slider's item adapter wholesale when the profile list opens
             // (`AccountHeaderView.toggleSelectionList` -> `buildDrawerSelectionList` ->
-            // `switchDrawerContent`), which is what `MainActivity.kt:1136`'s comment is about - so the
+            // `switchDrawerContent`), which is what `MainActivity.kt:1171`'s comment is about - so the
             // nav rows are *replaced*, not pushed down.
             if (state.profileSelectionOpen)
                 ProfileSelection(
@@ -325,13 +325,13 @@ private fun NavItem(row: DrawerRow, state: ShellState, onAction: (DrawerAction) 
 
 /**
  * The "More" group: `ExpandableDrawerItem` with `identifier = -1L`, `isSelectable = false`
- * (`MainActivity.kt:1129-1136`) and a 16 dp trailing arrow (`material_drawer_item_expandable.xml`)
+ * (`MainActivity.kt:1164-1171`) and a 16 dp trailing arrow (`material_drawer_item_expandable.xml`)
  * that `ExpandableDrawerItem`'s own listener rotates by 180°.
  *
  * The open state is `remember`ed **keyed on [ShellState.drawerEntries]**, which reproduces navlib
  * exactly: `setDrawerItems()` builds a fresh `ExpandableDrawerItem` (`isExpanded = false`) and calls
  * `drawer.setItems(...)`, so the group collapses whenever the entries are rebuilt - on startup, on a
- * profile switch (`MainActivity.kt:887`) and from `MiniMenuConfigDialog` - and survives navigation,
+ * profile switch (`MainActivity.kt:922`) and from `MiniMenuConfigDialog` - and survives navigation,
  * which never rebuilds them.
  */
 @Composable
@@ -502,7 +502,7 @@ private fun Divider() {
  *   swallowed case: navlib runs `resetDrawerContent()` before the listener either way, hence the
  *   unconditional flag clear here, and then `init$3$1` closes the drawer and returns.
  * - **a long press on any avatar** is `drawerProfileImageLongClickListener`, which
- *   `MainActivity.kt:285` aliases to `drawerProfileLongClickListener` - the same
+ *   `MainActivity.kt:320` aliases to `drawerProfileLongClickListener` - the same
  *   `ProfileConfigDialog` route as a long press in the profile list.
  */
 @Composable

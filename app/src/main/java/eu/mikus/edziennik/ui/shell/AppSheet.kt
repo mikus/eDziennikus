@@ -110,16 +110,16 @@ private const val SheetElevationDp = 8f
  * mapper:
  *
  * - **contextual** rows come from [ShellState.actions] (`setScreenActions`, which 12 fragments call)
- *   and are replaced wholesale on every navigation - `MainActivity.kt:1134-1136` is a bare
+ *   and are replaced wholesale on every navigation - `MainActivity.kt:1169-1171` is a bare
  *   `state.actions = actions`. They render **first** because this composable renders them first, at
  *   the [SheetRows] call above the sync row - not because anything prepends.
  * - **base** rows are the shell's own: the `BOTTOM_SHEET` `NavTarget`s, built once by
- *   `MainActivity.kt:398-413`'s `by lazy` - not per navigation, and not a function of the current
+ *   `MainActivity.kt:433-448`'s `by lazy` - not per navigation, and not a function of the current
  *   target. No `NavTarget` carries that location since Phase 40, so the list is empty - see
  *   [AppSheet]'s `baseRows` parameter.
  *
  * The **sync row is rendered here, from [onSyncClick]**, rather than arriving inside [baseRows]:
- * `MainActivity.kt:249` is the only call site of `SyncViewListDialog` in the whole app, this project
+ * `MainActivity.kt:284` is the only call site of `SyncViewListDialog` in the whole app, this project
  * has already shipped a regression on exactly that row, and a row the caller cannot forget to pass
  * cannot be dropped again. [baseRows] therefore carries only the `BOTTOM_SHEET` targets - see the
  * parameter docs for who filters them.
@@ -168,7 +168,7 @@ fun AppSheet(
         state.sheetVisible = false
     }
 
-    // The close-before-onClick rule (`MainActivity.kt:1178`: `bottomSheet.close(); it.onClick()`),
+    // The close-before-onClick rule (`MainActivity.kt:1213`: `bottomSheet.close(); it.onClick()`),
     // in the one place every row goes through. The close is *requested*, not awaited - as
     // `setState(STATE_HIDDEN)` is - so the click body still runs on the same frame and the sync
     // dialog appears as immediately as it does today.
@@ -251,7 +251,7 @@ private fun sheetContainerColor(): Color {
 /**
  * One [SheetRow] list. [SheetRow.separatorBefore] draws the separator *above* its row, which is how
  * `toBottomSheetItems` emitted `BottomSheetSeparatorItem` + item as a pair
- * (`MainActivity.kt:1256-1259`).
+ * (`MainActivity.kt:1291-1294`).
  */
 @Composable
 private fun SheetRows(rows: List<SheetRow>, closeThen: (() -> Unit) -> Unit) {

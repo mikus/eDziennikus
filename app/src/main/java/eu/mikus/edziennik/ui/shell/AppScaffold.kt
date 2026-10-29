@@ -147,7 +147,7 @@ private val ContentEdgeShadowColors = listOf(Color(0x40000000), Color(0x00000000
  *   shell's own half**: this file closes the drawer, clears the profile list and swallows
  *   [DrawerAction.CloseOnly], so the caller only has to `navigate(...)` (§7.5).
  * @param onProfileLongClick shows `ProfileConfigDialog`; the drawer is closed for you first. The
- *   toolbar avatar's long press aliases it for the current profile, as `MainActivity.kt:285` does.
+ *   toolbar avatar's long press aliases it for the current profile, as `MainActivity.kt:320` does.
  * @param onContainerReady the **first navigation** - `navTarget = NavTarget.HOME` and
  *   `handleIntent(intent?.extras)`, which cannot stay in `onCreate` (§2.1). Also re-commits a
  *   fragment left orphaned by a process-death restore (§2.2).
@@ -357,7 +357,7 @@ fun AppScaffold(
  *    1.6.2 (the key is absent; restore goes through `SavedStateRegistry`), so it is not written here.
  *
  * `SwipeRefreshLayoutNoTouch` moves in unchanged (§7.8) with the three colours from
- * `MainActivity.kt:328-332`; it discards every touch event it is not given explicitly, so there is no
+ * `MainActivity.kt:363-367`; it discards every touch event it is not given explicitly, so there is no
  * gesture and no `OnRefreshListener` to port.
  */
 /**

@@ -58,7 +58,7 @@ class ShellPolicyTest {
     /**
      * The row the whole four-parameter signature exists for. `config.ui.openDrawerOnBackPressed`
      * is a shipped, user-togglable setting whose "on" branch OPENS the drawer
-     * (`MainActivity.kt:1144-1156`). Resolve this to [ShellBack.Content] instead and back falls
+     * (`MainActivity.kt:1179-1191`). Resolve this to [ShellBack.Content] instead and back falls
      * through to `navigateUp()` -> `popBackStack()` false -> `finish()`: the app exits and the
      * setting becomes a visible no-op.
      */
