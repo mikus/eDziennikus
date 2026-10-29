@@ -68,6 +68,13 @@ open class Attendance(
     @ColumnInfo(name = "attendanceIsCounted")
     var isCounted: Boolean = true
 
+    /**
+     * Whether the school never gave this attendance a date. When true, the stored [date] is a
+     * filing date chosen by the parser, not the school's date, and must not be shown as one.
+     */
+    @ColumnInfo(name = "attendanceDateUnknown", defaultValue = "0")
+    var dateUnknown: Boolean = false
+
     @Ignore
     var showAsUnseen: Boolean? = null
 

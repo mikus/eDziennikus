@@ -8,6 +8,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import com.google.gson.JsonParser
 import eu.mikus.edziennik.data.db.dao.EventDaoSelective
+import eu.mikus.edziennik.data.db.entity.Attendance
 import eu.mikus.edziennik.data.db.entity.Event
 import eu.mikus.edziennik.data.db.entity.Metadata
 import eu.mikus.edziennik.data.db.enums.MetadataType
@@ -27,12 +28,12 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /**
- * The project's first Room migration. `AppDb` used to be `version = 1` with only
+ * The project's Room migrations. `AppDb` used to be `version = 1` with only
  * `fallbackToDestructiveMigration()`, so any version bump dropped every table silently.
  *
- * The v1 database is rebuilt from the committed `1.json`, so the fixture cannot drift from the
- * schema Room validates against, and it is opened through [AppDb.builder] — the same chain
- * production uses — so these tests prove production has the migration, not that the test does.
+ * Each starting database is rebuilt from the committed `<version>.json`, so a fixture cannot drift
+ * from the schema Room validates against, and it is opened through [AppDb.builder] — the same chain
+ * production uses — so these tests prove production has the migrations, not that the test does.
  *
  * Not every test here is a migration test: the flag's write round trip and the selective updates
  * that clear it and a stored time share this file because they need the same Robolectric + AppDb
@@ -59,7 +60,7 @@ class AppDbMigrationTest {
         createV1Database(context, DB_NAME)
         insertV1Event(context, DB_NAME, profileId = 1, eventId = 100L)
 
-        val appDb = openV2(context, DB_NAME).also { db = it }
+        val appDb = openCurrent(context, DB_NAME).also { db = it }
         val row = appDb.eventDao().getByIdNow(1, 100L)
 
         // if the destructive fallback fired instead of the migration, the row is gone
@@ -80,18 +81,50 @@ class AppDbMigrationTest {
     }
 
     @Test
-    fun `the database reports version 2 after the migration`() {
+    fun `the database reports version 3 after the migration`() {
         createV1Database(context, DB_NAME)
 
-        val version = openV2(context, DB_NAME).also { db = it }.openHelper.readableDatabase.version
+        val version = openCurrent(context, DB_NAME).also { db = it }.openHelper.readableDatabase.version
 
-        assertEquals(2, version)
+        assertEquals(3, version)
+    }
+
+    @Test
+    fun `a v1 attendance survives the chain to v3 and reads a false flag`() {
+        createV1Database(context, DB_NAME)
+        insertV1Attendance(context, DB_NAME, profileId = 1, attendanceId = 400L)
+
+        val appDb = openCurrent(context, DB_NAME).also { db = it }
+        val row = appDb.attendanceDao().getByIdNow(1, 400L)
+
+        // a v1 database has to chain 1->2->3; if the destructive fallback fired instead of the
+        // migrations, the row is gone
+        assertNotNull(row)
+        assertEquals("2026-06-20", row!!.date.stringY_m_d)
+        assertEquals(0, storedAttendanceDateUnknown(appDb, 400L))
+        assertFalse(row.dateUnknown)
+    }
+
+    @Test
+    fun `a v2 attendance reaches v3 with the column defaulted`() {
+        createV2Database(context, DB_NAME)
+        insertV1Attendance(context, DB_NAME, profileId = 1, attendanceId = 401L)
+
+        val appDb = openCurrent(context, DB_NAME).also { db = it }
+        val row = appDb.attendanceDao().getByIdNow(1, 401L)
+
+        // starts at version 2, so MIGRATION_1_2 is never visited: this is the one test that
+        // isolates MIGRATION_2_3
+        assertNotNull(row)
+        assertEquals("2026-06-20", row!!.date.stringY_m_d)
+        assertEquals(0, storedAttendanceDateUnknown(appDb, 401L))
+        assertFalse(row.dateUnknown)
     }
 
     @Test
     fun `an entity written with the flag set round-trips`() {
         createV1Database(context, DB_NAME)
-        val appDb = openV2(context, DB_NAME).also { db = it }
+        val appDb = openCurrent(context, DB_NAME).also { db = it }
 
         appDb.eventDao().add(newEvent(profileId = 1, id = 200L).also { it.dateUnknown = true })
 
@@ -117,7 +150,7 @@ class AppDbMigrationTest {
     @Test
     fun `the selective update clears a stored unknown flag`() {
         createV1Database(context, DB_NAME)
-        val appDb = openV2(context, DB_NAME).also { db = it }
+        val appDb = openCurrent(context, DB_NAME).also { db = it }
         appDb.eventDao().add(newEvent(profileId = 1, id = 300L).also { it.dateUnknown = true })
         // the flag is set before the update, so the 0 below is a cleared 1, not a column that
         // never held one
@@ -149,7 +182,7 @@ class AppDbMigrationTest {
     @Test
     fun `the selective update clears a stored midnight time`() {
         createV1Database(context, DB_NAME)
-        val appDb = openV2(context, DB_NAME).also { db = it }
+        val appDb = openCurrent(context, DB_NAME).also { db = it }
         appDb.eventDao().add(newEvent(profileId = 1, id = 301L).also { it.time = Time(0, 0, 0) })
         // the time is stored before the update, so the NULL below is a cleared value, not a
         // column that never held one
@@ -187,6 +220,18 @@ class AppDbMigrationTest {
                 cursor.getInt(0)
             }
 
+    /** Reads the raw column rather than the entity, for the reason given on [storedDateUnknown]. */
+    private fun storedAttendanceDateUnknown(appDb: AppDb, attendanceId: Long): Int =
+        appDb.openHelper.readableDatabase
+            .query(
+                "SELECT attendanceDateUnknown FROM attendances " +
+                    "WHERE profileId = 1 AND attendanceId = $attendanceId"
+            )
+            .use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                cursor.getInt(0)
+            }
+
     private fun newEvent(profileId: Int, id: Long) = Event(
         profileId = profileId,
         id = id,
@@ -200,9 +245,18 @@ class AppDbMigrationTest {
         teamId = 0L,
     )
 
-    private fun createV1Database(ctx: Context, name: String) {
+    private fun createV1Database(ctx: Context, name: String) = createDatabase(ctx, name, version = 1)
+
+    private fun createV2Database(ctx: Context, name: String) = createDatabase(ctx, name, version = 2)
+
+    /**
+     * Rebuilds the schema committed as `<version>.json`. Room only ever rewrites the file of the
+     * version `AppDb` currently declares, so every earlier one is a frozen fixture it will not
+     * regenerate: restore one from git rather than letting a build recreate it.
+     */
+    private fun createDatabase(ctx: Context, name: String, version: Int) {
         val root = JsonParser.parseString(
-            File("schemas/eu.mikus.edziennik.data.db.AppDb/1.json").readText()
+            File("schemas/eu.mikus.edziennik.data.db.AppDb/$version.json").readText()
         ).asJsonObject.getAsJsonObject("database")
         val file = ctx.getDatabasePath(name).also { it.parentFile?.mkdirs(); it.delete() }
         val raw = SQLiteDatabase.openOrCreateDatabase(file, null)
@@ -215,7 +269,7 @@ class AppDbMigrationTest {
             }
         }
         root.getAsJsonArray("setupQueries").forEach { raw.execSQL(it.asString) }
-        raw.execSQL("PRAGMA user_version = 1")
+        raw.execSQL("PRAGMA user_version = $version")
         raw.close()
     }
 
@@ -234,7 +288,26 @@ class AppDbMigrationTest {
         raw.close()
     }
 
-    private fun openV2(ctx: Context, name: String): AppDb = AppDb.builder(ctx, name).build()
+    /**
+     * Inserts with the v1 column list only: there is no `attendanceDateUnknown` yet. `attendances`
+     * is byte-identical in `1.json` and `2.json`, so one insert serves both fixtures.
+     */
+    private fun insertV1Attendance(ctx: Context, name: String, profileId: Int, attendanceId: Long) {
+        val raw = SQLiteDatabase.openDatabase(
+            ctx.getDatabasePath(name).path, null, SQLiteDatabase.OPEN_READWRITE,
+        )
+        raw.execSQL(
+            """INSERT INTO attendances (profileId, attendanceId, attendanceBaseType,
+                attendanceTypeName, attendanceTypeShort, attendanceTypeSymbol, attendanceTypeColor,
+                attendanceDate, attendanceTime, attendanceSemester, teacherId, subjectId,
+                addedDate, attendanceLessonTopic, attendanceLessonNumber, attendanceIsCounted, keep)
+                VALUES ($profileId, $attendanceId, ${Attendance.TYPE_ABSENT}, 'nieobecność', 'nb',
+                'nb', NULL, '2026-06-20', '080000', 1, 0, 0, 0, NULL, NULL, 1, 0)"""
+        )
+        raw.close()
+    }
+
+    private fun openCurrent(ctx: Context, name: String): AppDb = AppDb.builder(ctx, name).build()
 
     private companion object {
         const val DB_NAME = "migration-test.db"

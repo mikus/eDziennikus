@@ -45,7 +45,7 @@ import eu.mikus.edziennik.data.db.entity.*
     TimetableManual::class,
     Note::class,
     Metadata::class
-], version = 2)
+], version = 3)
 @TypeConverters(
         ConverterTime::class,
         ConverterDate::class,
@@ -102,11 +102,17 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE attendances ADD COLUMN attendanceDateUnknown INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         internal fun builder(context: Context, name: String) = Room.databaseBuilder(
                 context.applicationContext,
                 AppDb::class.java,
                 name
-        ).addMigrations(MIGRATION_1_2)
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 // findMigrationPath runs first, so this only fires when no path exists
                 .fallbackToDestructiveMigration()
                 .allowMainThreadQueries()
