@@ -47,20 +47,29 @@ When changing Librus behavior, scope changes to `librus/`; cross-cutting changes
 Single Room database `AppDb` (`data/db/`). Two kapt processors generate DAO code: `androidx.room:room-compiler` and `eu.szkolny.selective-dao:codegen` (the latter generates selective-update DAOs from annotations).
 
 > **⚠ There are two Room migrations, and bumping the DB version without the next one still destroys user data.**
-> `AppDb.kt:48` is `version = 3`; the `Migration`s are `AppDb.MIGRATION_1_2` (`AppDb.kt:99`) and
-> `AppDb.MIGRATION_2_3` (`AppDb.kt:105`), registered by `addMigrations(MIGRATION_1_2, MIGRATION_2_3)` in
-> `AppDb.builder` (`:115`), and `app/schemas/eu.mikus.edziennik.data.db.AppDb/` holds `1.json`, `2.json` and
-> `3.json`. The same builder **still calls `.fallbackToDestructiveMigration()`** (`:117`),
+> `AppDb.kt:54` is `version = APP_DB_VERSION` (`const val APP_DB_VERSION = 3`, `:20`); the `Migration`s are
+> `AppDb.MIGRATION_1_2` (`AppDb.kt:122`) and `AppDb.MIGRATION_2_3` (`AppDb.kt:128`), registered in the
+> `AppDb.MIGRATIONS` array (`:134`) that `AppDb.builder` hands on as `addMigrations(*MIGRATIONS)` (`:140`), and
+> `app/schemas/eu.mikus.edziennik.data.db.AppDb/` holds `1.json`, `2.json` and `3.json`. The same builder
+> **still calls `.fallbackToDestructiveMigration()`** (`:146`),
 > deliberately: `RoomOpenHelper.onUpgrade` consults `findMigrationPath` first, so the fallback fires **only when
-> no path exists** (checked against Room 2.4.3 bytecode) — which is why the two coexist safely today. It is also
-> the trap: bump to `version = 4` **without** writing a `Migration(3, 4)` and adding it to `AppDb.builder`'s
-> `addMigrations(...)` chain and there is no path, so Room **drops and recreates every table** and every user
+> no path exists** (checked against Room 2.4.3 bytecode) — which is why the two coexist safely for an *upgrade*.
+> It is also the trap: bump `APP_DB_VERSION` to 4 **without** writing a `Migration(3, 4)` and adding it to
+> `AppDb.MIGRATIONS` and there is no path, so Room **drops and recreates every table** and every user
 > silently loses their local diary. `assembleDebug` and `lint` (all that `build.yml` runs) stay green, but
 > `./gradlew test` does not: `MigrationLadderTest` fails, naming every version left without a path to
 > `APP_DB_VERSION` and the `Migration` to add.
 >
+> A *downgrade* has no path either, and Room 2.4.3 sends it through `onUpgrade` into the same drop, so
+> `AppDb.open` (what `AppDb(context)` builds through) probes the stored `user_version` before Room sees the
+> file: a database from a newer build, or one it cannot read, is left untouched and an
+> `edziennik-v<APP_DB_VERSION>.db` sidecar is opened in its place. `AppDb.choice` records which file was chosen
+> (`DatabaseChoice`, from `chooseDatabase`), and `MainActivity.onCreate` branches on it ahead of the
+> `App.profileId == 0` check, so a parked database gets an explanation and not the login wizard.
+>
 > Changing the schema is a **flag-and-confirm** change (see "Safe-change rules"): the version bump and its
-> `Migration(n, n + 1)` land together, registered in that `addMigrations(...)` chain. Don't edit any committed
+> `Migration(n, n + 1)` land together, registered in `AppDb.MIGRATIONS` (not as a further `addMigrations(...)`
+> argument: `MigrationLadderTest` reads that array, and fails for a migration registered anywhere else). Don't edit any committed
 > schema JSON — but note Room regenerates only the **current** version's file (`3.json` today). Every earlier
 > one is a frozen fixture it will never rewrite: `AppDbMigrationTest` rebuilds a v1 database from `1.json`'s
 > `createSql` and a v2 database from `2.json`'s, so deleting or hand-editing either silently removes the only
@@ -115,7 +124,7 @@ Feature-per-package under `ui/` (agenda, grades, home, homework, messages, timet
 
 **Jetpack Compose is the larger and growing surface** (`compose = true`, compose-bom, material3, activity-compose, lifecycle-runtime-compose; 83 files import `androidx.compose.runtime.Composable` against 63 that import a generated `eu.mikus.edziennik.databinding.*Binding`). **DataBinding is off** (`app/build.gradle:56`, `dataBinding = false`); ViewBinding is still on and still hosts the older screens. See "UI: Compose and ViewBinding".
 
-**There is no fragment Navigation graph.** The only navigation artifact is `androidx.navigation:navigation-compose:2.9.5`, and its only consumer is the login flow — `ui/login/LoginNavHost.kt`, whose entry composable is `LoginRoot` (`:42`). `NavHostFragment`, `navigation-fragment-ktx` and `res/navigation/` do not exist. The main content host swaps fragments by hand — `MainActivity.kt:976-977` does `transaction.replace(R.id.fragment, fragment)` + `commitAllowingStateLoss()` — with `NavStackPolicy.kt` as the back-stack authority.
+**There is no fragment Navigation graph.** The only navigation artifact is `androidx.navigation:navigation-compose:2.9.5`, and its only consumer is the login flow — `ui/login/LoginNavHost.kt`, whose entry composable is `LoginRoot` (`:42`). `NavHostFragment`, `navigation-fragment-ktx` and `res/navigation/` do not exist. The main content host swaps fragments by hand — `MainActivity.kt:1011-1012` does `transaction.replace(R.id.fragment, fragment)` + `commitAllowingStateLoss()` — with `NavStackPolicy.kt` as the back-stack authority.
 
 ### Networking
 - Provider-specific request/response models live alongside each provider under `data/api/`
@@ -237,7 +246,7 @@ Robolectric tests can instantiate the production `App.onCreate()` directly — t
 These changes have hidden coordination cost or break things in non-obvious ways. **Flag and confirm before doing any of them**, even if the diff looks small:
 
 - **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `./gradlew assembleDebug lint` on every push/PR and uploads nothing; `release.yml` triggers on `v*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
-- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = 3` with two `Migration`s (`MIGRATION_1_2`, `MIGRATION_2_3`) **and** `.fallbackToDestructiveMigration()` still on the builder, so **bumping the version without a registered `Migration(n, n + 1)` wipes every user's data** — the fallback fires exactly when no migration path exists. `MigrationLadderTest` now fails `./gradlew test` in that case, but `assembleDebug` and `lint` (all that `build.yml` runs) stay green. Register the new migration in `AppDb.builder`'s `addMigrations(...)` chain. Don't edit any committed `app/schemas/…/*.json`: Room regenerates only the current version's file, so every earlier snapshot is a frozen fixture (`AppDbMigrationTest` reads both `1.json` and `2.json` off disk) that it will not bring back.
+- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = APP_DB_VERSION` (3) with two `Migration`s (`MIGRATION_1_2`, `MIGRATION_2_3`) **and** `.fallbackToDestructiveMigration()` still on the builder, so **bumping the version without a registered `Migration(n, n + 1)` wipes every user's data** — the fallback fires exactly when no migration path exists. `MigrationLadderTest` now fails `./gradlew test` in that case, but `assembleDebug` and `lint` (all that `build.yml` runs) stay green. Register the new migration in `AppDb.MIGRATIONS`, the array `AppDb.builder` passes to `addMigrations(*MIGRATIONS)`; one added beside it as `.addMigrations(*MIGRATIONS, MIGRATION_3_4)` works at runtime but leaves `MigrationLadderTest`, which reads `AppDb.MIGRATIONS`, red. Don't edit any committed `app/schemas/…/*.json`: Room regenerates only the current version's file, so every earlier snapshot is a frozen fixture (`AppDbMigrationTest` reads both `1.json` and `2.json` off disk) that it will not bring back.
 - **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker is the standard tool; it is compiled into every build but only captures when `devMode` **and** `enableChucker` are both true — see Networking).
 - **`eu.mikus.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and sideload identity depend on exact values. Changing the application ID forces users to reinstall and loses their data.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
@@ -254,7 +263,7 @@ There is no Play AAB upload, no nightly cron, and no Discord/Firebase distributi
 
 ## Constraints to keep in mind
 
-- **`minSdk = 23` (Android 6.0)**: guard newer APIs with `Build.VERSION.SDK_INT` / `@RequiresApi`. Core library desugaring is enabled, so `java.time` and streams are fine without checks. Note that guards for API levels **≤ 23 are now dead code** — `lintDebug` already reports them as `Unnecessary; SDK_INT is always >= 23`. There are 18 such comparisons left across 10 files (9 of them in `utils/PermissionChecker.java` alone); `MainActivity.kt:980` is the only one in `MainActivity`. Don't add new ones; removing the existing ones is a separate, test-backed change.
+- **`minSdk = 23` (Android 6.0)**: guard newer APIs with `Build.VERSION.SDK_INT` / `@RequiresApi`. Core library desugaring is enabled, so `java.time` and streams are fine without checks. Note that guards for API levels **≤ 23 are now dead code** — `lintDebug` already reports them as `Unnecessary; SDK_INT is always >= 23`. There are 18 such comparisons left across 10 files (9 of them in `utils/PermissionChecker.java` alone); `MainActivity.kt:1015` is the only one in `MainActivity`. Don't add new ones; removing the existing ones is a separate, test-backed change.
 - **R8 full mode is off** (`android.enableR8.fullMode=false`). Don't rely on aggressive shrinking in release builds.
 - **`android.enableJetifier=true`** is on for transitively-pulled legacy support libs.
 - **All commit messages in this repo follow `[Area] Title` convention** (e.g., `[UI] …`, `[API/Librus] …`, `[Actions] …`, `[Gradle] …`). Match the prefix style when adding commits.
