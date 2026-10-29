@@ -27,6 +27,8 @@ class NodeKeyTest {
             NodeKey.DayRangeKey(20260609L).stableId,
             NodeKey.TypeKey(custom1).stableId,
             NodeKey.TypeKey(custom2).stableId, // same id as custom1, must still differ
+            NodeKey.UnknownDayKey.stableId,
+            NodeKey.UnknownMonthKey.stableId,
         )
 
         assertEquals(ids.size, ids.toSet().size) // all distinct

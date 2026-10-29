@@ -27,8 +27,10 @@ class AttendanceSummaryAggregatorTest {
         type: AttendanceType,
         semester: Int = 1,
         seen: Boolean = true,
+        dateUnknown: Boolean = false,
     ): AttendanceFull = mockk(relaxed = true) {
         every { this@mockk.id } returns id
+        every { this@mockk.dateUnknown } returns dateUnknown
         every { this@mockk.subjectId } returns subjectId
         every { subjectLongName } returns subjectName
         every { this@mockk.baseType } returns baseType
@@ -74,6 +76,27 @@ class AttendanceSummaryAggregatorTest {
         val stats = AttendanceSummaryAggregator.aggregate(rows, Period.ALL, 1).stats
         assertEquals(1f / 3f, stats.overallPercent!!, 0.0001f)   // 1 present / 3 total
         assertEquals(3, stats.counts.byType.sumOf { it.count })
+    }
+
+    /**
+     * A characterisation test: the Summary tab never reads the date, so an attendance whose date the
+     * school did not give is a real attendance here and must keep counting. It pins what is correct
+     * today so a later change to the aggregator cannot quietly start dropping undated rows.
+     */
+    @Test
+    fun `an undated row still counts in its subject and the overall percentage`() {
+        val rows = listOf(
+            row(1, 10, "Algebra", Attendance.TYPE_PRESENT, presentType),
+            row(2, 10, "Algebra", Attendance.TYPE_ABSENT, absentType, dateUnknown = true),
+        )
+        val tab = AttendanceSummaryAggregator.aggregate(rows, Period.ALL, currentSemester = 1)
+
+        val algebra = tab.subjects.single()
+        assertEquals(listOf(2L), algebra.leaves.map { it.attendance.id })   // the undated absence is a leaf
+        assertEquals(2, algebra.counts.byType.sumOf { it.count })
+        assertEquals(0.5f, algebra.percentage!!, 0.0001f)                   // 1 present / 2 total
+        assertEquals(0.5f, tab.stats.overallPercent!!, 0.0001f)
+        assertEquals(2, tab.stats.counts.byType.sumOf { it.count })
     }
 
     @Test

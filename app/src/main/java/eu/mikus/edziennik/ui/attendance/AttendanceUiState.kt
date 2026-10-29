@@ -34,6 +34,23 @@ sealed interface NodeKey {
     data class DayRangeKey(val anchor: Long) : NodeKey {
         override val stableId get() = "D$anchor"
     }
+
+    /**
+     * The Days bucket of attendances whose date the school did not give. Not a [DayRangeKey]: the
+     * parser files those rows at 2019-01-01, and a key minted from that date would collide with a
+     * real 2019-01-01 bucket, so two headers would share one LazyColumn item key and it would throw.
+     */
+    data object UnknownDayKey : NodeKey {
+        override val stableId get() = "D?"
+    }
+
+    /**
+     * The Months twin of [UnknownDayKey], and a separate object on purpose: the VM's expand set is one
+     * `Set<NodeKey>` shared by every tab, so a single shared key would expand both buckets at once.
+     */
+    data object UnknownMonthKey : NodeKey {
+        override val stableId get() = "M?"
+    }
 }
 
 /**
@@ -64,23 +81,43 @@ data class SubjectHeader(
 
 data class MonthHeader(
     val key: NodeKey,
-    val year: Int,
-    val month: Int,
+    val year: Int,                   // the filing date's year when dateUnknown; never read then
+    val month: Int,                  // likewise
     val counts: CountSnapshot,
-    val percentage: Float?,          // same formula as SubjectHeader
+    val percentage: Float?,          // same formula as SubjectHeader; null for the undated bucket
     val hasUnseen: Boolean,
     val expanded: Boolean,
     val leaves: List<AttendanceLeaf>,
-)
+) {
+    /**
+     * True for the bucket of attendances whose date the school did not give; [year] and [month] are
+     * then the parser's filing date and must not be shown as a month.
+     *
+     * Derived from [key] and not stored, so the fact has one encoding here and cannot disagree with
+     * the key that is also the LazyColumn item key and the expand-set member; `copy(expanded = ...)`
+     * keeps it because it keeps the key. Derived from [key] and NOT from [leaves]: the builder counts
+     * every row but drops `TYPE_PRESENT` leaves when `showPresenceInMonth` is off, so an undated
+     * bucket of only present rows has no leaves, still has counts, and still renders. Reading the
+     * leaves would report it as a real month and print "1.2019".
+     */
+    val dateUnknown get() = key == NodeKey.UnknownMonthKey
+}
 
 data class DayRangeHeader(
     val key: NodeKey,
-    val rangeStart: Date,
+    val rangeStart: Date,            // the filing date when dateUnknown; never read then
     val rangeEnd: Date,              // == rangeStart for a single day; == newest for a merged run
     val hasUnseen: Boolean,
     val expanded: Boolean,
     val leaves: List<AttendanceLeaf>,
-)
+) {
+    /**
+     * True for the bucket of attendances whose date the school did not give; [rangeStart] and
+     * [rangeEnd] are then the parser's filing date and must not be shown as a day. Derived from
+     * [key] for the reasons on [MonthHeader.dateUnknown].
+     */
+    val dateUnknown get() = key == NodeKey.UnknownDayKey
+}
 
 data class TypeHeader(
     val key: NodeKey,

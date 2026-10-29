@@ -41,8 +41,14 @@ object AttendanceTreeBuilder {
     private class ScratchRange(var rangeStart: Date, var rangeEnd: Date, val items: MutableList<AttendanceFull>)
 
     private fun buildDays(rows: List<AttendanceFull>, config: Config): List<DayRangeHeader> {
-        val ranges = rows
+        // The undated rows leave before groupBy and before the consecutive-day merge below: filed at
+        // 2019-01-01 they would otherwise fold into a real run dated 2019-01-02, the defect itself.
+        // This partition runs on the PRESENT-filtered rows, so an undated set of only PRESENT rows is
+        // empty here and adds no header; buildMonths, which does not filter, makes its own check.
+        val (undated, dated) = rows
             .filter { it.baseType != Attendance.TYPE_PRESENT }
+            .partition { it.dateUnknown }
+        val ranges = dated
             .groupBy { it.date }
             .map { (date, dayRows) -> ScratchRange(date, date, dayRows.toMutableList()) }
             .toMutableList()
@@ -67,7 +73,7 @@ object AttendanceTreeBuilder {
             ranges
         }
 
-        return grouped.map { range ->
+        val realDays = grouped.map { range ->
             val leaves = range.items.map(::leafOf)
             DayRangeHeader(
                 key = NodeKey.DayRangeKey(anchorOf(range.rangeEnd)),
@@ -78,27 +84,78 @@ object AttendanceTreeBuilder {
                 leaves = leaves,
             )
         }
+        // Appended last, and only when it has rows: groupBy emits a header only for a non-empty set, and
+        // this is the one header that would not, so an unconditional append would put an empty
+        // "date unknown" row on every install that has never had an undated attendance.
+        return if (undated.isEmpty()) realDays
+        else realDays + unknownDayHeader(undated.map(::leafOf))
     }
 
-    private fun buildMonths(rows: List<AttendanceFull>, config: Config): List<MonthHeader> =
-        rows
+    private fun unknownDayHeader(leaves: List<AttendanceLeaf>) = DayRangeHeader(
+        key = NodeKey.UnknownDayKey,
+        rangeStart = filingDate(),
+        rangeEnd = filingDate(),
+        hasUnseen = leaves.any { it.unseen },
+        expanded = false,
+        leaves = leaves,
+    )
+
+    /**
+     * The date the Librus parser files an undated attendance under (`librusAttendanceDate`). The unknown
+     * headers carry it so their date fields hold a defined value; nothing reads them, because every
+     * render site branches on `dateUnknown` first. A fresh instance per call: Date is mutable.
+     */
+    private fun filingDate() = Date(2019, 1, 1)
+
+    private fun buildMonths(rows: List<AttendanceFull>, config: Config): List<MonthHeader> {
+        // Unlike buildDays this does not drop PRESENT first, so the undated partition is empty only
+        // when there is no undated row at all, and an all-PRESENT undated set still gets its bucket.
+        val (undated, dated) = rows.partition { it.dateUnknown }
+        val realMonths = dated
             .groupBy { it.date.year to it.date.month }
             .map { (ym, monthRows) ->
-                val counts = AttendanceCounts.snapshot(monthRows)   // counts BEFORE dropping PRESENT
-                val kept = if (config.showPresenceInMonth) monthRows
-                else monthRows.filter { it.baseType != Attendance.TYPE_PRESENT }
-                val leaves = kept.map(::leafOf)
-                MonthHeader(
-                    key = NodeKey.MonthKey(ym.first, ym.second),
-                    year = ym.first,
-                    month = ym.second,
-                    counts = counts,
-                    percentage = AttendanceCounts.percentage(counts),
-                    hasUnseen = leaves.any { it.unseen },
-                    expanded = false,
-                    leaves = leaves,
-                )
+                monthHeader(NodeKey.MonthKey(ym.first, ym.second), ym.first, ym.second, monthRows, config)
             }
+        // Appended last, and only when it has rows - see buildDays.
+        return if (undated.isEmpty()) realMonths
+        else realMonths + unknownMonthHeader(undated, config)
+    }
+
+    /**
+     * Keeps the counts, which say "this many absences could not be dated", and drops the percentage.
+     * present-counted / counted-total is an attendance rate; over a parse failure it is a rate over no
+     * period, sitting in a column of monthly rates that invites comparison. `AttendanceBarChart` still
+     * labels each segment, and that stays: those labels are each type's share of this bucket's own
+     * rows, a true statement about what the bucket contains, not a rate.
+     */
+    private fun unknownMonthHeader(rows: List<AttendanceFull>, config: Config): MonthHeader {
+        val filing = filingDate()
+        return monthHeader(NodeKey.UnknownMonthKey, filing.year, filing.month, rows, config)
+            .copy(percentage = null)
+    }
+
+    private fun monthHeader(
+        key: NodeKey,
+        year: Int,
+        month: Int,
+        monthRows: List<AttendanceFull>,
+        config: Config,
+    ): MonthHeader {
+        val counts = AttendanceCounts.snapshot(monthRows)   // counts BEFORE dropping PRESENT
+        val kept = if (config.showPresenceInMonth) monthRows
+        else monthRows.filter { it.baseType != Attendance.TYPE_PRESENT }
+        val leaves = kept.map(::leafOf)
+        return MonthHeader(
+            key = key,
+            year = year,
+            month = month,
+            counts = counts,
+            percentage = AttendanceCounts.percentage(counts),
+            hasUnseen = leaves.any { it.unseen },
+            expanded = false,
+            leaves = leaves,
+        )
+    }
 
     private fun buildTypes(rows: List<AttendanceFull>, config: Config): List<TypeHeader> {
         val total = rows.size

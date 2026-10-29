@@ -11,6 +11,8 @@ import eu.mikus.edziennik.utils.models.Date
 import io.mockk.every
 import io.mockk.mockk
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -26,6 +28,7 @@ class AttendanceTreeBuilderTest {
         type: AttendanceType = absentType,
         semester: Int = 1,
         seen: Boolean = true,
+        dateUnknown: Boolean = false,
     ): AttendanceFull = mockk(relaxed = true) {
         every { this@mockk.id } returns id
         every { this@mockk.date } returns date
@@ -33,6 +36,7 @@ class AttendanceTreeBuilderTest {
         every { typeObject } returns type
         every { this@mockk.semester } returns semester
         every { this@mockk.seen } returns seen
+        every { this@mockk.dateUnknown } returns dateUnknown
         every { subjectId } returns 1L
         every { subjectLongName } returns "Algebra"
     }
@@ -229,5 +233,172 @@ class AttendanceTreeBuilderTest {
         )
         val ids = types(state).types.map { it.key.stableId }
         assertEquals(ids.size, ids.distinct().size, "duplicate LazyColumn keys: $ids")
+    }
+
+    // --- an attendance whose date the school did not give -------------------------------
+    //
+    // The Librus parser files such a row at 2019-01-01 and sets Attendance.dateUnknown; the flag,
+    // not the date, says the row is undated, because a school can really send 2019-01-01. The
+    // builder groups by date twice (Days by day, Months by year and month), so every undated row
+    // must be kept out of those groupings and given one bucket of its own on each tab, appended
+    // last and only when it has rows.
+
+    /** The date the parser files an undated attendance under. A fresh instance: Date is mutable. */
+    private fun filingDate() = Date(2019, 1, 1)
+
+    private fun undated(
+        id: Long,
+        baseType: Int = Attendance.TYPE_ABSENT,
+        type: AttendanceType = absentType,
+        seen: Boolean = true,
+    ) = row(id, filingDate(), baseType = baseType, type = type, seen = seen, dateUnknown = true)
+
+    private fun List<DayRangeHeader>.leafIds() = map { range -> range.leaves.map { it.attendance.id } }
+
+    @Test
+    fun `undated rows form their own Days bucket, last`() {
+        val state = AttendanceTreeBuilder.build(
+            // the undated row sits between the real ones, so "last" is the builder's doing, not the input order
+            listOf(row(1, Date(2026, 6, 1)), undated(2), row(3, Date(2026, 5, 1))),
+            config, Period.ALL,
+        )
+        val ranges = days(state).dayRanges
+        assertEquals(3, ranges.size)
+        assertEquals(listOf(listOf(1L), listOf(3L), listOf(2L)), ranges.leafIds())
+        assertEquals(NodeKey.UnknownDayKey, ranges.last().key)
+        assertTrue(ranges.last().dateUnknown)
+        assertEquals(filingDate(), ranges.last().rangeStart)
+        assertEquals(filingDate(), ranges.last().rangeEnd)
+        assertTrue(ranges.dropLast(1).none { it.dateUnknown })
+        assertTrue(ranges.dropLast(1).all { it.key is NodeKey.DayRangeKey })
+    }
+
+    @Test
+    fun `undated rows form their own Months bucket, last`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(row(1, Date(2026, 6, 1)), undated(2), row(3, Date(2026, 5, 1))),
+            config, Period.ALL,
+        )
+        val months = months(state).months
+        assertEquals(3, months.size)
+        assertEquals(listOf(listOf(1L), listOf(3L), listOf(2L)), months.map { m -> m.leaves.map { it.attendance.id } })
+        assertEquals(NodeKey.UnknownMonthKey, months.last().key)
+        assertTrue(months.last().dateUnknown)
+        assertTrue(months.dropLast(1).none { it.dateUnknown })
+        assertTrue(months.dropLast(1).all { it.key is NodeKey.MonthKey })
+    }
+
+    @Test
+    fun `the undated Months bucket has a null percentage but populated counts`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(
+                row(1, Date(2026, 6, 1), baseType = Attendance.TYPE_PRESENT, type = presentType),
+                row(2, Date(2026, 6, 2)),
+                undated(3, baseType = Attendance.TYPE_PRESENT, type = presentType),
+                undated(4),
+            ),
+            config, Period.ALL,
+        )
+        val (june, unknown) = months(state).months
+        // the same mix of types in a real month is a rate, so the null below is the builder's doing
+        assertEquals(0.5f, june.percentage!!, 0.0001f)
+        assertNull(unknown.percentage)
+        assertEquals(2, unknown.counts.byType.sumOf { it.count })
+    }
+
+    @Test
+    fun `the undated Months bucket carries the filing date's year and month`() {
+        val unknown = months(AttendanceTreeBuilder.build(listOf(undated(1)), config, Period.ALL)).months.single()
+        assertEquals(NodeKey.UnknownMonthKey, unknown.key)   // the year and month below are the unknown bucket's own
+        // never read - every render site branches on dateUnknown first - but defined, so a stray
+        // "1.2019" on screen cannot be mistaken for a deliberate label
+        assertEquals(2019, unknown.year)
+        assertEquals(1, unknown.month)
+    }
+
+    @Test
+    fun `an undated row is not merged into an adjacent day range`() {
+        // 2019-01-02 is one day from the filing date, so a merge that could see the undated row
+        // would fold the two into a single run and the undated row would read as a real day
+        val state = AttendanceTreeBuilder.build(
+            listOf(row(1, Date(2019, 1, 2)), undated(2)),
+            config.copy(groupConsecutiveDays = true), Period.ALL,
+        )
+        val ranges = days(state).dayRanges
+        assertEquals(2, ranges.size)
+        assertEquals(NodeKey.DayRangeKey(20190102L), ranges.first().key)
+        assertEquals(NodeKey.UnknownDayKey, ranges.last().key)
+        assertEquals(listOf(listOf(1L), listOf(2L)), ranges.leafIds())
+        // the real day stays a single day; a run stretched back to the filing date would read 1.1.2019 - 2.1.2019
+        assertEquals(Date(2019, 1, 2), ranges.first().rangeStart)
+        assertEquals(Date(2019, 1, 2), ranges.first().rangeEnd)
+    }
+
+    @Test
+    fun `an unseen undated row marks both unknown buckets unseen`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(row(1, Date(2026, 6, 1)), undated(2, seen = false)),
+            config, Period.ALL,
+        )
+        assertTrue(days(state).dayRanges.last().hasUnseen)
+        assertTrue(months(state).months.last().hasUnseen)
+        assertFalse(days(state).dayRanges.first().hasUnseen)     // the real day is seen, so the flag is the undated row's own
+        assertFalse(months(state).months.first().hasUnseen)
+    }
+
+    @Test
+    fun `the unknown keys do not collide with a real 2019-01-01 bucket`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(row(1, Date(2019, 1, 1)), undated(2)),
+            config, Period.ALL,
+        )
+        val ranges = days(state).dayRanges
+        val dayIds = ranges.map { it.key.stableId }
+        assertEquals(listOf(NodeKey.DayRangeKey(20190101L), NodeKey.UnknownDayKey), ranges.map { it.key })
+        assertEquals(dayIds.size, dayIds.distinct().size, "duplicate LazyColumn keys: $dayIds")
+        assertEquals(listOf(listOf(1L), listOf(2L)), ranges.leafIds())
+
+        val months = months(state).months
+        val monthIds = months.map { it.key.stableId }
+        assertEquals(listOf(NodeKey.MonthKey(2019, 1), NodeKey.UnknownMonthKey), months.map { it.key })
+        assertEquals(monthIds.size, monthIds.distinct().size, "duplicate LazyColumn keys: $monthIds")
+    }
+
+    @Test
+    fun `no undated rows means no unknown bucket on either tab`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(
+                row(1, Date(2026, 6, 1)),
+                row(2, Date(2026, 5, 2), baseType = Attendance.TYPE_PRESENT, type = presentType),
+            ),
+            config, Period.ALL,
+        )
+        // this is every existing install the day the column ships: the undated partition is empty,
+        // and an unconditional append would show an empty "date unknown" header on both tabs
+        val ranges = days(state).dayRanges
+        assertEquals(listOf<NodeKey>(NodeKey.DayRangeKey(20260601L)), ranges.map { it.key })
+        assertTrue(ranges.all { it.leaves.isNotEmpty() })
+        assertEquals(
+            listOf<NodeKey>(NodeKey.MonthKey(2026, 6), NodeKey.MonthKey(2026, 5)),
+            months(state).months.map { it.key },
+        )
+    }
+
+    @Test
+    fun `an all-present undated set adds a Months bucket and no Days bucket`() {
+        // Days drops PRESENT before grouping and Months does not, so the same undated set is empty
+        // for one tab and not for the other; each tab needs its own guard
+        val state = AttendanceTreeBuilder.build(
+            listOf(row(1, Date(2026, 6, 1)), undated(2, baseType = Attendance.TYPE_PRESENT, type = presentType)),
+            config, Period.ALL,    // showPresenceInMonth = false
+        )
+        assertEquals(listOf<NodeKey>(NodeKey.DayRangeKey(20260601L)), days(state).dayRanges.map { it.key })
+
+        val months = months(state).months
+        assertEquals(listOf<NodeKey>(NodeKey.MonthKey(2026, 6), NodeKey.UnknownMonthKey), months.map { it.key })
+        val unknown = months.last()
+        assertTrue(unknown.leaves.isEmpty())                       // PRESENT dropped from the leaves
+        assertEquals(1, unknown.counts.byType.sumOf { it.count })  // but still counted
+        assertTrue(unknown.dateUnknown)                            // empty leaves must not read as a real month
     }
 }

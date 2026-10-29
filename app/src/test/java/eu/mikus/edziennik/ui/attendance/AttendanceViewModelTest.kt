@@ -36,7 +36,14 @@ class AttendanceViewModelTest {
 
     private val absentType = AttendanceType(1, 1, Attendance.TYPE_ABSENT, "nieobecność", "nb", "nb", null)
 
-    private fun row(id: Long, semester: Int = 1, seen: Boolean = true, day: Int = 1): AttendanceFull =
+    /** An undated row is filed at 2019-01-01 by the parser, whatever [day] says. */
+    private fun row(
+        id: Long,
+        semester: Int = 1,
+        seen: Boolean = true,
+        day: Int = 1,
+        dateUnknown: Boolean = false,
+    ): AttendanceFull =
         mockk(relaxed = true) {
             every { this@mockk.id } returns id
             every { this@mockk.semester } returns semester
@@ -45,7 +52,10 @@ class AttendanceViewModelTest {
             every { typeObject } returns absentType
             every { subjectId } returns 1L
             every { subjectLongName } returns "Algebra"
-            every { date } returns eu.mikus.edziennik.utils.models.Date(2026, 6, day)
+            every { this@mockk.dateUnknown } returns dateUnknown
+            every { date } returns
+                if (dateUnknown) eu.mikus.edziennik.utils.models.Date(2019, 1, 1)
+                else eu.mikus.edziennik.utils.models.Date(2026, 6, day)
         }
 
     private val config = AttendanceTreeBuilder.Config(
@@ -224,6 +234,32 @@ class AttendanceViewModelTest {
         advanceUntilIdle()
         assertEquals(1, dayRanges(model).size)          // the consecutive run merged
         assertEquals(2, dayRanges(model).single().leaves.size)
+        job.cancel()
+    }
+
+    /**
+     * `expandedNodes` is one `Set<NodeKey>` shared by all five tabs, so this is the only guard that
+     * the two unknown keys are genuinely distinct: with one key reused, expanding the undated
+     * bucket on Days would expand it on Months too. It also pins that `dateUnknown`, derived from
+     * the key, survives the `copy(expanded = ...)` that `withExpanded` applies.
+     */
+    @Test
+    fun `expanding the Days unknown bucket does not expand the Months one`() = runTest(dispatcher) {
+        val model = vm(source = { flowOf(listOf(row(1), row(2, dateUnknown = true))) })
+        val job = launch { model.uiState.collect {} }
+        advanceUntilIdle()
+
+        model.toggleNode(NodeKey.UnknownDayKey)
+        advanceUntilIdle()
+        val content = model.uiState.value as AttendanceUiState.Content
+        val unknownDay = content.tabs.filterIsInstance<AttendanceTab.DaysTab>().single().dayRanges.last()
+        val unknownMonth = content.tabs.filterIsInstance<AttendanceTab.MonthsTab>().single().months.last()
+        assertEquals(NodeKey.UnknownDayKey, unknownDay.key)
+        assertEquals(NodeKey.UnknownMonthKey, unknownMonth.key)
+        assertTrue(unknownDay.expanded)
+        assertTrue(unknownDay.dateUnknown)
+        assertFalse(unknownMonth.expanded)
+        assertTrue(unknownMonth.dateUnknown)
         job.cancel()
     }
 
