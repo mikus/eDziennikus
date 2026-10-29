@@ -77,6 +77,7 @@ internal fun chooseDatabase(file: File, baseName: String, currentVersion: Int): 
         return DatabaseChoice.Unreadable(sidecar)
     }
     return when {
+        // looks unreachable, is not: see readUserVersion
         storedVersion == null -> DatabaseChoice.Unreadable(sidecar)
         storedVersion > currentVersion -> DatabaseChoice.Newer(sidecar, storedVersion)
         else -> DatabaseChoice.Current(baseName)
@@ -111,7 +112,15 @@ private fun readHeader(file: File): ByteArray = file.inputStream().use { input -
     buffer.copyOf(read)
 }
 
-/** `PRAGMA user_version` through a read-only connection, or null if the query returns no row. */
+/**
+ * `PRAGMA user_version` through a read-only connection, or null if the query returns no row.
+ *
+ * SQLite always returns that row, so the null looks like dead defence, and it is not: without the
+ * `moveToFirst` check, `getInt(0)` on an empty cursor throws `CursorIndexOutOfBoundsException`,
+ * which is not a `SQLiteException`, so [chooseDatabase] would not catch it and it would escape
+ * `AppDb.open` and crash `App.onCreate`. The null is what turns that into a park, and so fails
+ * closed.
+ */
 private fun readUserVersion(file: File): Int? {
     val db = SQLiteDatabase.openDatabase(
         file.path, null, SQLiteDatabase.OPEN_READONLY, noOpErrorHandler,

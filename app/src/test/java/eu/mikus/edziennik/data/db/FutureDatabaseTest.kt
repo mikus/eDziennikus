@@ -71,7 +71,7 @@ class FutureDatabaseTest {
     }
 
     @Test
-    fun `today, a database from the future is silently emptied by the destructive fallback`() {
+    fun `the destructive fallback still empties a database from the future that is handed straight to Room`() {
         createCurrentDatabase(context, DB_NAME)
         insertEvent(context, DB_NAME, profileId = 1, eventId = 100L)
         insertProfile(context, DB_NAME, profileId = 1)
@@ -93,9 +93,9 @@ class FutureDatabaseTest {
 
         // One assertion over all three facts, so that a failure reports each of them and not just
         // the first: both tables are emptied, and the file is rebuilt at the build's own version,
-        // not left at the future one. Rows are counted in the file and not read through a DAO,
-        // because a surviving profile row cannot be turned into a `Profile` (its `loginStoreType`
-        // is not one the converter knows), so the read would throw instead of reporting.
+        // not left at the future one. Rows are counted in the file and not read through a DAO:
+        // "emptied" is a question of how many rows are left, and a count answers it without a
+        // row having to convert into an entity first.
         assertEquals(
             mapOf("events" to 0, "profiles" to 0, "version" to APP_DB_VERSION),
             mapOf(
@@ -504,7 +504,8 @@ class FutureDatabaseTest {
 
     /**
      * A second table to drop, so the emptiness assertion does not rest on `events` alone. Inserts
-     * with the full v3 column list.
+     * with the full v3 column list. `loginStoreType` is 2, the id of `LoginType.LIBRUS`, so the row
+     * converts into a `Profile` when something reads it through the DAO.
      */
     private fun insertProfile(ctx: Context, name: String, profileId: Int) =
         withRawDatabase(ctx, name) { raw ->
@@ -514,7 +515,7 @@ class FutureDatabaseTest {
                     archived, syncEnabled, userCode, archiveId, studentNumber, studentClassName,
                     studentSchoolYearStart, dateSemester1Start, dateSemester2Start, dateYearEnd,
                     disabledNotifications, lastReceiversSync)
-                    VALUES ($profileId, 1, 1, 'Jan', NULL, 'Jan Kowalski', 'Jan K.', NULL, '{}',
+                    VALUES ($profileId, 1, 2, 'Jan', NULL, 'Jan Kowalski', 'Jan K.', NULL, '{}',
                     NULL, 0, 0, 1, 'kod', NULL, 1, NULL, 2025, '2025-09-01', '2026-02-01',
                     '2026-06-26', NULL, 0)"""
             )

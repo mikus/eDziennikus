@@ -172,19 +172,35 @@ class FutureDatabaseNoticeTest {
     @Test
     fun `every language says the stored version for a newer database and none for an unreadable one`() {
         val context = RuntimeEnvironment.getApplication()
+        val newerMessages = mutableMapOf<String, String>()
+        val unreadableMessages = mutableMapOf<String, String>()
         for (language in listOf("pl", "en", "de")) {
             val configuration = Configuration(context.resources.configuration)
-            configuration.setLocale(Locale(language))
+            configuration.setLocale(Locale.forLanguageTag(language))
             val localized = context.createConfigurationContext(configuration)
 
             val newerMessage = localized.getString(R.string.db_newer_version, STORED_VERSION, APP_DB_VERSION)
             val unreadableMessage = localized.getString(R.string.db_unreadable)
+            newerMessages[language] = newerMessage
+            unreadableMessages[language] = unreadableMessage
 
-            assertTrue("$language: $newerMessage", newerMessage.contains("$STORED_VERSION"))
-            assertTrue("$language: $newerMessage", newerMessage.contains("$APP_DB_VERSION"))
+            // The only digits in the message are the two numbers, so their order is the order the
+            // string places them in: %1$d the stored version, %2$d the one this build supports.
+            // A `contains` on either would pass with the two swapped.
+            assertEquals(
+                "$language: $newerMessage",
+                listOf("$STORED_VERSION", "$APP_DB_VERSION"),
+                Regex("\\d+").findAll(newerMessage).map { it.value }.toList(),
+            )
             assertFalse("$language: $unreadableMessage", unreadableMessage.any { it.isDigit() })
             assertNotEquals(language, newerMessage, unreadableMessage)
         }
+
+        // Everything above also holds for the default Polish text, which is what a missing
+        // values-xx key, or a locale that never applied, falls back to. Only three messages that
+        // differ from one another show that each language was really looked up.
+        assertEquals("one db_newer_version per language: $newerMessages", 3, newerMessages.values.toSet().size)
+        assertEquals("one db_unreadable per language: $unreadableMessages", 3, unreadableMessages.values.toSet().size)
     }
 
     /**

@@ -188,11 +188,14 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         // nothing to go back to. This is ahead of validateBuild, which may start its own
         // BuildInvalidActivity in a debug build.
         val choice = AppDb.choice
+        // No `else`: a fourth DatabaseChoice that ought to park must not fall through to the login
+        // wizard unnoticed, so the compiler has to be made to ask where it goes.
         val parkedMessage = when (choice) {
             is DatabaseChoice.Newer ->
                 getString(R.string.db_newer_version, choice.storedVersion, APP_DB_VERSION)
             is DatabaseChoice.Unreadable -> getString(R.string.db_unreadable)
-            else -> null
+            is DatabaseChoice.Current -> null
+            null -> null
         }
         if (parkedMessage != null) {
             d(TAG, "Database is parked ($choice). Launch BuildInvalidActivity.")

@@ -33,14 +33,20 @@ class MigrationLadderTest {
 
         if (stranded.isEmpty()) return
 
-        val registered = AppDb.MIGRATIONS.joinToString { "${it.startVersion} -> ${it.endVersion}" }
+        val registered = AppDb.MIGRATIONS
+            .joinToString { "${it.startVersion} -> ${it.endVersion}" }
+            .ifEmpty { "none" }
+        // The highest stranded version is the first step the ladder is missing, wherever the gap
+        // is: a missing tail (3 -> 4 after a bump to 4), a middle step, or a head (1 -> 2). It is
+        // never the version below APP_DB_VERSION by default, which may already be registered.
+        val missingFrom = stranded.max()
         fail(
             "APP_DB_VERSION is $APP_DB_VERSION, but no migration path reaches it from these " +
                 "versions: ${stranded.joinToString()}. Registered in AppDb.MIGRATIONS: $registered. " +
                 "AppDb.builder still ends in fallbackToDestructiveMigration(), so Room will not " +
                 "fail on the gap: it drops and recreates every table, and every user silently " +
                 "loses their local diary on update. Add the missing Migration to " +
-                "AppDb.MIGRATIONS, normally Migration(${APP_DB_VERSION - 1}, $APP_DB_VERSION).",
+                "AppDb.MIGRATIONS, normally Migration($missingFrom, ${missingFrom + 1}).",
         )
     }
 }
