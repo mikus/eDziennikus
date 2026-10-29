@@ -694,6 +694,8 @@
     <string name="notification_announcement_format">Schulankündigung von %s: %s</string>
     <string name="notification_attendance_format">%1$s auf Lektion %2$s auf Tag %3$s</string>
     <string name="notification_attendance_no_lesson_format">%1$s am Tag %3$s</string>
+    <string name="notification_attendance_unknown_date_format">%1$s auf Lektion %2$s — Datum unbekannt</string>
+    <string name="notification_attendance_unknown_date_no_lesson_format">%1$s — Datum unbekannt</string>
     <string name="notification_belated">Verspätung</string>
     <string name="notification_belated_excused">Entschuldigte Verspätung</string>
     <string name="notification_cant_check_update">Fehler beim Suchen nach Updates</string>

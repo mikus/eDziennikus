@@ -768,6 +768,8 @@
     <string name="notification_announcement_format">Ogłoszenie szkolne od %s: %s</string>
     <string name="notification_attendance_format">%1$s na lekcji %2$s z dnia %3$s</string>
     <string name="notification_attendance_no_lesson_format">%1$s z dnia %3$s</string>
+    <string name="notification_attendance_unknown_date_format">%1$s na lekcji %2$s — data nieznana</string>
+    <string name="notification_attendance_unknown_date_no_lesson_format">%1$s — data nieznana</string>
     <string name="notification_belated">Spóźnienie</string>
     <string name="notification_belated_excused">Spóźnienie usprawiedliwione</string>
     <string name="notification_cant_check_update">Nie udało się sprawdzić aktualizacji</string>

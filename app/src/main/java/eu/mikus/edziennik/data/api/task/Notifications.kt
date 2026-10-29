@@ -219,19 +219,21 @@ class Notifications(val app: App, val notifications: MutableList<Notification>, 
                 else -> app.getString(R.string.notification_type_attendance)
             }
 
-            val text = app.getString(
-                    if (attendance.subjectLongName.isNullOrEmpty())
-                        R.string.notification_attendance_no_lesson_format
-                    else
-                        R.string.notification_attendance_format,
-                    attendanceTypeStr,
-                    attendance.subjectLongName,
-                    attendance.date.formattedString
-            )
+            val text = attendanceNotificationText(attendanceTypeStr, attendance, app)
+            // An undated attendance's stored date is a filing date chosen by the parser, not the
+            // school's. The long format puts the date after a colon ("Termin: …"), a nominative
+            // slot, so the label fits there as a plain substitution; the short formats do not take
+            // it (see attendanceNotificationText). Unlike the short text this is built inline and
+            // is not pinned by a test: attendanceNotifications() reads the DAO off `app`, so only
+            // an emulator run covers it.
+            val dateText = when {
+                attendance.dateUnknown -> app.getString(R.string.attendance_date_unknown)
+                else -> attendance.date.formattedString
+            }
             val textLong = app.getString(
                     R.string.notification_attendance_long_format,
                     attendanceTypeStr,
-                    attendance.date.formattedString,
+                    dateText,
                     attendance.startTime?.stringHM ?: "-",
                     attendance.lessonNumber ?: "-",
                     attendance.subjectLongName ?: "-",

@@ -695,6 +695,8 @@
     <string name="notification_announcement_format">School announcement from %s: %s</string>
     <string name="notification_attendance_format">%1$s on lesson %2$s on day %3$s</string>
     <string name="notification_attendance_no_lesson_format">%1$s on day %3$s</string>
+    <string name="notification_attendance_unknown_date_format">%1$s on lesson %2$s — date unknown</string>
+    <string name="notification_attendance_unknown_date_no_lesson_format">%1$s — date unknown</string>
     <string name="notification_belated">Late</string>
     <string name="notification_belated_excused">Excused late</string>
     <string name="notification_cant_check_update">Failed to check for updates</string>
