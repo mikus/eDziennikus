@@ -5,6 +5,7 @@ package eu.mikus.edziennik.data.db
 
 import android.app.Application
 import android.content.Context
+import android.content.ContextWrapper
 import android.database.sqlite.SQLiteDatabase
 import com.google.gson.JsonParser
 import eu.mikus.edziennik.data.db.entity.Event
@@ -15,7 +16,6 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -77,17 +77,33 @@ class FutureDatabaseTest {
         insertProfile(context, DB_NAME, profileId = 1)
         // the rows are in the file before Room opens it, so the emptiness below is a drop, not an
         // insert that never landed
-        assertEquals(1, countRows(context, DB_NAME, "events"))
-        assertEquals(1, countRows(context, DB_NAME, "profiles"))
+        assertEquals(
+            mapOf("events" to 1, "profiles" to 1),
+            mapOf(
+                "events" to countRows(context, DB_NAME, "events"),
+                "profiles" to countRows(context, DB_NAME, "profiles"),
+            ),
+        )
         setUserVersion(context, DB_NAME, APP_DB_VERSION + 1)
 
         val appDb = AppDb.builder(context, DB_NAME).build().also { opened += it }
+        // Room opens the file lazily, and opening it is what drops the tables: open it before
+        // looking. onDowngrade -> onUpgrade -> dropAllTables + createAllTables
+        val version = appDb.openHelper.readableDatabase.version
 
-        // onDowngrade -> onUpgrade -> dropAllTables + createAllTables
-        assertNull(appDb.eventDao().getByIdNow(1, 100L))
-        assertTrue(appDb.profileDao().allNow.isEmpty())
-        // the file was rebuilt at the build's own version, not left at the future one
-        assertEquals(APP_DB_VERSION, appDb.openHelper.readableDatabase.version)
+        // One assertion over all three facts, so that a failure reports each of them and not just
+        // the first: both tables are emptied, and the file is rebuilt at the build's own version,
+        // not left at the future one. Rows are counted in the file and not read through a DAO,
+        // because a surviving profile row cannot be turned into a `Profile` (its `loginStoreType`
+        // is not one the converter knows), so the read would throw instead of reporting.
+        assertEquals(
+            mapOf("events" to 0, "profiles" to 0, "version" to APP_DB_VERSION),
+            mapOf(
+                "events" to countRows(context, DB_NAME, "events"),
+                "profiles" to countRows(context, DB_NAME, "profiles"),
+                "version" to version,
+            ),
+        )
     }
 
     @Test
@@ -246,6 +262,25 @@ class FutureDatabaseTest {
     }
 
     @Test
+    fun `a guarded open looks for the database where Room will open it`() {
+        plantFutureDatabase()
+
+        openGuarded(from = contextWithAnotherDatabaseDirectory())
+
+        assertEquals(DatabaseChoice.Newer(SIDECAR_NAME, FUTURE_VERSION), AppDb.choice)
+    }
+
+    @Test
+    fun `a guarded open through a context with another database directory leaves the main file byte-identical`() {
+        plantFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded(from = contextWithAnotherDatabaseDirectory())
+
+        assertSameBytes(DB_NAME, before, familySnapshot())
+    }
+
+    @Test
     fun `a database at the current version records Current on AppDb choice`() {
         plantCurrentDatabase()
 
@@ -291,12 +326,27 @@ class FutureDatabaseTest {
         assertNotNull(appDb.eventDao().getByIdNow(1, 100L))
     }
 
-    /** Opens through the production path, and makes Room open the file now rather than on a query. */
-    private fun openGuarded(): AppDb =
-        AppDb.open(context, DB_NAME, APP_DB_VERSION).also {
+    /**
+     * Opens through the production path, and makes Room open the file now rather than on a query.
+     * [from] is the context `open` is handed; Room is always given its application context.
+     */
+    private fun openGuarded(from: Context = context): AppDb =
+        AppDb.open(from, DB_NAME, APP_DB_VERSION).also {
             opened += it
             it.openHelper.writableDatabase
         }
+
+    /**
+     * A context whose own `getDatabasePath` points somewhere other than its application context's,
+     * as a device-protected-storage context would. Room is handed the application context, so the
+     * guard has to look in the directory Room will open from, not this one.
+     */
+    private fun contextWithAnotherDatabaseDirectory(): Context {
+        val elsewhere = File(context.cacheDir, "another-database-directory")
+        return object : ContextWrapper(context) {
+            override fun getDatabasePath(name: String): File = File(elsewhere, name)
+        }
+    }
 
     /** The current schema with a row in two tables, `user_version` stamped higher than the build's. */
     private fun plantFutureDatabase() {

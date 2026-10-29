@@ -101,9 +101,13 @@ abstract class AppDb : RoomDatabase() {
         private val LOCK = Any()
 
         /**
-         * Which file [open] last chose to build on, or null until a database has been built.
+         * Which file [open] last chose to build on, or null until [open] has been called.
          * [DatabaseChoice.Current] is the normal case; `Newer` and `Unreadable` mean the real file
          * was left alone and the app is running on a sidecar.
+         *
+         * It is recorded before Room builds the database, and building does not open the file: Room
+         * opens it on first use. A non-null value says which file will be opened, not that the
+         * database is open.
          *
          * The setter is `internal` so tests can put the app in a parked state without placing a
          * real database file and letting `App.onCreate` boot against the cached singleton.
@@ -127,7 +131,7 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+        internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
         internal fun builder(context: Context, name: String) = Room.databaseBuilder(
                 context.applicationContext,
@@ -151,9 +155,14 @@ abstract class AppDb : RoomDatabase() {
          * the tests drive it and not a copy of it: [invoke] caches a singleton and fixes the name.
          */
         internal fun open(context: Context, baseName: String, version: Int): AppDb {
-            val chosen = chooseDatabase(context.getDatabasePath(baseName), baseName, version)
+            // Room is given the application context, so that is the one the file is looked for
+            // through: a context with its own idea of the database directory, such as a
+            // device-protected-storage one, would make the guard read one directory while Room
+            // opened another.
+            val appContext = context.applicationContext
+            val chosen = chooseDatabase(appContext.getDatabasePath(baseName), baseName, version)
             choice = chosen
-            return builder(context, chosen.name).build()
+            return builder(appContext, chosen.name).build()
         }
 
         private fun buildDatabase(context: Context) = open(context, APP_DB_NAME, APP_DB_VERSION)
