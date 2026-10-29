@@ -5,31 +5,10 @@ buildscript {
         kotlin_version = '2.3.20'
         lifecycle_version = '2.9.4'
 
-        // versionCode is derived from versionName rather than maintained beside it, so the two
-        // cannot drift and every release automatically carries a strictly higher code than the one
-        // before it. Android refuses an install whose versionCode is lower than the installed
-        // one's, and Auto Backup refuses to restore a backup from a higher one, so a code that
-        // never moves leaves both doors open to a downgrade that a newer build's database cannot
-        // survive.
-        //
-        // The formula and its ranges mirror UpdateManager.versionCodeFromName, which the in-app
-        // updater applies to release tag names, so the build and the updater agree by
-        // construction. A name outside those ranges fails the build here instead of emitting a
-        // colliding code: 2026.05.100 would otherwise produce 20260600, which is 2026.06.0.
-        release = [versionName: "2026.05.0"]
-        def releaseName = (release.versionName =~ /^(\d{4})\.(\d{2})\.(\d{1,2})$/)
-        if (!releaseName.matches()) {
-            throw new GradleException(
-                    "release.versionName '${release.versionName}' must be YYYY.MM.patch, e.g. 2026.05.0")
-        }
-        if (!(releaseName[0][2].toInteger() in 1..12)) {
-            throw new GradleException(
-                    "release.versionName '${release.versionName}' has month ${releaseName[0][2]}; " +
-                            "UpdateManager.versionCodeFromName only accepts 01-12")
-        }
-        release.versionCode = releaseName[0][1].toInteger() * 10000 +
-                releaseName[0][2].toInteger() * 100 +
-                releaseName[0][3].toInteger()
+        release = [
+                versionName: "2026.05.0",
+                versionCode: 20260500
+        ]
 
         setup = [
                 compileSdk: 35,
