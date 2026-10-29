@@ -13,6 +13,12 @@ import eu.mikus.edziennik.data.db.converter.*
 import eu.mikus.edziennik.data.db.dao.*
 import eu.mikus.edziennik.data.db.entity.*
 
+/**
+ * The schema version [AppDb] declares. The annotation and the guard that decides which file to
+ * open both read it, so they cannot drift apart.
+ */
+const val APP_DB_VERSION = 3
+
 @Database(entities = [
     Grade::class,
     Teacher::class,
@@ -45,7 +51,7 @@ import eu.mikus.edziennik.data.db.entity.*
     TimetableManual::class,
     Note::class,
     Metadata::class
-], version = 3)
+], version = APP_DB_VERSION)
 @TypeConverters(
         ConverterTime::class,
         ConverterDate::class,
@@ -89,8 +95,21 @@ abstract class AppDb : RoomDatabase() {
     abstract fun metadataDao(): MetadataDao
 
     companion object {
+        const val APP_DB_NAME = "edziennik.db"
+
         @Volatile private var instance: AppDb? = null
         private val LOCK = Any()
+
+        /**
+         * Which file [open] last chose to build on, or null until a database has been built.
+         * [DatabaseChoice.Current] is the normal case; `Newer` and `Unreadable` mean the real file
+         * was left alone and the app is running on a sidecar.
+         *
+         * The setter is `internal` so tests can put the app in a parked state without placing a
+         * real database file and letting `App.onCreate` boot against the cached singleton.
+         */
+        @Volatile var choice: DatabaseChoice? = null
+            internal set
 
         operator fun invoke(context: Context) = instance ?: synchronized(LOCK) {
             instance ?: buildDatabase(context).also { instance = it }
@@ -108,15 +127,35 @@ abstract class AppDb : RoomDatabase() {
             }
         }
 
+        val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+
         internal fun builder(context: Context, name: String) = Room.databaseBuilder(
                 context.applicationContext,
                 AppDb::class.java,
                 name
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                // findMigrationPath runs first, so this only fires when no path exists
+        ).addMigrations(*MIGRATIONS)
+                // A file from a newer build does not reach this under its own name: no migration
+                // path is registered for a downgrade, so it would always land here and be dropped,
+                // and `open` parks it on a sidecar before Room sees it. What still lands here is a
+                // stored version lower than ours with no registered path. Corruption does not: that
+                // goes through the open helper's onCorruption, which deletes the file.
                 .fallbackToDestructiveMigration()
                 .allowMainThreadQueries()
 
-        private fun buildDatabase(context: Context) = builder(context, "edziennik.db").build()
+        /**
+         * Decides which file to open for the database called [baseName] at [version], records the
+         * decision on [choice], and builds on the file it names. A file written by a newer build
+         * is left where it is and a sidecar is opened beside it; see [chooseDatabase].
+         *
+         * This is what [buildDatabase] does with the production name, kept as its own function so
+         * the tests drive it and not a copy of it: [invoke] caches a singleton and fixes the name.
+         */
+        internal fun open(context: Context, baseName: String, version: Int): AppDb {
+            val chosen = chooseDatabase(context.getDatabasePath(baseName), baseName, version)
+            choice = chosen
+            return builder(context, chosen.name).build()
+        }
+
+        private fun buildDatabase(context: Context) = open(context, APP_DB_NAME, APP_DB_VERSION)
     }
 }

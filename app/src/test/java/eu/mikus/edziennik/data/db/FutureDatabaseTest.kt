@@ -9,10 +9,15 @@ import android.database.sqlite.SQLiteDatabase
 import com.google.gson.JsonParser
 import eu.mikus.edziennik.data.db.entity.Event
 import java.io.File
+import java.nio.ByteBuffer
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -28,9 +33,17 @@ import org.robolectric.annotation.Config
  * fires and Room drops every table and recreates them empty. The build stays green and the user
  * silently loses their local diary.
  *
- * The test below asserts that **current, broken** behaviour on purpose: it is the pin on what
- * Room 2.4.3 does today, kept so a later change that is meant to stop the wipe has something to
- * be measured against.
+ * The first test calls `AppDb.builder` directly, without the guard, and asserts that wipe on
+ * purpose: it pins what Room does to a file it is handed, which is why the guard exists. Every
+ * other test drives [AppDb.open], the function `AppDb(context)` builds the production database
+ * through, and asserts what happens instead: the file is left alone and a sidecar is opened.
+ * `AppDb(context)` itself cannot be driven from here: it hard-codes the real name and caches a
+ * singleton.
+ *
+ * The byte-identity tests hold the guard to what it may do to the file it leaves alone. The `.db`
+ * is never changed, an existing `-wal` is never changed, and nothing is deleted or renamed. A
+ * `-shm`, and a zero-length `-wal`, may appear where there were none: SQLite makes both on any
+ * open of a write-ahead-log database, read-only included, and Room's own open makes the same two.
  *
  * The fixture is rebuilt from the committed `<version>.json` and opened through [AppDb.builder] -
  * the same chain production uses - for the reasons given on `AppDbMigrationTest`, whose harness
@@ -43,11 +56,18 @@ class FutureDatabaseTest {
 
     private val context: Context
         get() = RuntimeEnvironment.getApplication()
-    private var db: AppDb? = null
+    private val opened = mutableListOf<AppDb>()
+
+    @Before
+    fun clearChoice() {
+        // a value left by an earlier test would let "open recorded it" pass without open
+        AppDb.choice = null
+    }
 
     @After
-    fun closeDb() {
-        db?.close()
+    fun closeDatabases() {
+        opened.forEach { it.close() }
+        AppDb.choice = null
     }
 
     @Test
@@ -59,25 +79,323 @@ class FutureDatabaseTest {
         // insert that never landed
         assertEquals(1, countRows(context, DB_NAME, "events"))
         assertEquals(1, countRows(context, DB_NAME, "profiles"))
-        setUserVersion(context, DB_NAME, APP_DB_VERSION_TODAY + 1)
+        setUserVersion(context, DB_NAME, APP_DB_VERSION + 1)
 
-        val appDb = AppDb.builder(context, DB_NAME).build().also { db = it }
+        val appDb = AppDb.builder(context, DB_NAME).build().also { opened += it }
 
         // onDowngrade -> onUpgrade -> dropAllTables + createAllTables
         assertNull(appDb.eventDao().getByIdNow(1, 100L))
         assertTrue(appDb.profileDao().allNow.isEmpty())
         // the file was rebuilt at the build's own version, not left at the future one
-        assertEquals(APP_DB_VERSION_TODAY, appDb.openHelper.readableDatabase.version)
+        assertEquals(APP_DB_VERSION, appDb.openHelper.readableDatabase.version)
+    }
+
+    @Test
+    fun `a guarded open of a database from the future records Newer on AppDb choice`() {
+        plantFutureDatabase()
+
+        openGuarded()
+
+        assertEquals(DatabaseChoice.Newer(SIDECAR_NAME, FUTURE_VERSION), AppDb.choice)
+    }
+
+    @Test
+    fun `a guarded open of a database from the future builds on the sidecar`() {
+        plantFutureDatabase()
+
+        val appDb = openGuarded()
+
+        assertEquals(SIDECAR_NAME, appDb.openHelper.databaseName)
+    }
+
+    @Test
+    fun `a guarded open of a database from the future yields an empty sidecar`() {
+        plantFutureDatabase()
+
+        openGuarded()
+
+        // counted in the sidecar file itself: an unguarded open would leave the real file empty
+        // too, but it would not leave a sidecar
+        assertEquals(
+            mapOf("events" to 0, "profiles" to 0),
+            mapOf(
+                "events" to countRows(context, SIDECAR_NAME, "events"),
+                "profiles" to countRows(context, SIDECAR_NAME, "profiles"),
+            ),
+        )
+    }
+
+    @Test
+    fun `a guarded open of a database from the future leaves the main file byte-identical`() {
+        plantFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertSameBytes(DB_NAME, before, familySnapshot())
+    }
+
+    @Test
+    fun `a guarded open of a clean write-ahead-log database from the future leaves the main file byte-identical`() {
+        plantCleanWalFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertSameBytes(DB_NAME, before, familySnapshot())
+    }
+
+    @Test
+    fun `a guarded open of a clean write-ahead-log database from the future adds nothing but a -shm and a -wal`() {
+        plantCleanWalFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertEquals(emptySet<String>(), addedFiles(before, familySnapshot()) - SHM_AND_WAL)
+    }
+
+    @Test
+    fun `a guarded open of a clean write-ahead-log database from the future adds only an empty -wal`() {
+        plantCleanWalFutureDatabase()
+
+        openGuarded()
+
+        // no -wal before, so whatever is there now was made by the open, and must be zero-length
+        assertEquals(0, familySnapshot()[WAL_NAME]?.size ?: 0)
+    }
+
+    @Test
+    fun `a guarded open of a database whose newer version is only in the log records Newer`() {
+        plantHotWalFutureDatabase()
+
+        openGuarded()
+
+        assertEquals(DatabaseChoice.Newer(SIDECAR_NAME, FUTURE_VERSION), AppDb.choice)
+    }
+
+    @Test
+    fun `a guarded open of a database whose newer version is only in the log leaves the main file byte-identical`() {
+        plantHotWalFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertSameBytes(DB_NAME, before, familySnapshot())
+    }
+
+    @Test
+    fun `a guarded open of a database whose newer version is only in the log leaves its -wal byte-identical`() {
+        plantHotWalFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertSameBytes(WAL_NAME, before, familySnapshot())
+    }
+
+    @Test
+    fun `a guarded open of a database whose newer version is only in the log deletes and renames nothing`() {
+        plantHotWalFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertEquals(emptySet<String>(), before.keys - familySnapshot().keys)
+    }
+
+    @Test
+    fun `a guarded open of a database whose newer version is only in the log adds nothing but a -shm`() {
+        plantHotWalFutureDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertEquals(emptySet<String>(), addedFiles(before, familySnapshot()) - SHM_AND_WAL)
+    }
+
+    @Test
+    fun `a guarded open of an unreadable database records Unreadable on AppDb choice`() {
+        plantUnreadableDatabase()
+
+        openGuarded()
+
+        assertEquals(DatabaseChoice.Unreadable(SIDECAR_NAME), AppDb.choice)
+    }
+
+    @Test
+    fun `a guarded open of an unreadable database leaves it byte-identical`() {
+        plantUnreadableDatabase()
+        val before = familySnapshot()
+
+        openGuarded()
+
+        assertSameBytes(DB_NAME, before, familySnapshot())
+    }
+
+    @Test
+    fun `the sidecar is reused on a second guarded open`() {
+        plantFutureDatabase()
+        openGuarded().close()
+        // what the app itself wrote to the sidecar while parked
+        insertEvent(context, SIDECAR_NAME, profileId = 1, eventId = 200L)
+
+        val second = openGuarded()
+
+        assertNotNull(second.eventDao().getByIdNow(1, 200L))
+    }
+
+    @Test
+    fun `a database at the current version records Current on AppDb choice`() {
+        plantCurrentDatabase()
+
+        openGuarded()
+
+        assertEquals(DatabaseChoice.Current(DB_NAME), AppDb.choice)
+    }
+
+    @Test
+    fun `a database at the current version still opens the real file`() {
+        plantCurrentDatabase()
+
+        val appDb = openGuarded()
+
+        assertNotNull(appDb.eventDao().getByIdNow(1, 100L))
+    }
+
+    @Test
+    fun `a database at the current version creates no sidecar`() {
+        plantCurrentDatabase()
+
+        openGuarded()
+
+        assertFalse(context.getDatabasePath(SIDECAR_NAME).exists())
+    }
+
+    @Test
+    fun `a database at a lower version records Current on AppDb choice`() {
+        plantV1Database()
+
+        openGuarded()
+
+        assertEquals(DatabaseChoice.Current(DB_NAME), AppDb.choice)
+    }
+
+    @Test
+    fun `a database at a lower version still migrates, and its row survives`() {
+        plantV1Database()
+
+        val appDb = openGuarded()
+
+        // if the guard had parked it, or the destructive fallback had fired, the row is not here
+        assertNotNull(appDb.eventDao().getByIdNow(1, 100L))
+    }
+
+    /** Opens through the production path, and makes Room open the file now rather than on a query. */
+    private fun openGuarded(): AppDb =
+        AppDb.open(context, DB_NAME, APP_DB_VERSION).also {
+            opened += it
+            it.openHelper.writableDatabase
+        }
+
+    /** The current schema with a row in two tables, `user_version` stamped higher than the build's. */
+    private fun plantFutureDatabase() {
+        createCurrentDatabase(context, DB_NAME)
+        insertEvent(context, DB_NAME, profileId = 1, eventId = 100L)
+        insertProfile(context, DB_NAME, profileId = 1)
+        setUserVersion(context, DB_NAME, FUTURE_VERSION)
+    }
+
+    /**
+     * [plantFutureDatabase], switched to write-ahead logging and closed cleanly: what a newer
+     * build leaves when it exits normally. SQLite removes the log and the index on the last close,
+     * so the `.db` is all there is on disk.
+     */
+    private fun plantCleanWalFutureDatabase() {
+        plantFutureDatabase()
+        withRawDatabase(context, DB_NAME) { raw ->
+            raw.rawQuery("PRAGMA journal_mode=WAL", null).use { it.moveToFirst() }
+        }
+        // the setup holds: the file says write-ahead log, and nothing sits beside it
+        assertEquals(2, context.getDatabasePath(DB_NAME).readBytes()[WAL_FORMAT_OFFSET].toInt())
+        assertEquals(setOf(DB_NAME), familySnapshot().keys)
+    }
+
+    /**
+     * A future database whose newer `user_version` is still in the write-ahead log, with that log
+     * left on disk and no `-shm`: what a newer build leaves when it is killed mid-session. Built
+     * by copying a live writer's files, since closing it cleanly would fold the log away.
+     */
+    private fun plantHotWalFutureDatabase() {
+        createCurrentDatabase(context, SCRATCH_NAME)
+        insertEvent(context, SCRATCH_NAME, profileId = 1, eventId = 100L)
+        insertProfile(context, SCRATCH_NAME, profileId = 1)
+        val scratch = context.getDatabasePath(SCRATCH_NAME)
+        val target = context.getDatabasePath(DB_NAME)
+        val writer = SQLiteDatabase.openDatabase(
+            scratch.path, null,
+            SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
+        )
+        try {
+            writer.rawQuery("PRAGMA journal_mode=WAL", null).use { it.moveToFirst() }
+            writer.rawQuery("PRAGMA wal_autocheckpoint=0", null).use { it.moveToFirst() }
+            writer.execSQL("PRAGMA user_version = $FUTURE_VERSION")
+            scratch.copyTo(target, overwrite = true)
+            File(scratch.path + "-wal").copyTo(File(target.path + "-wal"), overwrite = true)
+        } finally {
+            writer.close()
+        }
+        // the setup holds: the main file still says the build's own version, so the newer one is
+        // only in a log that is really there, and there is no index beside it
+        assertEquals(APP_DB_VERSION, ByteBuffer.wrap(target.readBytes()).getInt(USER_VERSION_OFFSET))
+        assertTrue(File(target.path + "-wal").length() > 0)
+        assertEquals(setOf(DB_NAME, WAL_NAME), familySnapshot().keys)
+    }
+
+    /** The SQLite header, then bytes that are not a database: the version cannot be read. */
+    private fun plantUnreadableDatabase() {
+        val file = context.getDatabasePath(DB_NAME).also { it.parentFile?.mkdirs() }
+        file.writeBytes(
+            "SQLite format 3\u0000".toByteArray(Charsets.US_ASCII) + ByteArray(48) { 'd'.code.toByte() }
+        )
+    }
+
+    private fun plantCurrentDatabase() {
+        createCurrentDatabase(context, DB_NAME)
+        insertEvent(context, DB_NAME, profileId = 1, eventId = 100L)
+    }
+
+    private fun plantV1Database() {
+        createDatabase(context, DB_NAME, version = 1)
+        insertV1Event(context, DB_NAME, profileId = 1, eventId = 100L)
+    }
+
+    /** Every file of the real database's family (`.db`, `-wal`, `-shm`, ...) by name, with its bytes. */
+    private fun familySnapshot(): Map<String, ByteArray> =
+        context.getDatabasePath(DB_NAME).parentFile?.listFiles().orEmpty()
+            .filter { it.name.startsWith(DB_NAME) }
+            .associate { it.name to it.readBytes() }
+
+    private fun addedFiles(before: Map<String, ByteArray>, after: Map<String, ByteArray>): Set<String> =
+        after.keys - before.keys
+
+    private fun assertSameBytes(
+        name: String,
+        before: Map<String, ByteArray>,
+        after: Map<String, ByteArray>,
+    ) {
+        // there before, so the comparison cannot pass for a file that was never planted
+        assertTrue("$name was not planted", name in before)
+        assertArrayEquals(before[name], after[name])
     }
 
     /** Rebuilds the schema committed as `AppDb`'s current version, `user_version` set to match. */
     private fun createCurrentDatabase(ctx: Context, name: String) =
-        createDatabase(ctx, name, APP_DB_VERSION_TODAY)
+        createDatabase(ctx, name, APP_DB_VERSION)
 
     /**
-     * Rebuilds the schema committed as `<version>.json`. Room only ever rewrites the file of the
-     * version `AppDb` currently declares, so every earlier one is a frozen fixture it will not
-     * regenerate: restore one from git rather than letting a build recreate it.
+     * Rebuilds the schema committed as `<version>.json`. `AppDbMigrationTest` says why an earlier
+     * version's file is a frozen fixture to restore from git, and not something to regenerate.
      */
     private fun createDatabase(ctx: Context, name: String, version: Int) {
         val root = JsonParser.parseString(
@@ -122,6 +440,18 @@ class FutureDatabaseTest {
             )
         }
 
+    /** Inserts with the v1 column list only: there is no `eventDateUnknown` yet. */
+    private fun insertV1Event(ctx: Context, name: String, profileId: Int, eventId: Long) =
+        withRawDatabase(ctx, name) { raw ->
+            raw.execSQL(
+                """INSERT INTO events (profileId, eventId, eventDate, eventTime, eventTopic,
+                    eventColor, eventType, teacherId, subjectId, teamId, addedDate,
+                    eventAddedManually, eventBlacklisted, eventIsDone, eventIsDownloaded, keep)
+                    VALUES ($profileId, $eventId, '2026-06-20', NULL, 'zadanie z polskiego', NULL,
+                    ${Event.TYPE_HOMEWORK}, 0, 0, 0, 0, 0, 0, 0, 1, 0)"""
+            )
+        }
+
     /**
      * A second table to drop, so the emptiness assertion does not rest on `events` alone. Inserts
      * with the full v3 column list.
@@ -153,8 +483,22 @@ class FutureDatabaseTest {
 
     private companion object {
         const val DB_NAME = "future-database-test.db"
+        const val WAL_NAME = "$DB_NAME-wal"
+        val SHM_AND_WAL = setOf("$DB_NAME-shm", WAL_NAME)
 
-        /** `AppDb`'s `version` today. Replaced by the production constant once there is one. */
-        const val APP_DB_VERSION_TODAY = 3
+        /** What the guard names the sidecar of [DB_NAME]: the base name, then `-v` and the version. */
+        const val SIDECAR_NAME = "future-database-test-v$APP_DB_VERSION.db"
+
+        /** Where the hot-log fixture is written before its files are copied to [DB_NAME]. */
+        const val SCRATCH_NAME = "future-database-scratch.db"
+
+        /** Not `APP_DB_VERSION + 1`, so a version the guard reports cannot be a computed one. */
+        const val FUTURE_VERSION = 7
+
+        /** Where the file header keeps `user_version`: 4 bytes, big-endian. */
+        const val USER_VERSION_OFFSET = 60
+
+        /** Where the file header keeps its format version: 1 for a rollback journal, 2 for a log. */
+        const val WAL_FORMAT_OFFSET = 18
     }
 }
