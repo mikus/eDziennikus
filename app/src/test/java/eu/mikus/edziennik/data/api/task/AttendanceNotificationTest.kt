@@ -93,6 +93,39 @@ class AttendanceNotificationTest {
         )
     }
 
+    // An empty subject is a no-subject row, not a row whose subject happens to be "". Without these
+    // two, weakening either `isNullOrEmpty()` to `== null` keeps every other test in this class
+    // green, and an "" row renders through the with-subject format with a blank where a name goes.
+    @Test fun `a dated attendance whose subject is empty reads as the dated no-lesson format`() {
+        assertEquals(
+            context.getString(
+                R.string.notification_attendance_no_lesson_format,
+                "Nieobecność",
+                "",
+                known.formattedString,
+            ),
+            attendanceNotificationText(
+                "Nieobecność",
+                attendance(known, dateUnknown = false, subject = ""),
+                context,
+            ),
+        )
+    }
+
+    @Test fun `an undated attendance whose subject is empty says the date is unknown`() {
+        assertEquals(
+            context.getString(
+                R.string.notification_attendance_unknown_date_no_lesson_format,
+                "Nieobecność",
+            ),
+            attendanceNotificationText(
+                "Nieobecność",
+                attendance(filing, dateUnknown = true, subject = ""),
+                context,
+            ),
+        )
+    }
+
     @Test fun `an undated attendance with a subject says the date is unknown`() {
         assertEquals(
             context.getString(
@@ -124,7 +157,7 @@ class AttendanceNotificationTest {
 
     @Test fun `an undated attendance notification does not carry its filing date`() {
         val filingText = filing.formattedString
-        for (subject in listOf("Matematyka", null)) {
+        for (subject in listOf("Matematyka", null, "")) {
             val text = attendanceNotificationText(
                 "Nieobecność",
                 attendance(filing, dateUnknown = true, subject = subject),

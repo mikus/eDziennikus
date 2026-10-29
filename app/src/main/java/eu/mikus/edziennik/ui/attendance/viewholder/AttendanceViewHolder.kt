@@ -43,6 +43,7 @@ class AttendanceViewHolder(
                 ?: item.lessonTopic
         if (adapter.showNotes)
             NoteManager.prependIcon(item, b.subjectName)
+        // Hoisted, not inlined into setText: lint reads a concat built in the argument as SetTextI18n.
         val dateTimeParts = attendanceDayDateParts(item, app) + listOf(
                 item.startTime?.stringHM,
                 item.lessonNumber?.let { app.getString(R.string.attendance_lesson_number_format, it) }

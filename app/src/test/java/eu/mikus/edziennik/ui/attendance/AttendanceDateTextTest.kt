@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
  * The gate on [attendanceDateText] and [attendanceDayDateParts], the date text of an attendance
  * row. They need a real `Context` for the string lookup, hence Robolectric (JUnit 4, via Vintage).
  *
- * The five places that call them are NOT gated here and must not be described as test-covered:
+ * The five render sites are NOT gated here and must not be described as test-covered:
  * `AttendanceScreen`'s leaf row, Days header and Months header, and `AttendanceDetailsDialog` are
  * all inside a composition (`createComposeRule` cannot be hosted here), and
  * `AttendanceViewHolder.onBind` takes an `App` and reads `app.attendanceManager`, so it cannot be
