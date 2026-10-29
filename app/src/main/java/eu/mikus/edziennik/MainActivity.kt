@@ -40,6 +40,9 @@ import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.*
 import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.api.models.Update
+import eu.mikus.edziennik.data.db.APP_DB_VERSION
+import eu.mikus.edziennik.data.db.AppDb
+import eu.mikus.edziennik.data.db.DatabaseChoice
 import eu.mikus.edziennik.data.db.entity.Metadata.*
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.databinding.ActivitySzkolnyBinding
@@ -48,6 +51,7 @@ import eu.mikus.edziennik.sync.AppManagerDetectedEvent
 import eu.mikus.edziennik.sync.SyncWorker
 import eu.mikus.edziennik.sync.UpdateStateEvent
 import eu.mikus.edziennik.sync.UpdateWorker
+import eu.mikus.edziennik.ui.base.BuildInvalidActivity
 import eu.mikus.edziennik.ui.base.MainSnackbar
 import eu.mikus.edziennik.ui.base.ScreenAction
 import eu.mikus.edziennik.ui.base.ScreenFab
@@ -175,6 +179,34 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         app.config.ui.language?.let {
             setLanguage(it)
+        }
+
+        // AppDb left a database it must not open alone and is running on a blank sidecar, so
+        // App.profileId is 0 and the check below would open the login wizard for an app that looks
+        // freshly installed, over a diary that is still on the device. Explain instead, and finish
+        // so no blank MainActivity is left under the notice. It is critical: no close button, and
+        // nothing to go back to. This is ahead of validateBuild, which may start its own
+        // BuildInvalidActivity in a debug build.
+        val choice = AppDb.choice
+        val parkedMessage = when (choice) {
+            is DatabaseChoice.Newer ->
+                getString(R.string.db_newer_version, choice.storedVersion, APP_DB_VERSION)
+            is DatabaseChoice.Unreadable -> getString(R.string.db_unreadable)
+            else -> null
+        }
+        if (parkedMessage != null) {
+            d(TAG, "Database is parked ($choice). Launch BuildInvalidActivity.")
+            startActivity(
+                Intent(
+                    this,
+                    BuildInvalidActivity::class.java,
+                    "message" to parkedMessage,
+                    "color" to R.color.md_orange_500.resolveColor(this),
+                    "isCritical" to true,
+                )
+            )
+            finish()
+            return
         }
 
         app.buildManager.validateBuild(this)

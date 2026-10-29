@@ -1248,6 +1248,8 @@
     <string name="settings_about_homepage_text">Go to application website</string>
     <string name="settings_about_homepage_subtext">Get help or support authors</string>
     <string name="build_invalid_title">Information about application version</string>
+    <string name="db_newer_version">Your diary was saved by a newer version of the app, so this version cannot open it (database version: %1$d, supported by this version of the app: %2$d).\n\nNothing has been deleted or changed: the diary is still on this device.\n\nInstall the newer version of the app again and the diary will open.</string>
+    <string name="db_unreadable">Your diary could not be read, so this version of the app cannot open it.\n\nNothing has been deleted or changed: the diary is still on this device.\n\nInstall again the version of the app that last saved it, and the diary should open.</string>
     <string name="home_archive_close_no_target_title">No current profile</string>
     <string name="attendance_config_title">Attendance configuration</string>
     <string name="attendance_config_use_symbols">Show symbols and colors from e-register config</string>

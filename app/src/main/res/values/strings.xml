@@ -1361,6 +1361,8 @@
     <string name="build_invalid_debug">Korzystasz z kompilacji typu \"debug\". Ta informacja zostanie wyświetlona tylko jeden raz dla aktualnego urządzenia.</string>
     <string name="build_valid_unofficial">Korzystasz z nieoficjalnej kompilacji aplikacji eDziennikus.\n\nOstatnie zmiany w tej wersji zostały wprowadzone przez:\n%3$s\nw repozytorium:\n%1$s (%2$s).\n\nTo okno nie wyświetli się ponownie.</string>
     <string name="build_invalid_title">Informacja dotycząca wersji aplikacji</string>
+    <string name="db_newer_version">Twój dziennik został zapisany przez nowszą wersję aplikacji, więc ta wersja nie może go otworzyć (wersja bazy danych: %1$d, obsługiwana przez tę wersję aplikacji: %2$d).\n\nNiczego nie usunięto ani nie zmieniono: dziennik nadal jest na tym urządzeniu.\n\nZainstaluj ponownie nowszą wersję aplikacji – wtedy dziennik znów się otworzy.</string>
+    <string name="db_unreadable">Nie udało się odczytać Twojego dziennika, więc ta wersja aplikacji nie może go otworzyć.\n\nNiczego nie usunięto ani nie zmieniono: dziennik nadal jest na tym urządzeniu.\n\nZainstaluj ponownie wersję aplikacji, która ostatnio go zapisała – wtedy powinien się znów otworzyć.</string>
     <string name="settings_about_version_details_text">Szczegóły wersji</string>
     <string name="settings_about_version_details_subtext">Informacje o kompilacji</string>
     <string name="build_dialog_open_repo">Sprawdź kod</string>

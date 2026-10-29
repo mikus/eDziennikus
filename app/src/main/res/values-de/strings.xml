@@ -1183,4 +1183,6 @@
     <string name="settings_about_contributors_subtext">Liste der Szkolny-Entwickler</string>
     <string name="menu_teachers">Lehrer</string>
     <string name="edziennik_progress_endpoint_addressbook">Addressbuch herunterladen…</string>
+    <string name="db_newer_version">Ihr Tagebuch wurde von einer neueren Version der App gespeichert, daher kann diese Version es nicht öffnen (Datenbankversion: %1$d, von dieser App-Version unterstützt: %2$d).\n\nEs wurde nichts gelöscht oder verändert: Das Tagebuch befindet sich weiterhin auf diesem Gerät.\n\nInstallieren Sie die neuere Version der App erneut, dann lässt sich das Tagebuch wieder öffnen.</string>
+    <string name="db_unreadable">Ihr Tagebuch konnte nicht gelesen werden, daher kann diese Version der App es nicht öffnen.\n\nEs wurde nichts gelöscht oder verändert: Das Tagebuch befindet sich weiterhin auf diesem Gerät.\n\nInstallieren Sie die Version der App erneut, die es zuletzt gespeichert hat, dann sollte es sich wieder öffnen lassen.</string>
 </resources>
