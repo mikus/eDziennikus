@@ -150,6 +150,25 @@ class DatabaseChoiceTest {
     }
 
     /**
+     * The one decision the table does not make: a file that is there but cannot be read. A
+     * directory where the file should be is a fixture that needs no permissions: `exists()` is true
+     * and opening it for reading throws. `Current` here would hand a database that momentarily
+     * could not be read to Room, which drops it if it turns out to be from the future.
+     */
+    @Test
+    fun `a file that exists but cannot be read chooses the sidecar`() {
+        val file = context.getDatabasePath(DB_NAME).also { it.mkdirs() }
+        assertTrue(file.exists())
+
+        assertEquals(
+            DatabaseChoice.Unreadable(SIDECAR_NAME),
+            chooseDatabase(file, DB_NAME, CURRENT_VERSION),
+        )
+        // looked at, not touched
+        assertTrue(file.isDirectory)
+    }
+
+    /**
      * Why the version is read through SQLite and not out of the file header. A newer build's write
      * of `user_version` can still be in the write-ahead log when it is downgraded over: the main
      * file then still says the old number, and Room, which reads through the log, sees the new
@@ -158,6 +177,8 @@ class DatabaseChoiceTest {
     @Test
     fun `a newer version still held in the write-ahead log chooses the sidecar`() {
         val file = createDatabase(context, DB_NAME, schemaVersion = 3)
+        // the plain overload, on purpose: it takes the default error handler, which is fine for a
+        // fixture this test just wrote and is exactly what the probe itself must not do
         val writer = SQLiteDatabase.openDatabase(
             file.path, null,
             SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,
@@ -221,7 +242,11 @@ class DatabaseChoiceTest {
         val root = JsonParser.parseString(
             File("schemas/eu.mikus.edziennik.data.db.AppDb/$schemaVersion.json").readText()
         ).asJsonObject.getAsJsonObject("database")
-        val file = ctx.getDatabasePath(name).also { it.parentFile?.mkdirs(); it.delete() }
+        val file = ctx.getDatabasePath(name).also {
+            it.parentFile?.mkdirs()
+            it.delete()
+        }
+        // the plain overload again, on purpose: see the write-ahead log test
         val raw = SQLiteDatabase.openOrCreateDatabase(file, null)
         root.getAsJsonArray("entities").forEach { e ->
             val o = e.asJsonObject

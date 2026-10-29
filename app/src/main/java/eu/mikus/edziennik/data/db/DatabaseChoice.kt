@@ -27,7 +27,10 @@ sealed interface DatabaseChoice {
     /** The file was written by a newer build, at [storedVersion]. [name] is the sidecar. */
     data class Newer(override val name: String, val storedVersion: Int) : DatabaseChoice
 
-    /** The file says it is SQLite and its version could not be read. [name] is the sidecar. */
+    /**
+     * The file says it is SQLite and its version could not be read, or it exists and could not be
+     * read at all. [name] is the sidecar.
+     */
     data class Unreadable(override val name: String) : DatabaseChoice
 }
 
@@ -35,13 +38,13 @@ sealed interface DatabaseChoice {
  * Decides which database to open for [file], whose name is [baseName] and whose build declares
  * [currentVersion].
  *
- * | file state                                    | result                       |
- * |-----------------------------------------------|------------------------------|
- * | absent, or zero-length                        | `Current(baseName)`          |
- * | no `SQLite format 3\0` magic in the first 16  | `Current(baseName)`          |
- * | magic, version readable, <= [currentVersion]  | `Current(baseName)`          |
- * | magic, version readable, > [currentVersion]   | `Newer(sidecar, version)`    |
- * | magic, version not readable                   | `Unreadable(sidecar)`        |
+ * | file state                                         | result                    |
+ * |----------------------------------------------------|---------------------------|
+ * | absent, or zero-length                             | `Current(baseName)`       |
+ * | no `SQLite format 3\0` magic in the first 16 bytes | `Current(baseName)`       |
+ * | magic, version readable, <= [currentVersion]       | `Current(baseName)`       |
+ * | magic, version readable, > [currentVersion]        | `Newer(sidecar, version)` |
+ * | magic, version not readable                        | `Unreadable(sidecar)`     |
  *
  * The sidecar is `baseName` without its `.db`, then `-v<currentVersion>.db`. A file that exists
  * but cannot be read at all is also `Unreadable`: that is outside the table, and the side that
