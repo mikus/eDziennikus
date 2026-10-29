@@ -57,8 +57,17 @@ sealed interface DatabaseChoice {
  * of `user_version` can still be in the write-ahead log, where the main file still holds the old
  * number and Room would see the new one.
  *
- * This only reads. It never creates, deletes, renames, moves or writes the database file, and it
- * does not log: `App.devMode` is assigned after the database is built, so `Utils.d` would be
+ * This makes no destructive write: it never creates, deletes, renames or moves the database file.
+ * It is not strictly read-only, though. Opening a write-ahead-log database, even read-only, may
+ * checkpoint the committed frames of its `-wal` into the main file and truncate the log, which
+ * changes the main file's bytes. No data is lost, and it is what any open of that database does,
+ * the newer build's own next launch included. Measured on an Android 16 emulator: a 16512-byte
+ * `-wal` that held `user_version = 7` was folded into the main file (4096 to 8192 bytes) and
+ * truncated to zero, and a row that existed only in that log was still readable afterwards.
+ * Robolectric does not reproduce this, so a JVM test that finds the file byte-identical has not
+ * shown the same of a device; see `FutureDatabaseTest`.
+ *
+ * It does not log: `App.devMode` is assigned after the database is built, so `Utils.d` would be
  * silent here. SQLite itself may leave a `-shm` and an empty `-wal` beside a WAL-mode database it
  * has opened, even read-only; they are what Room's own open would create.
  */

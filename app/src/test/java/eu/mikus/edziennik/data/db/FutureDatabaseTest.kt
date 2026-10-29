@@ -40,10 +40,25 @@ import org.robolectric.annotation.Config
  * `AppDb(context)` itself cannot be driven from here: it hard-codes the real name and caches a
  * singleton.
  *
- * The byte-identity tests hold the guard to what it may do to the file it leaves alone. The `.db`
- * is never changed, an existing `-wal` is never changed, and nothing is deleted or renamed. A
- * `-shm`, and a zero-length `-wal`, may appear where there were none: SQLite makes both on any
- * open of a write-ahead-log database, read-only included, and Room's own open makes the same two.
+ * The byte-identity tests hold the guard to what it may do to the file it leaves alone, as
+ * Robolectric's SQLite sees it. Nothing is deleted or renamed, and the `.db` and an existing
+ * `-wal` come back unchanged. A `-shm`, and a zero-length `-wal`, may appear where there were
+ * none: SQLite makes both on any open of a write-ahead-log database, read-only included, and
+ * Room's own open makes the same two.
+ *
+ * **Those two byte-identity claims about a non-empty `-wal` are Robolectric's, not the device's.**
+ * On `emulator-5554` (Android 16) a database whose `user_version = 7` lived only in a hot
+ * 16512-byte `-wal` was changed by the probe's read-only open: `edziennik.db` went from 4096 bytes
+ * (md5 `7521076b0e620fab0a1c8064e30a53bc`) to 8192 bytes (`c3458d4e1be1d5b4a926bd36cebbfd92`) and
+ * `edziennik.db-wal` from 16512 bytes (`559c2ed1f9ae7d6aaf0dd53286d4bdfd`) to zero
+ * (`d41d8cd98f00b204e9800998ecf8427e`). The open checkpointed the committed frames into the main
+ * file and truncated the log, which is what any open of a WAL database does, and no data was
+ * lost: a row planted in that log was still readable. Robolectric does not reproduce the
+ * checkpoint, so the two tests named "under Robolectric" below pass against a file the device
+ * would have changed. Do not make the device match them, and do not read their names as a promise
+ * that the probe never writes. The other byte-identity tests are about files with no non-empty
+ * log, and the device smoke confirmed that a database with an absent or empty `-wal` is left
+ * unchanged.
  *
  * The fixture is rebuilt from the committed `<version>.json` and opened through [AppDb.builder] -
  * the same chain production uses - for the reasons given on `AppDbMigrationTest`, whose harness
@@ -190,8 +205,12 @@ class FutureDatabaseTest {
         assertEquals(DatabaseChoice.Newer(SIDECAR_NAME, FUTURE_VERSION), AppDb.choice)
     }
 
+    /**
+     * Robolectric's observation, not a device contract: the real checkpoint rewrites the main file
+     * when the log is non-empty. See the class comment for the measurement.
+     */
     @Test
-    fun `a guarded open of a database whose newer version is only in the log leaves the main file byte-identical`() {
+    fun `under Robolectric a guarded open of a database whose newer version is only in the log leaves the main file byte-identical`() {
         plantHotWalFutureDatabase()
         val before = familySnapshot()
 
@@ -200,8 +219,12 @@ class FutureDatabaseTest {
         assertSameBytes(DB_NAME, before, familySnapshot())
     }
 
+    /**
+     * Robolectric's observation, not a device contract: the real checkpoint truncates a non-empty
+     * log. See the class comment for the measurement.
+     */
     @Test
-    fun `a guarded open of a database whose newer version is only in the log leaves its -wal byte-identical`() {
+    fun `under Robolectric a guarded open of a database whose newer version is only in the log leaves its -wal byte-identical`() {
         plantHotWalFutureDatabase()
         val before = familySnapshot()
 

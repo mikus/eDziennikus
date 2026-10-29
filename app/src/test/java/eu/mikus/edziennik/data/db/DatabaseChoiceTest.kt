@@ -172,7 +172,11 @@ class DatabaseChoiceTest {
      * Why the version is read through SQLite and not out of the file header. A newer build's write
      * of `user_version` can still be in the write-ahead log when it is downgraded over: the main
      * file then still says the old number, and Room, which reads through the log, sees the new
-     * one. The probe must see what Room would, and must not write the file while looking.
+     * one. The probe must see what Room would, and must not delete or lose anything while looking.
+     *
+     * The byte comparison at the end is Robolectric's observation, with a writer still holding the
+     * log open, and not a no-write guarantee: a device checkpoints a hot log that nothing else
+     * holds open, and so changes the main file. `FutureDatabaseTest` has the measurement.
      */
     @Test
     fun `a newer version still held in the write-ahead log chooses the sidecar`() {
