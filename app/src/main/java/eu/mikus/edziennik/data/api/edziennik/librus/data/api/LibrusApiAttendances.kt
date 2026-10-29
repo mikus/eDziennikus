@@ -40,7 +40,7 @@ class LibrusApiAttendances(override val data: DataLibrus,
                         .replace("[^\\d.]".toRegex(), "")).toLong()
                 val lessonId = attendance.getJsonObject("Lesson")?.getLong("Id") ?: -1
                 val lessonNo = attendance.getInt("LessonNo") ?: return@forEach
-                val lessonDate = Date.fromY_m_d(attendance.getString("Date"))
+                val lessonDate = librusAttendanceDate(attendance.getString("Date"))
                 val teacherId = attendance.getJsonObject("AddedBy")?.getLong("Id")
                 val semester = attendance.getInt("Semester") ?: return@forEach
 
@@ -63,7 +63,7 @@ class LibrusApiAttendances(override val data: DataLibrus,
                         typeShort = type?.typeShort ?: "?",
                         typeSymbol = type?.typeSymbol ?: "?",
                         typeColor = type?.typeColor,
-                        date = lessonDate,
+                        date = lessonDate.date,
                         startTime = startTime,
                         semester = semester,
                         teacherId = teacherId ?: lesson?.teacherId ?: -1,
@@ -71,6 +71,7 @@ class LibrusApiAttendances(override val data: DataLibrus,
                         addedDate = addedDate
                 ).also {
                     it.lessonNumber = lessonNo
+                    it.dateUnknown = lessonDate.unknown
                 }
 
                 data.attendanceList.add(attendanceObject)
