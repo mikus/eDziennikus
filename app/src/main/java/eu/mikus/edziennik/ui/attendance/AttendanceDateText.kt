@@ -19,8 +19,11 @@ import eu.mikus.edziennik.utils.models.Week
  *
  * Pass it a row read from the DAO. The display-only synthetics built in `TypeViewHolder.kt` and
  * `MonthViewHolder.kt` (`date = Date(0, 0, 0)`, never persisted) are not rows, carry no flag, and
- * are not meant to reach it. The parameter cannot be narrowed to `AttendanceFull`: the dialog and
- * the view holder both hold the base type.
+ * are not meant to reach it. That contract is prose only, and it need not be: the parameter COULD
+ * be narrowed to `AttendanceFull`, because all three production callers already hold one - the
+ * dialog's own field, the view holder's `item`, and `AttendanceLeaf.attendance`. Narrowing would
+ * exclude both synthetics at compile time, since they are base `Attendance` values. It is left
+ * wide only because nothing has required it yet; the only base-typed caller is this file's test.
  *
  * A `false` flag means only that the school gave a date that parsed, not that the date is
  * plausible: `Date.fromY_m_dOrNull` reads fixed character positions, so `"0000-00-00"` is stored

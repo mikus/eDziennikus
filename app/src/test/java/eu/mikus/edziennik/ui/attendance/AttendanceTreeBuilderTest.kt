@@ -401,4 +401,26 @@ class AttendanceTreeBuilderTest {
         assertEquals(1, unknown.counts.byType.sumOf { it.count })  // but still counted
         assertTrue(unknown.dateUnknown)                            // empty leaves must not read as a real month
     }
+
+    /**
+     * Types and List never read the date, so an undated row is a real attendance on both and must
+     * keep counting. Summary's half of this property is pinned in `AttendanceSummaryAggregatorTest`;
+     * without this one, a change that dropped undated rows from the tree's own two date-blind tabs
+     * would leave the whole suite green - and preserving these counts is the reason this phase kept
+     * the record instead of skipping it.
+     */
+    @Test
+    fun `an undated row still counts in Types and appears in List`() {
+        val state = AttendanceTreeBuilder.build(
+            listOf(row(1, Date(2026, 6, 1)), undated(2)),
+            config, Period.ALL,
+        )
+
+        val absent = types(state).types.single { it.type.baseType == Attendance.TYPE_ABSENT }
+        assertEquals(2, absent.yearCount)                                     // dated and undated alike
+        assertEquals(2, absent.semesterCount)                                 // semester is the API's, not the date's
+        assertEquals(listOf(1L, 2L), absent.leaves.map { it.attendance.id }.sorted())
+
+        assertEquals(listOf(1L, 2L), list(state).leaves.map { it.attendance.id }.sorted())
+    }
 }
