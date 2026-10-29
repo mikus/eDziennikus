@@ -54,8 +54,10 @@ Single Room database `AppDb` (`data/db/`). Two kapt processors generate DAO code
 > deliberately: `RoomOpenHelper.onUpgrade` consults `findMigrationPath` first, so the fallback fires **only when
 > no path exists** (checked against Room 2.4.3 bytecode) — which is why the two coexist safely today. It is also
 > the trap: bump to `version = 4` **without** writing a `Migration(3, 4)` and adding it to `AppDb.builder`'s
-> `addMigrations(...)` chain and there is no path, so Room **drops and recreates every table** — the build stays
-> green and every user silently loses their local diary.
+> `addMigrations(...)` chain and there is no path, so Room **drops and recreates every table** and every user
+> silently loses their local diary. `assembleDebug` and `lint` (all that `build.yml` runs) stay green, but
+> `./gradlew test` does not: `MigrationLadderTest` fails, naming every version left without a path to
+> `APP_DB_VERSION` and the `Migration` to add.
 >
 > Changing the schema is a **flag-and-confirm** change (see "Safe-change rules"): the version bump and its
 > `Migration(n, n + 1)` land together, registered in that `addMigrations(...)` chain. Don't edit any committed
@@ -235,7 +237,7 @@ Robolectric tests can instantiate the production `App.onCreate()` directly — t
 These changes have hidden coordination cost or break things in non-obvious ways. **Flag and confirm before doing any of them**, even if the diff looks small:
 
 - **`.github/workflows/build.yml` and `.github/workflows/release.yml`** — the fork's own CI. `build.yml` runs `./gradlew assembleDebug lint` on every push/PR and uploads nothing; `release.yml` triggers on `v*` tags and produces signed APKs. There is no upstream reusable workflow any more — edit the local files directly.
-- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = 3` with two `Migration`s (`MIGRATION_1_2`, `MIGRATION_2_3`) **and** `.fallbackToDestructiveMigration()` still on the builder, so **bumping the version without a registered `Migration(n, n + 1)` wipes every user's data while the build stays green** — the fallback fires exactly when no migration path exists. Register the new migration in `AppDb.builder`'s `addMigrations(...)` chain. Don't edit any committed `app/schemas/…/*.json`: Room regenerates only the current version's file, so every earlier snapshot is a frozen fixture (`AppDbMigrationTest` reads both `1.json` and `2.json` off disk) that it will not bring back.
+- **The Room schema and `AppDb` version** — see the warning under "Persistence". `AppDb` is `version = 3` with two `Migration`s (`MIGRATION_1_2`, `MIGRATION_2_3`) **and** `.fallbackToDestructiveMigration()` still on the builder, so **bumping the version without a registered `Migration(n, n + 1)` wipes every user's data** — the fallback fires exactly when no migration path exists. `MigrationLadderTest` now fails `./gradlew test` in that case, but `assembleDebug` and `lint` (all that `build.yml` runs) stay green. Register the new migration in `AppDb.builder`'s `addMigrations(...)` chain. Don't edit any committed `app/schemas/…/*.json`: Room regenerates only the current version's file, so every earlier snapshot is a frozen fixture (`AppDbMigrationTest` reads both `1.json` and `2.json` off disk) that it will not bring back.
 - **Provider request/response models under `data/api/<provider>/`** — fields are shaped by undocumented backend JSON/HTML. Don't rename or restructure without verifying against a captured response (Chucker is the standard tool; it is compiled into every build but only captures when `devMode` **and** `enableChucker` are both true — see Networking).
 - **`eu.mikus.edziennik` application ID, signing config, version code/name in `app/build.gradle`** — release plumbing and sideload identity depend on exact values. Changing the application ID forces users to reinstall and loses their data.
 - **Classes referenced from XML layouts (`<view class="…">` or custom view tags)** — Kotlin's rename refactor won't catch them. Grep `app/src/main/res/layout/` for the FQCN before renaming.
