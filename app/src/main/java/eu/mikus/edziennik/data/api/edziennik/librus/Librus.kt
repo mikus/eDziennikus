@@ -130,7 +130,7 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
                     // Synergia only. This used to read `if (data.messagesLoginSuccessful)
                     // LibrusMessagesGetAttachment(...)` followed - with no `else` - by the Synergia
                     // call, so BOTH downloaders ran on every tap: messagesLoginSuccessful defaults
-                    // to true (DataLibrus:255) and is only ever cleared by LibrusLoginMessages,
+                    // to true (DataLibrus:282) and is only ever cleared by LibrusLoginMessages,
                     // which a SYNERGIA login never runs. Two Librus round trips per attachment, and
                     // the loser's late completed() posted ApiTaskFinishedEvent carrying a
                     // taskProfileId that clearTask() had already reset to -1 - which MainActivity

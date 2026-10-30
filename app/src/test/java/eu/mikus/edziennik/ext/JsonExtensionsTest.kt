@@ -285,7 +285,7 @@ class JsonExtensionsTest {
     /**
      * The `bFalse` row is the one that matters: the with-default family is `… ?: defaultValue`,
      * and `?:` fires only on null. A stored `false` must survive a `true` default. It does, and it
-     * has to - `LibrusApiUnits.kt:38-39` call `getBoolean("…", true)` from inside an `apply {}`
+     * has to - `LibrusApiUnits.kt:41-42` call `getBoolean("…", true)` from inside an `apply {}`
      * block, so they are receiver-less calls that a `.getBoolean(` grep cannot see.
      */
     @Test
