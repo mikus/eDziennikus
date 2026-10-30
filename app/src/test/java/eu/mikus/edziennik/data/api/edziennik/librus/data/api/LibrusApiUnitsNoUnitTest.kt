@@ -6,6 +6,7 @@ package eu.mikus.edziennik.data.api.edziennik.librus.data.api
 import com.google.gson.JsonObject
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.api.edziennik.librus.DataLibrus
 import eu.mikus.edziennik.data.api.edziennik.librus.ENDPOINT_LIBRUS_API_UNITS
 import eu.mikus.edziennik.data.api.edziennik.librus.Librus
 import eu.mikus.edziennik.data.api.edziennik.librus.LibrusFeatures
@@ -19,6 +20,7 @@ import eu.mikus.edziennik.data.db.entity.LoginStore
 import eu.mikus.edziennik.data.db.enums.LoginMode
 import eu.mikus.edziennik.data.db.enums.LoginType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,8 +37,8 @@ import org.robolectric.annotation.Config
  * no-unit branch, which returns before `apiGet`, then asks the real scheduler what is due. Each part
  * of the fixture is load-bearing:
  *
- * - **The null profile** keeps `Data`'s init and `saveData` off the database, and makes `unitId`
- *   read zero, which is the branch under test.
+ * - **The null profile** keeps `Data`'s init and `saveData` off the database, and makes no unit id
+ *   known (`unitIdUnknown`), which is the branch under test.
  * - **`endpointTimers` must start empty.** The timer writer appends, and `prepare` looks a timer up
  *   with `singleOrNull`, so a pre-loaded Units timer plus one appended by a mutation would read as no
  *   timer at all, and the "still due" test would pass against the bug. The arrange step asserts it.
@@ -76,7 +78,7 @@ class LibrusApiUnitsNoUnitTest {
         val app = RuntimeEnvironment.getApplication() as App
         val librus = Librus(app, null, LoginStore(1, LoginType.LIBRUS, LoginMode.LIBRUS_EMAIL, JsonObject()), spy)
         // Asserted BEFORE the chain runs, so a wrong answer never lets Units reach apiGet.
-        assertEquals("the branch under test is the no-unit one", 0L, librus.data.unitId)
+        assertTrue("the branch under test is the no-unit one", librus.data.unitIdUnknown)
         assertTrue("no timer may exist before the run", librus.data.endpointTimers.isEmpty())
         librus.data.targetEndpoints[ENDPOINT_LIBRUS_API_UNITS] = null
         librus.data.targetEndpoints[unmatchedEndpoint] = null
@@ -107,5 +109,17 @@ class LibrusApiUnitsNoUnitTest {
 
         assertTrue("Units must be due again, on the same Data the first run used",
             ENDPOINT_LIBRUS_API_UNITS in run.librus.data.targetEndpoints)
+    }
+
+    @Test fun `unitIdUnknown tracks the stored unit id`() {
+        val data = DataLibrus(RuntimeEnvironment.getApplication() as App, null,
+            LoginStore(1, LoginType.LIBRUS, LoginMode.LIBRUS_EMAIL, JsonObject()))
+
+        assertTrue(data.unitIdUnknown)
+        data.unitId = 5L
+        assertFalse(data.unitIdUnknown)
+        // a literal 0: Classes' old fallback already stored this in users' studentData
+        data.unitId = 0L
+        assertTrue(data.unitIdUnknown)
     }
 }

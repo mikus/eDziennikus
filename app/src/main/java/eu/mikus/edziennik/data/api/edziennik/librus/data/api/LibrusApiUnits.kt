@@ -19,11 +19,11 @@ class LibrusApiUnits(override val data: DataLibrus,
     }
 
     init { run {
-        if (data.unitId == 0L) {
+        if (data.unitIdUnknown) {
             // This branch makes no request, so it records no timer (see the contract on Data's
-            // timer writer). A zero unitId means no unit id is known; the Classes endpoint is
-            // where one comes from, and staying due lets a later run read it once Classes has
-            // stored one. onSuccess is the dispatcher's continuation and must stay.
+            // timer writer). When no unit id is known (DataLibrus.unitIdUnknown), the Classes
+            // endpoint is where one comes from, and staying due lets a later run read it once
+            // Classes has stored one. onSuccess is the dispatcher's continuation and must stay.
             onSuccess(ENDPOINT_LIBRUS_API_UNITS)
             return@run
         }

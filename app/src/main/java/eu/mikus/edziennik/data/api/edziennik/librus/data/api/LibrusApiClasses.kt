@@ -44,7 +44,7 @@ class LibrusApiClasses(override val data: DataLibrus,
 
                 data.teamList.put(id, teamObject)
 
-                data.unitId = studentClass.getJsonObject("Unit").getLong("Id") ?: 0L
+                data.unitId = studentClass.getJsonObject("Unit").getLong("Id") ?: DataLibrus.UNIT_ID_UNKNOWN
 
                 profile?.apply {
                     dateSemester1Start = Date.fromY_m_dOrNull(studentClass.getString("BeginSchoolYear"))

@@ -16,6 +16,19 @@ import eu.mikus.edziennik.ext.set
 
 class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app, profile, loginStore) {
 
+    companion object {
+        /**
+         * The [unitId] that means no unit id is known. It is what [unitId] reads when none is
+         * stored, and it is also what `LibrusApiClasses` stores when the Classes response has no
+         * readable unit id, so the two cannot be told apart. Readers must not compare against it;
+         * they ask [unitIdUnknown] instead.
+         *
+         * Keep the value: users' `studentData` already holds `"unitId": 0`, and any other value
+         * would make each of those read as a real unit id.
+         */
+        const val UNIT_ID_UNKNOWN = 0L
+    }
+
     fun isPortalLoginValid() = portalTokenExpiryTime-30 > currentTimeUnix() && portalRefreshToken.isNotNullNorEmpty() && portalAccessToken.isNotNullNorEmpty()
     fun isApiLoginValid() = apiTokenExpiryTime-30 > currentTimeUnix() && apiAccessToken.isNotNullNorEmpty()
     fun isSynergiaLoginValid() = synergiaSessionIdExpiryTime-30 > currentTimeUnix() && synergiaSessionId.isNotNullNorEmpty()
@@ -220,8 +233,22 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
 
     private var mUnitId: Long? = null
     var unitId: Long
-        get() { mUnitId = mUnitId ?: profile?.getStudentData("unitId", 0L); return mUnitId ?: 0L }
+        get() { mUnitId = mUnitId ?: profile?.getStudentData("unitId", UNIT_ID_UNKNOWN); return mUnitId ?: UNIT_ID_UNKNOWN }
         set(value) { profile["unitId"] = value; mUnitId = value }
+
+    /**
+     * True when [unitId] holds [UNIT_ID_UNKNOWN], so no unit id is known and there is nothing to ask
+     * the Units endpoint for. When true, [unitId] is not a unit id and must not be sent as one.
+     *
+     * Getter-only, with no backing field, so it keeps no state of its own that could disagree with
+     * [unitId]. A reader that asks this rather than comparing [unitId] itself does not depend on the
+     * encoding: if the id ever becomes nullable, this property changes and no reader that asks it
+     * does.
+     *
+     * Asked by `LibrusApiUnits`.
+     */
+    val unitIdUnknown: Boolean
+        get() = unitId == UNIT_ID_UNKNOWN
 
     private var mStartPointsSemester1: Int? = null
     var startPointsSemester1: Int
