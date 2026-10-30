@@ -258,8 +258,8 @@ internal fun writeLabValue(resolved: Resolved, newValue: Any?) {
  * The two profile roots are saved by applying [path] and the parsed [value] to the row as it is
  * stored now, not by writing back `App.profile`, which Lab edited in memory and which may predate
  * what a sync has stored since. It runs on the calling thread, so a path the stored row cannot take,
- * an unsupported target or a row that is gone throws [LabEditError] to the caller, and nothing is
- * written.
+ * an unsupported target or a row that is gone throws to the caller, which [LabViewModel.writeValue]
+ * reports as a failed edit, and nothing is written.
  */
 internal fun persistLabRoot(
     app: App,

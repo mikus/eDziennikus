@@ -145,9 +145,9 @@ fun Profile.isBeforeYear() = false && Date.getToday() < dateSemester1Start
  * where before it showed a single day in the Timetable and a single month in the Agenda.
  *
  * When the stored year is trusted the bounds are the profile's own [Date] objects, not copies, so a
- * caller that steps one forward must `clone()` it first: `Date.stepForward` mutates its receiver, and
- * the bounds are the profile's own, so walking one corrupts that profile in memory, for everything
- * that reads it. The fallback range is freshly built.
+ * caller that steps one forward must `clone()` it first: `Date.stepForward` mutates its receiver,
+ * so walking one corrupts that profile in memory, for everything that reads it. The fallback range
+ * is freshly built.
  *
  * Nothing is written back, so a school that later sends a readable year has it picked up by the
  * next Classes sync. [getSemesterStart] with semester 1 still honours a bad semester 1 start. That

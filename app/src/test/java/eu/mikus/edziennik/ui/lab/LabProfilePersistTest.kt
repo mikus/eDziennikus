@@ -53,7 +53,9 @@ class LabProfilePersistTest {
     fun setUp() {
         previousProfile = App.profile
         previousLastProfileId = App.config.lastProfileId
-        assertNull("profile $PROFILE_ID left over from another test", App.db.profileDao().getByIdNow(PROFILE_ID))
+        FIXTURE_IDS.forEach {
+            assertNull("profile $it left over from another test", App.db.profileDao().getByIdNow(it))
+        }
         App.db.profileDao().add(storedProfile())
         app.profileLoad(staleProfile())
     }
@@ -61,7 +63,7 @@ class LabProfilePersistTest {
     @After
     fun tearDown() {
         try {
-            removeProfileData(App.db, App.config, PROFILE_ID, keepProfile = false)
+            FIXTURE_IDS.forEach { removeProfileData(App.db, App.config, it, keepProfile = false) }
         } finally {
             app.profileLoad(previousProfile)
             App.config.lastProfileId = previousLastProfileId
@@ -76,6 +78,8 @@ class LabProfilePersistTest {
         val row = storedRow()
         assertEquals("Edited", row.name)
         assertEquals(storedStudentData(), row.studentData)
+        assertFalse(row.empty)
+        assertEquals(7, row.studentNumber)
     }
 
     @Test
@@ -86,7 +90,10 @@ class LabProfilePersistTest {
             addProperty("unitId", 6)
             addProperty("startPointsSemester1", 100)
         }
-        assertEquals(expected, storedRow().studentData)
+        val row = storedRow()
+        assertEquals(expected, row.studentData)
+        assertFalse(row.empty)
+        assertEquals(7, row.studentNumber)
     }
 
     @Test
@@ -103,6 +110,30 @@ class LabProfilePersistTest {
         assertIs<LabEffect.ParseFailed>(effects.single())
         val row = storedRow()
         assertEquals("Stored", row.name)
+        assertEquals(storedStudentData(), row.studentData)
+        assertFalse(row.empty)
+    }
+
+    @Test
+    fun `a LAB edit after a refused id edit still targets the profile LAB opened`() = runTest {
+        val vm = vm()
+        // LabViewModel.effects does not replay, so it is collected before the edits
+        val effects = mutableListOf<LabEffect>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.effects.collect { effects += it } }
+
+        // editProfile refuses an id change, and the edit has already moved App.profile to the new id
+        vm.writeValue(LabPath(LabRoot.PROFILE, listOf("id")), REFUSED_ID.toString())
+
+        assertIs<LabEffect.ParseFailed>(effects.single())
+        assertEquals("Stored", storedRow().name)
+        assertNull(App.db.profileDao().getByIdNow(REFUSED_ID))
+
+        // the next edit resolves on App.profile, now at the new id, and still saves to the row LAB opened
+        vm.writeValue(LabPath(LabRoot.PROFILE, listOf("name")), "X")
+
+        assertEquals(1, effects.size)
+        val row = storedRow()
+        assertEquals("X", row.name)
         assertEquals(storedStudentData(), row.studentData)
         assertFalse(row.empty)
     }
@@ -167,6 +198,8 @@ class LabProfilePersistTest {
 
     private companion object {
         const val PROFILE_ID = 9021
+        const val REFUSED_ID = 9999
         const val LOGIN_STORE_ID = 9121
+        val FIXTURE_IDS = listOf(PROFILE_ID, REFUSED_ID)
     }
 }
