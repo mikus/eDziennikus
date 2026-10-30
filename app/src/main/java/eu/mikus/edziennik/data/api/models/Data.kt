@@ -315,6 +315,14 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
         d("Total save time: ${System.currentTimeMillis()-totalStart} ms")
     }
 
+    /**
+     * Records that the server just answered [endpointId]'s request, and sets when it is next due.
+     * It stamps `lastSync` = now, which the endpoint is handed on its next run; [syncIn], [syncAt]
+     * and [forceFeatureType] only choose when that is. Call it only on a path that issued its
+     * request. A branch that skips its request on a local condition calls nothing here, not even
+     * with SYNC_ALWAYS: with no timer recorded the endpoint stays due, keeps its previous
+     * `lastSync`, and runs again once the condition has changed.
+     */
     fun setSyncNext(endpointId: Int, syncIn: Long? = null, forceFeatureType: FeatureType? = null, syncAt: Long? = null) {
         EndpointTimer(profile?.id
                 ?: -1, endpointId).apply {
