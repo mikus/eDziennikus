@@ -103,6 +103,6 @@ class SettingsViewModelTest {
         writeSettingsToggle(app, SettingsToggle.SHOW_TEACHER_ABSENCES, false)
 
         assertFalse(cfg.ui.agendaTeacherAbsence)    // red today: the write goes to studentData
-        verify(exactly = 0) { app.profileSave() }   // red today: the studentData branch calls it
+        verify(exactly = 0) { app.profileSave(any(), any()) }   // the toggle writes no profile row
     }
 }

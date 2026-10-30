@@ -133,9 +133,9 @@ class ProfileSchoolYearTest {
 
     @Test
     fun `reading the school year never mutates the profile`() {
-        // Date.stepForward mutates its receiver and App.profileSave() (profile settings dialog,
-        // student-number dialog, LAB) writes app.profile to the database, so a bound handed out by
-        // reference and walked would be persisted. The profiles
+        // Date.stepForward mutates its receiver and the bounds are the profile's own Date objects,
+        // so a bound handed out by reference and walked would corrupt the profile in memory, for
+        // everything that reads it. The profiles
         // are seeded with their own objects and compared against fresh literals: comparing against
         // the seeds would pass, as a walked field and its seed are the same object.
         val healthy = profile(Date(y, 9, 2), Date(y + 1, 1, 15), Date(y + 1, 6, 21))

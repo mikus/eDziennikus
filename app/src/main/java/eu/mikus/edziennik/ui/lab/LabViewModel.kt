@@ -14,6 +14,7 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.config.Config
 import eu.mikus.edziennik.data.db.entity.EventType.Companion.SOURCE_DEFAULT
 import eu.mikus.edziennik.data.db.entity.LoginStore
+import eu.mikus.edziennik.data.db.entity.Profile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +36,7 @@ class LabViewModel(
     private val panelSnapshot: () -> LabSnapshot,
     private val roots: () -> Map<LabRoot, Any?>,
     private val write: (Resolved, Any?) -> Unit,
-    private val persist: (LabRoot) -> Unit,
+    private val persist: (LabRoot, LabPath, Any?) -> Unit,
     private val act: (LabAction) -> Unit,
     private val toggle: (LabToggle, Boolean) -> Unit,
 ) : ViewModel() {
@@ -78,13 +79,17 @@ class LabViewModel(
         _effects.tryEmit(LabEffect.OpenEditor(path, path.title, LabValueCodec.format(target)))
     }
 
-    /** Parse failure, resolve failure or a throwing sink all mean: zero writes, operator told. */
+    /**
+     * Parse failure, resolve failure or a throwing sink all mean the operator is told, and a failed
+     * parse or resolve writes nothing. A throwing `persist`, such as an edit the stored row cannot
+     * take, saves nothing but leaves the edit that `write` already applied in memory.
+     */
     fun writeValue(path: LabPath, input: String) {
         val resolved = LabPathResolver.resolve(roots(), path).getOrElse { return failed(it) }
         val value = LabValueCodec.parse(resolved.target, input).getOrElse { return failed(it) }
         runCatching {
             write(resolved, value)
-            persist(resolved.root)
+            persist(resolved.root, path, value)
         }.getOrElse { return failed(it) }
         nodes = LabTreeBuilder.build(snapshot())
         projectTree()
@@ -168,15 +173,20 @@ class LabViewModel(
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T = LabViewModel(
-            snapshot = { readLabJson(app, loginStore) },
-            panelSnapshot = { readLabSnapshot(app, profiles) },
-            roots = { labRoots(app, loginStore) },
-            write = { resolved, value -> writeLabValue(resolved, value) },
-            persist = { root -> persistLabRoot(app, root, loginStore) },
-            act = { action -> performLabAction(app, action) },
-            toggle = { toggle, value -> writeLabToggle(app, toggle, value) },
-        ) as T
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            // Read now, before any edit: a Lab edit can change `Profile.id` itself, and the row an
+            // edit is saved to is the one Lab opened on.
+            val profileId = app.profileId
+            return LabViewModel(
+                snapshot = { readLabJson(app, loginStore) },
+                panelSnapshot = { readLabSnapshot(app, profiles) },
+                roots = { labRoots(app, loginStore) },
+                write = { resolved, value -> writeLabValue(resolved, value) },
+                persist = { root, path, value -> persistLabRoot(app, profileId, root, path, value, loginStore) },
+                act = { action -> performLabAction(app, action) },
+                toggle = { toggle, value -> writeLabToggle(app, toggle, value) },
+            ) as T
+        }
     }
 }
 
@@ -242,13 +252,41 @@ internal fun writeLabValue(resolved: Resolved, newValue: Any?) {
     }
 }
 
-/** `LabProfileFragment.kt@53a07964:139-142`. The config roots need nothing: `BaseConfig.set` already wrote. */
-internal fun persistLabRoot(app: App, root: LabRoot, loginStore: LoginStore?) {
+/**
+ * `LabProfileFragment.kt@53a07964:139-142`. The config roots need nothing: `BaseConfig.set` already wrote.
+ *
+ * The two profile roots are saved by applying [path] and the parsed [value] to the row as it is
+ * stored now, not by writing back `App.profile`, which Lab edited in memory and which may predate
+ * what a sync has stored since. It runs on the calling thread, so a path the stored row cannot take,
+ * an unsupported target or a row that is gone throws [LabEditError] to the caller, and nothing is
+ * written.
+ */
+internal fun persistLabRoot(
+    app: App,
+    profileId: Int,
+    root: LabRoot,
+    path: LabPath,
+    value: Any?,
+    loginStore: LoginStore?,
+) {
     when (root) {
-        LabRoot.PROFILE, LabRoot.PROFILE_STUDENT_DATA -> app.profileSave()
+        LabRoot.PROFILE, LabRoot.PROFILE_STUDENT_DATA -> {
+            val saved = app.db.editProfile(profileId) { stored -> writeLabValue(resolveOnProfile(stored, path), value) }
+            if (!saved) throw LabEditError("profile $profileId is not stored, or the edit changed its id")
+        }
         LabRoot.LOGIN_STORE, LabRoot.LOGIN_STORE_DATA -> loginStore?.let { app.db.loginStoreDao().add(it) }
         LabRoot.CONFIG_GLOBAL, LabRoot.CONFIG_PROFILE -> Unit
     }
+}
+
+/** [path] resolved against [stored], the profile as the database holds it: the same walk Lab did on `App.profile`. */
+private fun resolveOnProfile(stored: Profile, path: LabPath): Resolved {
+    val resolved = LabPathResolver.resolve(
+        mapOf(LabRoot.PROFILE to stored, LabRoot.PROFILE_STUDENT_DATA to stored.studentData),
+        path,
+    ).getOrThrow()
+    (resolved.target as? LabTarget.Unsupported)?.let { throw LabEditError(it.reason) }
+    return resolved
 }
 
 internal fun writeLabToggle(app: App, toggle: LabToggle, value: Boolean) {
@@ -273,7 +311,7 @@ internal fun performLabAction(app: App, action: LabAction) {
         }
         LabAction.FullSync -> {
             app.profile.empty = true
-            app.profileSave()
+            app.db.editProfile(app.profileId) { it.empty = true }
         }
         LabAction.ClearEndpointTimers -> app.db.endpointTimerDao().clear(app.profileId)
         LabAction.Rodo -> app.db.teacherDao().query(
@@ -288,7 +326,10 @@ internal fun performLabAction(app: App, action: LabAction) {
         LabAction.Unarchive -> {
             app.profile.archived = false
             app.profile.archiveId = null
-            app.profileSave()
+            app.db.editProfile(app.profileId) {
+                it.archived = false
+                it.archiveId = null
+            }
         }
         LabAction.ResetCert -> app.config.apiInvalidCert = null
         LabAction.RebuildConfig -> App.config = Config(App.db)

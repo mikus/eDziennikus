@@ -37,7 +37,7 @@ class LabViewModelTest {
     private var snapshotCalls = 0
     private var panelCalls = 0
     private val writes = mutableListOf<Pair<Resolved, Any?>>()
-    private val persisted = mutableListOf<LabRoot>()
+    private val persisted = mutableListOf<Triple<LabRoot, LabPath, Any?>>()
     private val acted = mutableListOf<LabAction>()
     private val toggled = mutableListOf<Pair<LabToggle, Boolean>>()
     private var writeThrows = false
@@ -83,7 +83,7 @@ class LabViewModelTest {
                 }
             }
         },
-        persist = { persisted += it },
+        persist = { root, path, value -> persisted += Triple(root, path, value) },
         act = { acted += it },
         toggle = { t, v -> toggled += t to v },
     )
@@ -160,11 +160,23 @@ class LabViewModelTest {
         vm.writeValue(tokenPath, "xyz")
         assertEquals(1, writes.size)
         assertEquals("xyz", writes.single().second)
-        assertEquals(listOf(LabRoot.PROFILE_STUDENT_DATA), persisted)
+        assertEquals(listOf(LabRoot.PROFILE_STUDENT_DATA), persisted.map { it.first })
         assertEquals(before + 1, snapshotCalls)
         // The rebuilt nodes have to reach _tree: a writeValue that rebuilds but never re-projects
         // leaves the row showing the pre-edit value, and every other assertion here still passes.
         assertEquals("\"xyz\"", assertIs<LabNode.Leaf>(vm.tree.value.rows.single { it.name == "token" }).displayText)
+    }
+
+    @Test
+    fun `a numeric edit reaches persist parsed`() {
+        val vm = vm()
+        val countPath = LabPath(LabRoot.PROFILE_STUDENT_DATA, listOf("count"))
+        studentData.addProperty("count", 7)
+        vm.writeValue(countPath, "8")
+        // persist re-applies the edit to the stored row, so it needs the parsed 8L: the typed input
+        // "8" would write a string into a number's place.
+        assertEquals(countPath, persisted.single().second)
+        assertEquals(8L, persisted.single().third)
     }
 
     @Test
@@ -175,7 +187,7 @@ class LabViewModelTest {
         assertSame(profileConfig, target.owner)
         assertEquals(LabRoot.CONFIG_PROFILE, writes.single().first.root)
         // BaseConfig.set persists on its own, so nothing extra is asked of the persist sink.
-        assertEquals(listOf(LabRoot.CONFIG_PROFILE), persisted)
+        assertEquals(listOf(LabRoot.CONFIG_PROFILE), persisted.map { it.first })
     }
 
     @Test
