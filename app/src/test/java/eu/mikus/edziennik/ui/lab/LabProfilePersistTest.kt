@@ -29,14 +29,16 @@ import kotlin.test.assertIs
  * Pins what LAB writes to the profile row when it edits the profile or its `studentData`, and what
  * its Full sync and Unarchive actions write. The view model is built the way production builds it,
  * through [LabViewModel.Factory], against the real `App` and the real `App.db`, a process-wide
- * database that outlives each test: [setUp] asserts the fixture id is absent and [tearDown] removes
- * the row it wrote.
+ * database that outlives each test: [setUp] asserts that no row has a fixture id (the profile's own,
+ * and the one a refused id edit tries to move it to) and [tearDown] removes any row with either.
  *
  * The fixture is a screen's stale copy: `App.profile`, which LAB shows and edits, is loaded with
  * `studentData {"unitId":4}` and `empty = true`, while the stored row has `studentData
  * {"unitId":5,"startPointsSemester1":100}` and `empty = false`, as it is once a sync has run since
  * the copy was loaded. A write built from the copy puts the copy's values back; a write built from
- * the row keeps the row's.
+ * the row keeps the row's. The copy's `studentNumber` is 3 against the row's 7 only so that a write
+ * copying an unedited column shows: a sync copies the number back into `App.profile`, so no sync
+ * leaves the two apart.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -127,6 +129,10 @@ class LabProfilePersistTest {
         assertIs<LabEffect.ParseFailed>(effects.single())
         assertEquals("Stored", storedRow().name)
         assertNull(App.db.profileDao().getByIdNow(REFUSED_ID))
+        // the premise: were App.profile still at the id LAB opened, the id read at save time and the
+        // id captured at open would agree, and the edit below could not tell them apart. If LAB ever
+        // rolls a refused edit back in memory, this needs another way to move App.profile off that id
+        assertEquals("the refused edit left App.profile at the new id", REFUSED_ID, App.profile.id)
 
         // the next edit resolves on App.profile, now at the new id, and still saves to the row LAB opened
         vm.writeValue(LabPath(LabRoot.PROFILE, listOf("name")), "X")
@@ -193,7 +199,7 @@ class LabProfilePersistTest {
         studentData = studentData,
     ).apply {
         empty = true
-        studentNumber = 7
+        studentNumber = 3
     }
 
     private companion object {
