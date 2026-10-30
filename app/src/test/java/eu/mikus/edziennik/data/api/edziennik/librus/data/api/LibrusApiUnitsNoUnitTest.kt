@@ -39,6 +39,10 @@ import org.robolectric.annotation.Config
  *
  * - **The null profile** keeps `Data`'s init and `saveData` off the database, and makes no unit id
  *   known (`unitIdUnknown`), which is the branch under test.
+ * - **The "still due" test's `prepare` makes one Room read**, which the null profile does not
+ *   prevent: `LUCKY_NUMBER`'s `withShouldSync` asks the lucky-number DAO. That read decides only
+ *   whether the lucky-number feature is chosen; Units belongs to another feature type, so it cannot
+ *   affect whether Units is selected.
  * - **`endpointTimers` must start empty.** The timer writer appends, and `prepare` looks a timer up
  *   with `singleOrNull`, so a pre-loaded Units timer plus one appended by a mutation would read as no
  *   timer at all, and the "still due" test would pass against the bug. The arrange step asserts it.
@@ -118,7 +122,7 @@ class LibrusApiUnitsNoUnitTest {
         assertTrue(data.unitIdUnknown)
         data.unitId = 5L
         assertFalse(data.unitIdUnknown)
-        // a literal 0: Classes' old fallback already stored this in users' studentData
+        // a literal 0: the value Classes' fallback stores, which users' studentData may already hold
         data.unitId = 0L
         assertTrue(data.unitIdUnknown)
     }

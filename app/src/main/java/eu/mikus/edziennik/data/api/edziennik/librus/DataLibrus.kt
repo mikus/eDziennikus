@@ -19,11 +19,11 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
     companion object {
         /**
          * The [unitId] that means no unit id is known. It is what [unitId] reads when none is
-         * stored, and it is also what `LibrusApiClasses` stores when the Classes response has no
-         * readable unit id, so the two cannot be told apart. Readers must not compare against it;
+         * stored, and it is also what `LibrusApiClasses` stores when the response's class has no
+         * readable `Unit.Id`, so the two cannot be told apart. Readers must not compare against it;
          * they ask [unitIdUnknown] instead.
          *
-         * Keep the value: users' `studentData` already holds `"unitId": 0`, and any other value
+         * Keep the value: users' `studentData` may already hold `"unitId": 0`, and any other value
          * would make each of those read as a real unit id.
          */
         const val UNIT_ID_UNKNOWN = 0L
@@ -238,7 +238,7 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
 
     /**
      * True when [unitId] holds [UNIT_ID_UNKNOWN], so no unit id is known and there is nothing to ask
-     * the Units endpoint for. When true, [unitId] is not a unit id and must not be sent as one.
+     * the Units endpoint for. When true, [unitId] must not be used to pick a unit from the response.
      *
      * Getter-only, with no backing field, so it keeps no state of its own that could disagree with
      * [unitId]. A reader that asks this rather than comparing [unitId] itself does not depend on the
