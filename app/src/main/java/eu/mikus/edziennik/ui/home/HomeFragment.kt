@@ -84,7 +84,7 @@ class HomeFragment : Fragment() {
                 HomeConfigDialog(activity).show()
             },
             ScreenAction(R.string.menu_set_student_number, SzkolnyFont.Icon.szf_clipboard_list_outline) {
-                StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show()
+                StudentNumberDialog(activity, app.profile).show()
             },
             ScreenAction(
                 R.string.menu_mark_everything_as_read,
@@ -114,7 +114,7 @@ class HomeFragment : Fragment() {
                     onRemove = viewModel::removeCard,
                     onConfigureCards = { HomeCardsDialog(activity).show() },
                     gradeColor = { Color(app.gradesManager.getGradeColor(it)) },
-                    onLuckyClick = { StudentNumberDialog(activity, app.profile, onDismissListener = { app.profileSave() }).show() },
+                    onLuckyClick = { StudentNumberDialog(activity, app.profile).show() },
                     onEventClick = { EventDetailsDialog(activity, it).show() },
                     onEventEditClick = { EventManualDialog(activity, it.profileId, editingEvent = it).show() },
                     onOpenAgenda = { activity.navigate(navTarget = NavTarget.AGENDA) },

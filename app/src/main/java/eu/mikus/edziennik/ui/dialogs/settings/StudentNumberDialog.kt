@@ -57,7 +57,7 @@ class StudentNumberDialog(
     }
 
     override suspend fun onPositiveClick(): Boolean {
-        profile.studentNumber = text.toIntOrNull() ?: -1
+        app.profileSave(profile.id, studentNumberEdit(text.toIntOrNull() ?: -1))
         return DISMISS
     }
 }

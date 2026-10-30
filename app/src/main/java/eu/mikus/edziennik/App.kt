@@ -393,6 +393,25 @@ class App : MultiDexApplication(), Configuration.Provider, CoroutineScope {
         }
     }
 
+    /**
+     * Saves [edit] to the profile [profileId]: onto [App.profile] at once when that is the current
+     * profile, so the screen shows it, and in the background onto the row as it is stored now (see
+     * [AppDb.editProfile]), so only what [edit] sets is written. The returned [Job] completes when
+     * the row has been written, or the write has failed.
+     *
+     * For the current profile [edit] runs twice, once on each, so it must be idempotent and must
+     * not throw. A failure of the background write is passed to [Utils.d], which logs in dev mode,
+     * and never cancels App's scope. When no row has [profileId], nothing is written.
+     */
+    fun profileSave(profileId: Int, edit: (Profile) -> Unit): Job {
+        if (profileId == App.profileId)
+            edit(App.profile)
+        return launch(Dispatchers.Default) {
+            runCatching { App.db.editProfile(profileId, edit) }
+                .onFailure { d("App", "Saving profile $profileId failed: ${it.stackTraceToString()}") }
+        }
+    }
+
     fun checkDevModePassword() {
         devMode = try {
             Utils.AESCrypt.decrypt("nWFVxY65Pa8/aRrT7EylNAencmOD+IxUY2Gg/beiIWY=", config.devModePassword) == "ok here you go it's enabled now" || BuildConfig.DEBUG

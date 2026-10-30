@@ -52,7 +52,9 @@ class ProfileConfigDialog(
     override fun getTitleRes(): Int? = null
     override fun getPositiveButtonText() = R.string.close
 
-    private var profileChanged = false
+    private var nameChanged = false
+    private var syncChanged = false
+    private var imageChanged = false
     private var profileRemoved = false
     private var avatarKey by mutableIntStateOf(0)
     private var name by mutableStateOf(profile.name)
@@ -81,7 +83,7 @@ class ProfileConfigDialog(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it; profile.name = it; profileChanged = true },
+                onValueChange = { name = it; profile.name = it; nameChanged = true },
                 singleLine = true,
                 label = { Text(stringResource(R.string.profile_config_name_hint)) },
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
@@ -94,7 +96,7 @@ class ProfileConfigDialog(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             CheckboxRow(R.string.profile_config_sync_enabled, syncEnabled) {
-                syncEnabled = it; profile.syncEnabled = it; profileChanged = true
+                syncEnabled = it; profile.syncEnabled = it; syncChanged = true
             }
             OutlinedButton(
                 onClick = {
@@ -115,13 +117,25 @@ class ProfileConfigDialog(
     private fun requestImage() {
         mainActivity.requestHandler.requestProfileImage(profile) {
             val p = it as? Profile ?: return@requestProfileImage
-            if (this.profile == p) { profileChanged = true; avatarKey++ }
+            if (this.profile == p) { imageChanged = true; avatarKey++ }
         }
     }
 
     override fun onDismiss() {
-        if (!profileRemoved && profileChanged) {
-            app.profileSave(profile)
+        if (!profileRemoved && (nameChanged || syncChanged || imageChanged)) {
+            // name and syncEnabled are Compose state and the save runs on another thread, so read them here
+            val n = name
+            val s = syncEnabled
+            val img = profile.image
+            app.profileSave(
+                profile.id,
+                profileConfigEdit(
+                    name = n.takeIf { nameChanged },
+                    syncEnabled = s.takeIf { syncChanged },
+                    setImage = imageChanged,
+                    image = img,
+                ),
+            )
             onProfileSaved?.invoke(profile)
         }
     }
