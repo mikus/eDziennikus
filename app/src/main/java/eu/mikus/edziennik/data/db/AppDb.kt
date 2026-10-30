@@ -167,4 +167,33 @@ abstract class AppDb : RoomDatabase() {
 
         private fun buildDatabase(context: Context) = open(context, APP_DB_NAME, APP_DB_VERSION)
     }
+
+    /**
+     * Applies [edit] to the profile row as it is stored now and writes the row back, so a UI save
+     * changes the fields the edit sets and nothing else. The copy a screen holds is a snapshot:
+     * `studentData`, `empty` and the other columns a sync has written since it was loaded are not
+     * in it, and writing the snapshot back would revert them.
+     *
+     * The read, the edit and the write run in one transaction, so no other write lands between the
+     * read and the write.
+     *
+     * It never inserts. When no row has [profileId] it writes nothing and returns `false`, so a
+     * save cannot resurrect a profile that was removed.
+     *
+     * It refuses an edit that changes the row's `id`: the write replaces by primary key, so the
+     * changed row would be inserted as a second profile and the original left behind. It writes
+     * nothing and returns `false`.
+     *
+     * Otherwise it returns `true`. [edit] must be idempotent and must not throw: a caller that
+     * also applies the same edit to an in-memory profile runs it twice, and a throw rolls the
+     * transaction back and propagates to the caller.
+     */
+    fun editProfile(profileId: Int, edit: (Profile) -> Unit): Boolean =
+        runInTransaction(java.util.concurrent.Callable<Boolean> {
+            val row = profileDao().getByIdNow(profileId) ?: return@Callable false
+            edit(row)
+            if (row.id != profileId) return@Callable false
+            profileDao().add(row)
+            true
+        })
 }
