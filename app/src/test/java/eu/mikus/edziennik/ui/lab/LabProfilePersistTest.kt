@@ -117,6 +117,27 @@ class LabProfilePersistTest {
     }
 
     @Test
+    fun `a LAB edit whose stored target is not a primitive writes nothing`() = runTest {
+        // The sibling above resolves a key the row does not have, so it throws out of
+        // LabPathResolver.descend and never reaches persistLabRoot's Unsupported guard. Here the key
+        // is present in both and only its TYPE differs - a number on the screen's copy, an object on
+        // the row - so the walk succeeds and the guard is what refuses the edit. Only the effect can
+        // tell a refusal from a silent no-op: dropping the guard leaves the row untouched either way.
+        App.db.profileDao().add(
+            storedProfile(JsonObject().apply { add("unitId", JsonObject().apply { addProperty("nested", 1) }) }),
+        )
+        val vm = vm()
+        // LabViewModel.effects does not replay, so it is collected before the edit
+        val effects = mutableListOf<LabEffect>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.effects.collect { effects += it } }
+
+        vm.writeValue(LabPath(LabRoot.PROFILE_STUDENT_DATA, listOf("unitId")), "6")
+
+        assertIs<LabEffect.ParseFailed>(effects.single())
+        assertEquals(1, storedRow().studentData.getAsJsonObject("unitId").get("nested").asInt)
+    }
+
+    @Test
     fun `a LAB edit after a refused id edit still targets the profile LAB opened`() = runTest {
         val vm = vm()
         // LabViewModel.effects does not replay, so it is collected before the edits
@@ -180,12 +201,12 @@ class LabProfilePersistTest {
 
     private fun staleStudentData() = JsonObject().apply { addProperty("unitId", 4) }
 
-    private fun storedProfile() = Profile(
+    private fun storedProfile(studentData: JsonObject = storedStudentData()) = Profile(
         id = PROFILE_ID,
         loginStoreId = LOGIN_STORE_ID,
         loginStoreType = LoginType.LIBRUS,
         name = "Stored",
-        studentData = storedStudentData(),
+        studentData = studentData,
     ).apply {
         empty = false
         studentNumber = 7
