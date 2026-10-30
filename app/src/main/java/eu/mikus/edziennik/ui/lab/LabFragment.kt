@@ -167,7 +167,7 @@ class LabFragment : Fragment() {
      * Design D6: this one gets its own confirm, because it is the phase's own foot-gun. `App.kt:219`
      * reads `devMode = config.devMode ?: debugMode`, so once `config.devMode` is a non-null `false`
      * the `BuildConfig.DEBUG` fallback is bypassed forever, and the only re-enable
-     * (`checkDevModePassword`, `App.kt:396`) is gated on `config.devModePassword`. The single writer
+     * (`checkDevModePassword`, `App.kt:407`) is gated on `config.devModePassword`. The single writer
      * of that key is the v3 prefs migration (`AppConfigMigrationV3.kt:38`), which
      * `ConfigMigration.kt:18` gates on a legacy prefs key it deletes as it runs - so it cannot fire
      * again on a migrated device, and no in-app path re-enables. One mis-tap hides LAB on that device

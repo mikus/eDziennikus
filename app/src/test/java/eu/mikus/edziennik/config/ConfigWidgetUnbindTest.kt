@@ -284,7 +284,7 @@ class ConfigWidgetUnbindTest {
     }
 
     /**
-     * The blob is hand-editable from LAB (`LabViewModel.kt:235` writes an arbitrary string into any
+     * The blob is hand-editable from LAB (`LabViewModel.kt:245` writes an arbitrary string into any
      * config key), so `profileId` can hold a string or a boolean. When this test was written
      * `ext.getInt` checked `isJsonPrimitive` and then called `asInt`, and both of those ARE
      * primitives - Gson fell through to `Integer.parseInt(getAsString())` and threw. Phase 68 fixed
