@@ -13,6 +13,7 @@ import java.lang.reflect.Modifier
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -21,8 +22,16 @@ import org.junit.jupiter.api.Test
  * Pins [snapshot] and [changesSince] over every stored column of [Profile], found by reflection, so a
  * column added to `Profile` but not to the column list in `ProfileChanges.kt` fails here.
  *
- * [filled] sets every column to a value that is not a fresh profile's, so a column a snapshot misses
- * reads as a change in one test and as a lost value in the other.
+ * [filled] sets every column to a value that is not a fresh profile's, which is what lets each kind of
+ * miss show. A column missing from the shared column list fails `every column the task changed is
+ * applied`, since `changesSince` skips it too. A column only `snapshot` misses fails `every column
+ * the task left alone keeps the target's value`, since the baseline then holds a default and the
+ * column reads as changed.
+ *
+ * A change is captured when `changesSince` is called and copied again when it is applied, so a
+ * `Date`, a list or a `studentData` object the task changes later cannot reach what is applied, and
+ * two targets do not share what is applied to them. `every column the task changed is applied` pins
+ * both for the columns and `studentData changes apply key by key` pins both for a key.
  */
 class ProfileChangesTest {
 
@@ -67,8 +76,22 @@ class ProfileChangesTest {
         is Long -> value + 1
         is Boolean -> !value
         is Date -> Date(value.year, value.month, value.day + 1)
-        is List<*> -> value + 99L
+        is List<*> -> value.toMutableList().apply { add(99L) }
         else -> error("no other value for $value")
+    }
+
+    /** Whether [value] can change in place, so that two profiles sharing it could be told apart. */
+    private fun isMutable(value: Any) = value is Date || value is List<*>
+
+    /**
+     * Changes [value], which [other] made, in place, and returns an equal copy taken before. A value
+     * that cannot change in place is returned as it is.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun mutateInPlace(value: Any): Any = when (value) {
+        is Date -> value.clone().also { value.day = 27 }
+        is MutableList<*> -> value.toList().also { (value as MutableList<Any?>).add(7L) }
+        else -> value
     }
 
     /** So that a loop over [columns] cannot pass because reflection found none of them. */
@@ -82,17 +105,27 @@ class ProfileChangesTest {
     fun `every column the task changed is applied`() {
         assertColumnsFound()
 
-        val failing = columns.filter { field ->
+        val failing = columns.flatMap { field ->
             val task = filled("A")
             val base = task.snapshot()
             val changed = other(field.get(task))
             field.set(task, changed)
-            val target = filled("A")
+            val changes = task.changesSince(base)
+            // a change to the task's value after the call must not reach what is applied
+            val captured = mutateInPlace(changed)
+            val first = filled("A")
+            val second = filled("A")
 
-            task.changesSince(base).applyTo(target)
+            changes.applyTo(first)
+            changes.applyTo(second)
 
-            field.get(target) != changed
-        }.map { it.name }
+            listOfNotNull(
+                "${field.name}: not applied as captured"
+                    .takeIf { field.get(first) != captured },
+                "${field.name}: two targets share the applied value"
+                    .takeIf { isMutable(captured) && field.get(first) === field.get(second) },
+            )
+        }
 
         assertEquals(emptyList(), failing)
     }
@@ -124,9 +157,15 @@ class ProfileChangesTest {
         task.studentData.addProperty("new", 3)
         task.studentData.remove("drop")
         task.studentData.add("nul", JsonNull.INSTANCE)
+        task.studentData.add("obj", json("""{"a":1}"""))
+        val changes = task.changesSince(base)
+        // a change to the task's object after the call must not reach what is applied
+        task.studentData.getAsJsonObject("obj").addProperty("a", 2)
         val target = fresh(json("""{"keep":9,"set":1,"drop":1,"nul":"x","ui":"u"}"""))
+        val second = fresh(json("""{"keep":9}"""))
 
-        task.changesSince(base).applyTo(target)
+        changes.applyTo(target)
+        changes.applyTo(second)
 
         assertEquals(9L, target.studentData.get("keep").asLong)
         assertEquals(2L, target.studentData.get("set").asLong)
@@ -134,6 +173,16 @@ class ProfileChangesTest {
         assertFalse(target.studentData.has("drop"))
         assertTrue(target.studentData.get("nul") is JsonNull)
         assertEquals("u", target.studentData.get("ui").asString)
+        assertEquals(
+            1L,
+            target.studentData.getAsJsonObject("obj").get("a").asLong,
+            "key obj: not applied as it was when captured",
+        )
+        assertNotSame(
+            target.studentData.get("obj"),
+            second.studentData.get("obj"),
+            "key obj: two targets share the applied value",
+        )
     }
 
     @Test
