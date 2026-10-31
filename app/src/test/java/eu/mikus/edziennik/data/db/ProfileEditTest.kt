@@ -101,6 +101,29 @@ class ProfileEditTest {
         assertTrue(inTransaction)
     }
 
+    @Test
+    fun `a guard that says no writes nothing`() {
+        val appDb = openDb()
+        appDb.profileDao().add(storedProfile())
+
+        val applied = appDb.editProfile(PROFILE_ID, { false }) { it.studentNumber = 12 }
+
+        assertFalse(applied)
+        assertEquals(7, storedRow(appDb, PROFILE_ID).studentNumber)
+    }
+
+    @Test
+    fun `the guard is shown the row as stored`() {
+        val appDb = openDb()
+        appDb.profileDao().add(storedProfile())
+        appDb.editProfile(PROFILE_ID) { it.name = "Changed" }
+
+        val applied = appDb.editProfile(PROFILE_ID, { it.name == "Changed" }) { it.studentNumber = 12 }
+
+        assertTrue(applied)
+        assertEquals(12, storedRow(appDb, PROFILE_ID).studentNumber)
+    }
+
     private fun storedRow(appDb: AppDb, profileId: Int): Profile =
         requireNotNull(appDb.profileDao().getByIdNow(profileId)) { "no profile row $profileId" }
 

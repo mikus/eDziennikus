@@ -187,10 +187,24 @@ abstract class AppDb : RoomDatabase() {
      * Otherwise it returns `true`. If [edit] throws, the transaction rolls back, nothing is written
      * and the exception propagates to the caller. [edit] must be idempotent: a caller that also
      * applies the same edit to an in-memory copy runs it twice.
+     *
+     * To write only when the stored row still passes a check, use the overload that takes a guard.
      */
     fun editProfile(profileId: Int, edit: (Profile) -> Unit): Boolean =
+        editProfile(profileId, { true }, edit)
+
+    /**
+     * [editProfile] that writes only when [onlyIf] accepts the row. The guard runs inside the
+     * transaction, on the row as just read and before [edit], so no write can land between the
+     * check and the write. When it returns `false` nothing is written, [edit] is not run, and this
+     * returns `false`. Everything else is as in the two-argument form: no row means `false`, an
+     * edit that changes the id means `false`, and an exception from [onlyIf] or [edit] rolls the
+     * transaction back and propagates.
+     */
+    fun editProfile(profileId: Int, onlyIf: (Profile) -> Boolean, edit: (Profile) -> Unit): Boolean =
         runInTransaction(java.util.concurrent.Callable<Boolean> {
             val row = profileDao().getByIdNow(profileId) ?: return@Callable false
+            if (!onlyIf(row)) return@Callable false
             edit(row)
             if (row.id != profileId) return@Callable false
             profileDao().add(row)
