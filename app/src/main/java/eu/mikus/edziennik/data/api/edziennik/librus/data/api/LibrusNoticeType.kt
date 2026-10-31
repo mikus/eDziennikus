@@ -20,7 +20,7 @@ import eu.mikus.edziennik.ext.getInt
  * and notified as neutral. `else` must not be a domain value.
  *
  * The parser can neither throw on the note nor skip it: Data.saveData writes `noticeList` with
- * `clear` + `putAll` (`Data.kt:298-301`), so a throw mid-loop deletes every stored note from that
+ * `clear` + `putAll` (`Data.kt:300-303`), so a throw mid-loop deletes every stored note from that
  * point on, and a skipped note is deleted with them.
  *
  * That `{0, 1, 2}` is the whole domain is not verified against a captured response. If Librus
