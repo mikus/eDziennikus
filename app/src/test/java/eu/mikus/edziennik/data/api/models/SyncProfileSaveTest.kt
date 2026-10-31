@@ -16,6 +16,8 @@ import eu.mikus.edziennik.data.db.enums.LoginMode
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.data.db.removeProfileData
 import eu.mikus.edziennik.utils.models.Date
+import io.mockk.every
+import io.mockk.spyk
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -263,6 +265,25 @@ class SyncProfileSaveTest {
 
         assertEquals(13, row().studentNumber)
         assertEquals(7L, key("unitId")?.asLong)
+    }
+
+    @Test
+    fun `a change made while a save runs is written by the next save`() {
+        // `cancel()` saves on an EventBus thread while an endpoint's response handler may still be
+        // changing the profile on another. The guard runs inside the save, after the changes are
+        // computed and before the baseline is replaced, so a change made there is that window.
+        val spy = spyk(startTask())
+        every { spy.isSameAccount(any(), any()) } answers {
+            spy.profile!!.studentNumber = 11
+            callOriginal()
+        }
+        spy.unitId = 6
+
+        spy.saveData()
+        spy.saveData()
+
+        assertEquals(11, row().studentNumber)
+        assertEquals(6L, key("unitId")?.asLong)
     }
 
     @Test

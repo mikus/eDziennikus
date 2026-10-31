@@ -38,11 +38,15 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
 
     /**
      * The profile as the task read it: a deep copy taken when this is constructed, before any login
-     * method or endpoint can change [profile], and replaced by a fresh copy after each [saveData]
-     * that writes the row. [saveData] saves what [profile] holds that this does not.
+     * method or endpoint can change [profile]. After each [saveData] that writes the row it becomes
+     * the snapshot that save's changes were computed from, so a change made to [profile] while the
+     * save ran is not in it and the next save writes it. [saveData] saves what [profile] holds that
+     * this does not.
      *
-     * It is `private` because endpoints receive `data`, and none may change it.
+     * It is `private` because endpoints receive `data`, and none may change it. It is `@Volatile`
+     * because [cancel], which calls [saveData], can run on a thread other than the task's.
      */
+    @Volatile
     private var profileBaseline: Profile? = profile?.snapshot()
 
     var arguments: JsonObject? = null
@@ -222,14 +226,17 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
         ) + " " + app.getString(if (profile.isParent) R.string.account_type_parent else R.string.account_type_child)
 
         val baseline = profileBaseline ?: return // null only when profile is, which returned above
-        val changes = profile.changesSince(baseline)
+        // one snapshot, for the changes and for the next baseline: taking a second one after the
+        // write would absorb a change made to the profile meanwhile that this save did not write
+        val current = profile.snapshot()
+        val changes = current.changesSince(baseline)
         // the row as stored now, with only this task's changes, and never another account's row
         val written = db.editProfile(profile.id, { isSameAccount(baseline, it) }) { changes.applyTo(it) }
         if (!written) {
             Utils.d(TAG, "Profile ${profile.id} is gone or belongs to another account; nothing saved")
             return
         }
-        profileBaseline = profile.snapshot()
+        profileBaseline = current
         db.loginStoreDao().add(loginStore)
 
         if (profile.id == app.profile.id)
