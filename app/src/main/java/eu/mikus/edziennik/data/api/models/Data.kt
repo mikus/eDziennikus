@@ -40,8 +40,8 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
      * The profile as the task read it: a deep copy taken when this is constructed, before any login
      * method or endpoint can change [profile]. After each [saveData] that writes the row it becomes
      * the snapshot that save's changes were computed from, so a change made to [profile] while the
-     * save ran is not in it and the next save writes it. [saveData] saves what [profile] holds that
-     * this does not.
+     * save ran is not in it and the next save writes it. [saveData] saves the columns and
+     * `studentData` keys where [profile] differs from this.
      *
      * It is `private` because endpoints receive `data`, and none may change it. It is `@Volatile`
      * because [cancel], which calls [saveData], can run on a thread other than the task's.

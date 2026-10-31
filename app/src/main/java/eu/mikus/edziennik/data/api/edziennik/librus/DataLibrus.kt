@@ -29,12 +29,22 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
         const val UNIT_ID_UNKNOWN = 0L
 
         /**
-         * The `studentData` keys that say which Librus account a profile is. `LibrusFirstLogin`
-         * writes them and [isSameAccount] reads them, so they must share one spelling: a key absent
-         * from both rows counts as equal, so a misspelling in one of them would let every row
-         * through.
+         * The `studentData` key that holds a Librus account's id, one of the two that say which
+         * account a profile is. `LibrusFirstLogin` writes it and [isSameAccount] reads it, so they
+         * must share one spelling. A key absent from both rows counts as equal, so a spelling that
+         * matches no stored row stops this key telling accounts apart, and [KEY_ACCOUNT_LOGIN]
+         * alone still guards.
          */
         const val KEY_ACCOUNT_ID = "accountId"
+
+        /**
+         * The `studentData` key that holds a Librus account's login, one of the two that say which
+         * account a profile is. `LibrusFirstLogin` writes it, and so does the [apiLogin] setter,
+         * which `LibrusLoginApi.copyFromLoginStore` writes through. [isSameAccount] reads it, so
+         * they must share one spelling. A key absent from both rows counts as equal, so a spelling
+         * that matches no stored row stops this key telling accounts apart, and [KEY_ACCOUNT_ID]
+         * alone still guards.
+         */
         const val KEY_ACCOUNT_LOGIN = "accountLogin"
     }
 
@@ -62,8 +72,10 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
     override fun generateUserCode() = "$schoolName:$apiLogin"
 
     /**
-     * Reads only its two parameters. [apiLogin] and the other accessors read the working copy, which
-     * this task may have changed, so using one would refuse a task that changed its own login.
+     * Compares [KEY_ACCOUNT_ID] and [KEY_ACCOUNT_LOGIN] in the two rows' `studentData`: the same
+     * account when both are equal, a key absent from both counting as equal. Reads only its two
+     * parameters. [apiLogin] and the other accessors read the working copy, which this task may have
+     * changed, so using one would refuse a task that changed its own login.
      */
     override fun isSameAccount(baseline: Profile, stored: Profile) =
         listOf(KEY_ACCOUNT_ID, KEY_ACCOUNT_LOGIN).all {

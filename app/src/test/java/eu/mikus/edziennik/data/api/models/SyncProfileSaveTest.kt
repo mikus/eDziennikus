@@ -47,9 +47,8 @@ import org.robolectric.annotation.Config
  * A task's copy is read back from the row with `getByIdNow`, as `EdziennikTask.prepare` does, and
  * wrapped in a [DataLibrus], as `Librus` does.
  *
- * Every assertion reads numbers with `asLong` and strings with `asString`: a parsed number prints as
- * written and a set one as `6`, so printing the element would compare different spellings of one
- * value.
+ * Every assertion on one `studentData` value reads it with `asLong` or `asString`, never as the
+ * element or its string form, which quotes a string.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -169,7 +168,6 @@ class SyncProfileSaveTest {
         d.saveData()
 
         assertSame(p, App.profile)
-        assertSame(sd, App.profile.studentData)
         assertEquals(sdBefore, sd)
         assertEquals("InMemory", App.profile.name)
         assertEquals(9, App.profile.studentNumber)

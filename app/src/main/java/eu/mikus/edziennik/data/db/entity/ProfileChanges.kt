@@ -67,8 +67,9 @@ private val COLUMNS: List<Column<*>> = listOf(
 
 /**
  * A deep copy of this profile: every column in [COLUMNS] and `studentData`, sharing no `Date`, list
- * or `JsonElement` with the original. A sync task takes one when it starts, as the baseline for
- * [changesSince].
+ * or mutable `JsonElement` (`JsonObject`, `JsonArray`) with the original. A `JsonPrimitive` or
+ * `JsonNull` in `studentData` is shared, because Gson's `deepCopy()` returns the same immutable
+ * object. A sync task takes one when it starts, as the baseline for [changesSince].
  */
 fun Profile.snapshot(): Profile =
     Profile(id, loginStoreId, loginStoreType, studentData = studentData.deepCopy()).also { copy ->
@@ -91,8 +92,10 @@ fun Profile.changesSince(baseline: Profile): ProfileChanges {
 
 /**
  * The difference [Profile.changesSince] found, ready to apply to another copy of the same profile.
- * Whatever it sets on a profile is a copy, so a profile never shares a `Date`, list or
- * `JsonElement` with the profile the changes came from or with another profile they were applied to.
+ * Whatever it sets on a profile is a copy, so a profile never shares a `Date`, list or mutable
+ * `JsonElement` (`JsonObject`, `JsonArray`) with the profile the changes came from or with another
+ * profile they were applied to. A `JsonPrimitive` or `JsonNull` is shared, because Gson's
+ * `deepCopy()` returns the same immutable object.
  */
 class ProfileChanges internal constructor(
     private val columns: List<(Profile) -> Unit>,
