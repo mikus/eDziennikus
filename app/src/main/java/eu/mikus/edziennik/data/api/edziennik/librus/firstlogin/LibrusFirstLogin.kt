@@ -75,8 +75,8 @@ class LibrusFirstLogin(val data: DataLibrus, val onSuccess: () -> Unit) {
                                 studentNameShort,
                                 if (isParent) studentNameLong else null /* temporarily - there is no parent name provided, only the type */
                         ).apply {
-                            studentData["accountId"] = id
-                            studentData["accountLogin"] = login
+                            studentData[DataLibrus.KEY_ACCOUNT_ID] = id
+                            studentData[DataLibrus.KEY_ACCOUNT_LOGIN] = login
                             studentData["accountToken"] = token
                             studentData["accountTokenTime"] = tokenTime
                         }
@@ -114,8 +114,8 @@ class LibrusFirstLogin(val data: DataLibrus, val onSuccess: () -> Unit) {
                             accountNameLong
                     ).apply {
                         studentData["isPremium"] = account?.getBoolean("IsPremium") == true || account?.getBoolean("IsPremiumDemo") == true
-                        studentData["accountId"] = account.getInt("Id") ?: 0
-                        studentData["accountLogin"] = data.apiLogin ?: login
+                        studentData[DataLibrus.KEY_ACCOUNT_ID] = account.getInt("Id") ?: 0
+                        studentData[DataLibrus.KEY_ACCOUNT_LOGIN] = data.apiLogin ?: login
                         studentData["accountPassword"] = data.apiPassword
                         studentData["accountToken"] = data.apiAccessToken
                         studentData["accountTokenTime"] = data.apiTokenExpiryTime

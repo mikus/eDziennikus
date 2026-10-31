@@ -36,6 +36,15 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
     val profileId
         get() = profile?.id ?: -1
 
+    /**
+     * The profile as the task read it: a deep copy taken when this is constructed, before any login
+     * method or endpoint can change [profile], and replaced by a fresh copy after each [saveData]
+     * that writes the row. [saveData] saves what [profile] holds that this does not.
+     *
+     * It is `private` because endpoints receive `data`, and none may change it.
+     */
+    private var profileBaseline: Profile? = profile?.snapshot()
+
     var arguments: JsonObject? = null
 
     /**
@@ -212,26 +221,19 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
                 "${profile.studentSchoolYearStart}/${profile.studentSchoolYearStart + 1}"
         ) + " " + app.getString(if (profile.isParent) R.string.account_type_parent else R.string.account_type_child)
 
-        db.profileDao().add(profile)
+        val baseline = profileBaseline ?: return // null only when profile is, which returned above
+        val changes = profile.changesSince(baseline)
+        // the row as stored now, with only this task's changes, and never another account's row
+        val written = db.editProfile(profile.id, { isSameAccount(baseline, it) }) { changes.applyTo(it) }
+        if (!written) {
+            Utils.d(TAG, "Profile ${profile.id} is gone or belongs to another account; nothing saved")
+            return
+        }
+        profileBaseline = profile.snapshot()
         db.loginStoreDao().add(loginStore)
 
-        if (profile.id == app.profile.id) {
-            app.profile.apply {
-                name = profile.name
-                subname = profile.subname
-                syncEnabled = profile.syncEnabled
-                empty = profile.empty
-                archived = profile.archived
-                studentNameLong = profile.studentNameLong
-                studentNameShort = profile.studentNameShort
-                studentNumber = profile.studentNumber
-                accountName = profile.accountName
-                dateSemester1Start = profile.dateSemester1Start
-                dateSemester2Start = profile.dateSemester2Start
-                dateYearEnd = profile.dateYearEnd
-                lastReceiversSync = profile.lastReceiversSync
-            }
-        }
+        if (profile.id == app.profile.id)
+            changes.applyColumnsTo(app.profile)
 
         d("Profiles saved in ${System.currentTimeMillis()-startTime} ms")
         startTime = System.currentTimeMillis()
@@ -345,6 +347,12 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
     }
 
     abstract fun generateUserCode(): String
+
+    /**
+     * Whether [stored], the profile row as it is now, is the account the task read, which is
+     * [baseline]. [saveData] writes nothing when it is not.
+     */
+    abstract fun isSameAccount(baseline: Profile, stored: Profile): Boolean
 
     fun cancel() {
         d("Cancelled")

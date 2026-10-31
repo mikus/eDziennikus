@@ -27,6 +27,15 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
          * would make each of those read as a real unit id.
          */
         const val UNIT_ID_UNKNOWN = 0L
+
+        /**
+         * The `studentData` keys that say which Librus account a profile is. `LibrusFirstLogin`
+         * writes them and [isSameAccount] reads them, so they must share one spelling: a key absent
+         * from both rows counts as equal, so a misspelling in one of them would let every row
+         * through.
+         */
+        const val KEY_ACCOUNT_ID = "accountId"
+        const val KEY_ACCOUNT_LOGIN = "accountLogin"
     }
 
     fun isPortalLoginValid() = portalTokenExpiryTime-30 > currentTimeUnix() && portalRefreshToken.isNotNullNorEmpty() && portalAccessToken.isNotNullNorEmpty()
@@ -51,6 +60,15 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
     }
 
     override fun generateUserCode() = "$schoolName:$apiLogin"
+
+    /**
+     * Reads only its two parameters. [apiLogin] and the other accessors read the working copy, which
+     * this task may have changed, so using one would refuse a task that changed its own login.
+     */
+    override fun isSameAccount(baseline: Profile, stored: Profile) =
+        listOf(KEY_ACCOUNT_ID, KEY_ACCOUNT_LOGIN).all {
+            baseline.studentData.get(it) == stored.studentData.get(it)
+        }
 
     fun getColor(id: Int?): Int {
         return when (id) {
@@ -131,8 +149,8 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
      */
     private var mApiLogin: String? = null
     var apiLogin: String?
-        get() { mApiLogin = mApiLogin ?: profile?.getStudentData("accountLogin", null); return mApiLogin }
-        set(value) { profile["accountLogin"] = value; mApiLogin = value }
+        get() { mApiLogin = mApiLogin ?: profile?.getStudentData(KEY_ACCOUNT_LOGIN, null); return mApiLogin }
+        set(value) { profile[KEY_ACCOUNT_LOGIN] = value; mApiLogin = value }
     /**
      * A Synergia password.
      * Used: for login (API Login Method) in Synergia mode.
