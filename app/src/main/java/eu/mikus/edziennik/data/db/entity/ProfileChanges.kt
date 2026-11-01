@@ -92,10 +92,10 @@ fun Profile.changesSince(baseline: Profile): ProfileChanges {
 
 /**
  * The difference [Profile.changesSince] found, ready to apply to another copy of the same profile.
- * Whatever it sets on a profile is a copy, so a profile never shares a `Date`, list or mutable
- * `JsonElement` (`JsonObject`, `JsonArray`) with the profile the changes came from or with another
- * profile they were applied to. A `JsonPrimitive` or `JsonNull` is shared, because Gson's
- * `deepCopy()` returns the same immutable object.
+ * Every `Date`, list and mutable `JsonElement` (`JsonObject`, `JsonArray`) it sets on a profile is a
+ * copy, so a profile never shares one with the profile the changes came from or with another profile
+ * they were applied to. A `JsonPrimitive` or `JsonNull` is shared, because Gson's `deepCopy()`
+ * returns the same immutable object.
  */
 class ProfileChanges internal constructor(
     private val columns: List<(Profile) -> Unit>,
