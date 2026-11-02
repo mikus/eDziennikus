@@ -13,12 +13,20 @@ import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.db.removeProfileData
 import eu.mikus.edziennik.ui.dialogs.base.BaseDialog
 
+/**
+ * Asks to remove the profile [profileId]. Remove runs `removeProfileData` and then [onRemove]; Cancel
+ * only closes this dialog.
+ *
+ * [onRemove] has no default on purpose. The last parameter, `onDismissListener`, runs on every
+ * dismiss, Cancel included (see [BaseDialog.show]), so a trailing lambda written for [onRemove] binds
+ * to it instead. With [onRemove] required, a call that leaves it out does not compile.
+ */
 class ProfileRemoveDialog(
     activity: AppCompatActivity,
     val profileId: Int,
     val profileName: String,
     val keepProfile: Boolean = false,
-    val onRemove: (() -> Unit)? = null,
+    val onRemove: () -> Unit,
     onShowListener: ((tag: String) -> Unit)? = null,
     onDismissListener: ((tag: String) -> Unit)? = null,
 ) : BaseDialog<Any>(activity, onShowListener, onDismissListener) {
@@ -48,7 +56,7 @@ class ProfileRemoveDialog(
             activity.reloadTarget()
 
         Toast.makeText(activity, R.string.dialog_profile_remove_success, Toast.LENGTH_LONG).show()
-        onRemove?.invoke()
+        onRemove()
 
         return DISMISS
     }

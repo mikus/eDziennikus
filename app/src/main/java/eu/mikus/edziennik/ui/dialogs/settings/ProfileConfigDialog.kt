@@ -5,6 +5,7 @@
 package eu.mikus.edziennik.ui.dialogs.settings
 
 import android.widget.ImageView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -100,7 +101,7 @@ class ProfileConfigDialog(
             }
             OutlinedButton(
                 onClick = {
-                    ProfileRemoveDialog(mainActivity, profile.id, profile.name) {
+                    profileRemoveConfirmation(mainActivity, profile) {
                         profileRemoved = true; dialog.dismiss()
                     }.show()
                 },
@@ -140,3 +141,14 @@ class ProfileConfigDialog(
         }
     }
 }
+
+/**
+ * The confirmation Remove opens for [profile]. [onRemoved] runs only once the profile has been
+ * removed; Cancel closes the confirmation without running it, so the settings dialog stays open and
+ * still saves the user's edits.
+ */
+internal fun profileRemoveConfirmation(
+    activity: AppCompatActivity,
+    profile: Profile,
+    onRemoved: () -> Unit,
+) = ProfileRemoveDialog(activity, profile.id, profile.name, onRemove = onRemoved)
