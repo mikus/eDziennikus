@@ -178,6 +178,7 @@ class SyncProfileSaveTest {
         val d = startTask()
         withContent(d)
         d.unitId = 6
+        d.profile!!.studentNumber = 9
         App.db.profileDao().remove(P)
 
         d.saveData()
@@ -186,6 +187,9 @@ class SyncProfileSaveTest {
         assertEquals("stored", storeMarker())
         assertEquals(0, count("luckyNumbers"))
         assertEquals(0, count("endpointTimers"))
+        // the in-memory apply has to sit below the refusal, not above it: the task's columns must
+        // not reach App.profile for a save the database refused
+        assertEquals(7, App.profile.studentNumber)
     }
 
     @Test
@@ -212,6 +216,12 @@ class SyncProfileSaveTest {
     @Test
     fun `another account by accountLogin alone is refused`() =
         assertReusedIdIsLeftAlone(accountId = 1001, accountLogin = "2002u")
+
+    @Test
+    fun `a stored row that lost one account key is refused`() =
+        // the baseline carries both keys and the row carries only accountId. A key on one side
+        // alone is not a match, so as far as the guard can tell this is a different account.
+        assertReusedIdIsLeftAlone(accountId = 1001, accountLogin = null)
 
     @Test
     fun `the same account re-added takes the task's changes`() {
@@ -305,10 +315,11 @@ class SyncProfileSaveTest {
      * Neither the row, nor the login store under the same id, nor any content row may be written by
      * the task.
      */
-    private fun assertReusedIdIsLeftAlone(accountId: Long, accountLogin: String) {
+    private fun assertReusedIdIsLeftAlone(accountId: Long?, accountLogin: String?) {
         val d = startTask()
         withContent(d)
         d.unitId = 6
+        d.profile!!.studentNumber = 9
         replaceRow(accountId, accountLogin, "New")
         val before = Gson().toJson(row())
 
@@ -318,6 +329,9 @@ class SyncProfileSaveTest {
         assertEquals("new", storeMarker())
         assertEquals(0, count("luckyNumbers"))
         assertEquals(0, count("endpointTimers"))
+        // the in-memory apply has to sit below the refusal, not above it: the task's columns must
+        // not reach App.profile for a save the database refused
+        assertEquals(7, App.profile.studentNumber)
     }
 
     private fun save(profileId: Int, edit: (Profile) -> Unit): Job =
