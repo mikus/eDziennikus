@@ -77,6 +77,18 @@ class LessonEventsTest {
     }
 
     @Test
+    fun `a block whose subject is -1 or 0 owns no event`() {
+        val a = normal(1, start, end, 10)
+        val b = normal(2, start, end, -1)
+        val c = normal(3, start, end, 0)
+        val day = listOf(a, b, c)
+        val events = listOf(examEvent(1, start, -1), examEvent(2, start, 0), examEvent(3, start, 10))
+        assertEquals(listOf(1L, 2L, 3L), ids(events, a, day))
+        assertEquals(listOf(1L, 2L), ids(events, b, day))
+        assertEquals(listOf(1L, 2L), ids(events, c, day))
+    }
+
+    @Test
     fun `a cancelled block keeps its own subject's event`() {
         val a = cancelled(1, start, end, 10)
         val b = shiftedTarget(2, Time(10, 0, 0), Time(10, 45, 0), start, end, 20)
