@@ -114,6 +114,28 @@ class TimetableDayBuilderTest {
             seen = true
         }
 
+    /**
+     * A lesson moved INTO this slot from elsewhere: the shape `LibrusApiTimetables` stores when a
+     * substitution's date or lesson number differs from the original's. It is the only non-cancelled
+     * type that can share a slot with a cancellation, and unlike [normal] it is not TYPE_NORMAL — so
+     * it is what tells `ran` apart from "is a plain lesson".
+     */
+    private fun shiftedTarget(
+        id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null,
+    ): LessonFull =
+        LessonFull(1, id).apply {
+            type = Lesson.TYPE_SHIFTED_TARGET
+            subjectId = subject
+            oldSubjectId = subject
+            oldDate = this@TimetableDayBuilderTest.date
+            oldStartTime = oldStart
+            oldEndTime = oldEnd
+            this.date = this@TimetableDayBuilderTest.date
+            startTime = newStart
+            endTime = newEnd
+            seen = true
+        }
+
     @Test
     fun `empty lessons yields NoTimetable with week start`() {
         val state = TimetableDayBuilder.build(date, emptyList(), emptyList(), emptyList(), cfg)
@@ -370,6 +392,37 @@ class TimetableDayBuilderTest {
         val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
         assertNull(c.blocks[0].attendance)
         assertSame(mX, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a lesson shifted into a cancelled slot counts as having run`() {
+        // `ran` is `!isCancelled`, not "is TYPE_NORMAL". A substitution moved into a freed slot is
+        // TYPE_SHIFTED_TARGET, so narrowing `ran` to TYPE_NORMAL would make neither block count as
+        // having run and hand the mark back to the cancelled one.
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            shiftedTarget(2, Time(10, 0, 0), Time(10, 45, 0), Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertNull(c.blocks[0].attendance)
+        assertSame(mX, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `the lesson that ran keeps its mark when it is listed before the cancelled one`() {
+        // The slot's owner map collapses with `any`, not last-wins: every other same-subject test
+        // lists the block that ran LAST, so a plain `.toMap()` would pass them all. Within one slot
+        // the DAO's order is content-derived (TimetableDao orders by id, and inside a slot that is a
+        // hash), so either order is reachable on real data.
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+        assertNull(c.blocks[1].attendance)
     }
 
     @Test
