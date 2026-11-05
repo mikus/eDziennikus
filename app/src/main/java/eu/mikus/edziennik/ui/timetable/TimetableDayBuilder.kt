@@ -8,7 +8,8 @@ import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.LessonFull
-import eu.mikus.edziennik.ext.takePositive
+import eu.mikus.edziennik.data.db.full.isTimetableBlock
+import eu.mikus.edziennik.data.db.full.knownSubjectId
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Week
 
@@ -44,7 +45,7 @@ object TimetableDayBuilder {
             )
         }
 
-        val actual = lessons.filter { it.type != Lesson.TYPE_NO_LESSONS && it.displayStartTime != null && it.displayEndTime != null }
+        val actual = lessons.filter { it.isTimetableBlock }
         if (actual.isEmpty()) return TimetableDayUiState.NoTimetable(date.weekStart.stringY_m_d)
 
         // hour range (mirror legacy: fallback of DEFAULT_END/START keeps null-timed lessons from skewing bounds)
@@ -70,7 +71,7 @@ object TimetableDayBuilder {
         val slotOwners: Map<Int, Map<Long, Boolean>> = actual
             .groupBy { it.displayStartTime!!.value }
             .mapValues { (_, slot) ->
-                slot.mapNotNull { block -> block.displaySubjectId.takePositive()?.let { it to !block.isCancelled } }
+                slot.mapNotNull { block -> block.knownSubjectId?.let { it to !block.isCancelled } }
                     .groupBy({ it.first }) { it.second }
                     .mapValues { (_, ran) -> ran.any { it } }
             }
@@ -92,7 +93,7 @@ object TimetableDayBuilder {
                 attendance = if (config.showAttendance)
                     slotAttendance(
                         marks = attendance.filter { it.startTime?.value == startTime.value },
-                        subject = lesson.displaySubjectId,
+                        subject = lesson.knownSubjectId,
                         ran = !lesson.isCancelled,
                         slotOwners = slotOwners.getValue(startTime.value),
                     )
@@ -110,7 +111,7 @@ object TimetableDayBuilder {
      * Picks the mark a block shows among [marks], those recorded in its slot. The block's own known
      * subject wins (unless the block did not run and a block of that subject in the slot did; see below);
      * otherwise the first mark whose subject matches no block in the slot; otherwise nothing.
-     * An unknown subject (null, -1 or 0; see takePositive) matches nothing: slotOwners holds only known ones.
+     * An unknown subject (null, -1 or 0; see knownSubjectId) matches nothing: slotOwners holds only known ones.
      * A block that did not run (cancelled or shifted away) gives up its own subject's mark when a block of that
      * subject in the slot ran, and falls back to the orphan; if none of them ran, all of them keep it. Blocks of
      * the same subject that both ran both show it: attendance stores no team to tell them apart.
@@ -121,8 +122,7 @@ object TimetableDayBuilder {
         ran: Boolean,
         slotOwners: Map<Long, Boolean>,
     ): AttendanceFull? {
-        val own = subject.takePositive()
-        return marks.firstOrNull { it.subjectId == own }?.takeIf { ran || slotOwners[own] != true }
+        return marks.firstOrNull { it.subjectId == subject }?.takeIf { ran || slotOwners[subject] != true }
             ?: marks.firstOrNull { it.subjectId !in slotOwners }
     }
 

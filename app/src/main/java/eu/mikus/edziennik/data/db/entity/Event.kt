@@ -11,6 +11,7 @@ import com.google.gson.annotations.SerializedName
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.ext.MINUTE
 import eu.mikus.edziennik.ext.isNotNullNorEmpty
+import eu.mikus.edziennik.ext.takePositive
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import java.util.*
@@ -147,3 +148,9 @@ open class Event(
     @Ignore
     fun withMetadata(metadata: Metadata) = EventFull(this, metadata)
 }
+
+/**
+ * [Event.subjectId], or null when the subject is unknown: -1 and 0 both mean "no subject".
+ */
+val Event.knownSubjectId: Long?
+    get() = subjectId.takePositive()

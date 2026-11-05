@@ -145,3 +145,20 @@ class LessonFull(
     override fun getNoteOwnerId() = ownerId
     override fun getNoteShareTeamId() = teamId.takePositive()
 }
+
+/**
+ * [LessonFull.displaySubjectId], or null when the subject is unknown: null, -1 and 0 all mean "no subject".
+ * An extension, not a member, so a relaxed mock of [LessonFull] computes it from its stubbed display* getters
+ * instead of intercepting it.
+ */
+val LessonFull.knownSubjectId: Long?
+    get() = displaySubjectId.takePositive()
+
+/**
+ * Whether this row is drawn on the timetable as a block: a real lesson (not the
+ * [Lesson.TYPE_NO_LESSONS] placeholder) that has both a display start and a display end time.
+ * An extension, not a member, so a relaxed mock of [LessonFull] computes it from its stubbed display* getters
+ * instead of intercepting it.
+ */
+val LessonFull.isTimetableBlock: Boolean
+    get() = type != Lesson.TYPE_NO_LESSONS && displayStartTime != null && displayEndTime != null
