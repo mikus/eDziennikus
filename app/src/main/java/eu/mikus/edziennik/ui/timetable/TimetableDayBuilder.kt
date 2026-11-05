@@ -66,9 +66,14 @@ object TimetableDayBuilder {
         val positions = TimetableArrange.arrange(spans)
 
         // Known subjects of every block, by display start time: lets a slot's marks be told apart.
-        val slotSubjects: Map<Int, Set<Long>> = actual
-            .groupBy({ it.displayStartTime!!.value }) { it.displaySubjectId.takePositive() }
-            .mapValues { (_, subjects) -> subjects.filterNotNull().toSet() }
+        // Each maps to whether any block of that subject in the slot ran.
+        val slotOwners: Map<Int, Map<Long, Boolean>> = actual
+            .groupBy { it.displayStartTime!!.value }
+            .mapValues { (_, slot) ->
+                slot.mapNotNull { block -> block.displaySubjectId.takePositive()?.let { it to !block.isCancelled } }
+                    .groupBy({ it.first }) { it.second }
+                    .mapValues { (_, ran) -> ran.any { it } }
+            }
 
         val blocks = actual.mapIndexed { i, lesson ->
             val pos = positions[i]
@@ -88,7 +93,8 @@ object TimetableDayBuilder {
                     slotAttendance(
                         marks = attendance.filter { it.startTime?.value == startTime.value },
                         subject = lesson.displaySubjectId,
-                        slotSubjects = slotSubjects.getValue(startTime.value),
+                        ran = !lesson.isCancelled,
+                        slotOwners = slotOwners.getValue(startTime.value),
                     )
                 else null,
                 annotation = classify(lesson),
@@ -102,14 +108,22 @@ object TimetableDayBuilder {
 
     /**
      * Picks the mark a block shows among [marks], those recorded in its slot. The block's own known
-     * subject wins; otherwise the first mark whose subject matches no block in the slot; otherwise
-     * nothing. An unknown subject (null, -1 or 0; see takePositive) matches nothing: slotSubjects holds only known ones.
-     * Two blocks of the same subject in one slot both match its mark: attendance stores no team to tell them apart.
+     * subject wins (unless the block did not run and a block of that subject in the slot did; see below);
+     * otherwise the first mark whose subject matches no block in the slot; otherwise nothing.
+     * An unknown subject (null, -1 or 0; see takePositive) matches nothing: slotOwners holds only known ones.
+     * A block that did not run (cancelled or shifted away) gives up its own subject's mark when a block of that
+     * subject in the slot ran, and falls back to the orphan; if none of them ran, all of them keep it. Blocks of
+     * the same subject that both ran both show it: attendance stores no team to tell them apart.
      */
-    private fun slotAttendance(marks: List<AttendanceFull>, subject: Long?, slotSubjects: Set<Long>): AttendanceFull? {
+    private fun slotAttendance(
+        marks: List<AttendanceFull>,
+        subject: Long?,
+        ran: Boolean,
+        slotOwners: Map<Long, Boolean>,
+    ): AttendanceFull? {
         val own = subject.takePositive()
-        return marks.firstOrNull { it.subjectId == own }
-            ?: marks.firstOrNull { it.subjectId !in slotSubjects }
+        return marks.firstOrNull { it.subjectId == own }?.takeIf { ran || slotOwners[own] != true }
+            ?: marks.firstOrNull { it.subjectId !in slotOwners }
     }
 
     private fun classify(lesson: LessonFull): LessonAnnotation = when (lesson.type) {

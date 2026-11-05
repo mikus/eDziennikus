@@ -88,9 +88,13 @@ class TimetableDayBuilderTest {
             seen = true
         }
 
-    private fun shiftedSource(id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time): LessonFull =
+    private fun shiftedSource(
+        id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null,
+    ): LessonFull =
         LessonFull(1, id).apply {
             type = Lesson.TYPE_SHIFTED_SOURCE
+            oldSubjectId = subject
+            subjectId = subject
             oldDate = this@TimetableDayBuilderTest.date
             oldStartTime = oldStart
             oldEndTime = oldEnd
@@ -318,6 +322,91 @@ class TimetableDayBuilderTest {
         val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mY, mX), cfg) as TimetableDayUiState.Content
         assertSame(mX, c.blocks[0].attendance)
         assertSame(mY, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a same-subject mark goes to the lesson that ran, not the cancelled one`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertNull(c.blocks[0].attendance)
+        assertSame(mX, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a same-subject mark stays on every lesson when none of them ran`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            cancelled(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+        assertSame(mX, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `two same-subject lessons that both ran both keep its mark`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+        assertSame(mX, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a shifted-away lesson gives a same-subject mark to the lesson that ran`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            shiftedSource(1, Time(8, 0, 0), Time(8, 45, 0), Time(10, 0, 0), Time(10, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertNull(c.blocks[0].attendance)
+        assertSame(mX, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a cancelled lesson that loses its own mark still shows an orphan`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val mZ = attendance(Time(8, 0, 0), subjectId = 33)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX, mZ), cfg) as TimetableDayUiState.Content
+        assertSame(mZ, c.blocks[0].attendance)
+        assertSame(mX, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a lone cancelled lesson keeps its mark though its subject runs at another time`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(9, 0, 0), Time(9, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+        assertNull(c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a same-subject mark stays on a shifted-away and a cancelled lesson when neither ran`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            shiftedSource(1, Time(8, 0, 0), Time(8, 45, 0), Time(10, 0, 0), Time(10, 45, 0), subject = 11),
+            cancelled(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+        assertSame(mX, c.blocks[1].attendance)
     }
 
     @Test
