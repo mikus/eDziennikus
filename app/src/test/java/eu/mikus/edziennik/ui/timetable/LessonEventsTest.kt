@@ -132,6 +132,16 @@ class LessonEventsTest {
     }
 
     @Test
+    fun `a cancelled block keeps its subject's event when the same subject ran in the slot`() {
+        val a = cancelled(1, start, end, 10)
+        val b = shiftedTarget(2, Time(10, 0, 0), Time(10, 45, 0), start, end, 10)
+        val day = listOf(a, b)
+        val events = listOf(examEvent(10, start, 10))
+        assertEquals(listOf(10L), ids(events, a, day))
+        assertEquals(listOf(10L), ids(events, b, day))
+    }
+
+    @Test
     fun `an event's team never changes where it shows`() {
         val a = normal(1, start, end, 10).apply { teamId = 5 }
         val b = normal(2, start, end, 20).apply { teamId = 6 }
