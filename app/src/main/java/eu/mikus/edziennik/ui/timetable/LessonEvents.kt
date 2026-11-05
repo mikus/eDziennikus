@@ -16,8 +16,10 @@ import eu.mikus.edziennik.data.db.full.knownSubjectId
  *
  * The slot is every block in [dayLessons] on the same day with the same display start time
  * (compared by value), where "block" is [isTimetableBlock]. The rule owns this definition, so
- * [dayLessons] may be any superset of the day (the widget passes a whole week) and callers
- * cannot pre-filter it into disagreement. The slot's owners are the known subjects of its blocks.
+ * [dayLessons] may be any superset of this profile's day (one profile's lessons, any number of
+ * days; the widget passes a whole week) and callers cannot pre-filter it into disagreement. The
+ * rule never checks the profile, so lessons of another profile would add owners. The slot's
+ * owners are the known subjects of its blocks.
  *
  * An event at the lesson's time is kept iff its subject is unknown, or no block in the slot
  * carries it (an orphan), or it is the lesson's own subject. Input order is preserved.
@@ -26,8 +28,9 @@ import eu.mikus.edziennik.data.db.full.knownSubjectId
  * and a reminder hidden costs more than one shown twice. Likewise a block of unknown subject
  * takes only orphans and unknown-subject events, never an event another block owns.
  *
- * `Event.teamId` is deliberately not read. Synced events (Synergia homework, meetings,
- * manual events, Librus events with a class) carry the whole-class team id, and lessons carry
+ * `Event.teamId` is deliberately not read. Synced events (Librus events with a class, Synergia
+ * homework, parent-teacher meetings) and lesson-less manual events carry the whole-class team
+ * id, and lessons carry
  * it too whenever Librus sends a class, so narrowing by team would read "for the whole class"
  * as "not for this group" on a slot holding a whole-class block and a group block.
  *

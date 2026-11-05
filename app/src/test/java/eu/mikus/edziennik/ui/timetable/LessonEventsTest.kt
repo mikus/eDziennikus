@@ -99,13 +99,25 @@ class LessonEventsTest {
     }
 
     @Test
-    fun `a shifted-source block is matched on its old subject and slot`() {
+    fun `a shifted-source block is matched on its old slot`() {
         val a = shiftedSource(1, start, end, Time(10, 0, 0), Time(10, 45, 0), 10)
         val b = normal(2, start, end, 20)
         val day = listOf(a, b)
         val events = listOf(examEvent(10, start, 10))
         assertEquals(listOf(10L), ids(events, a, day))
         assertEquals(emptyList(), ids(events, b, day))
+    }
+
+    @Test
+    fun `a lesson moved to another day still claims its old slot, by value`() {
+        val a = shiftedSource(1, start, end, newStart = start, newEnd = end, subject = 10)
+        a.date = Date(2026, 6, 2)
+        val b = normal(2, start, end, 20, date = Date(2026, 6, 1))
+        val c = normal(3, start, end, 30, date = Date(2026, 6, 2))
+        val day = listOf(a, b, c)
+        val events = listOf(examEvent(10, start, 10), examEvent(30, start, 30))
+        assertEquals(listOf(30L), ids(events, b, day))
+        assertEquals(listOf(10L, 30L), ids(events, a, day))
     }
 
     @Test
