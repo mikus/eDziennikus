@@ -481,4 +481,30 @@ class TimetableDayBuilderTest {
         val c = TimetableDayBuilder.build(date, listOf(lesson()), emptyList(), emptyList(), cfg) as TimetableDayUiState.Content
         assertEquals(LessonAnnotation.None, c.blocks[0].annotation)
     }
+
+    @Test
+    fun `a shared slot shows each event only on the block of its subject`() {
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 10),
+            shiftedTarget(2, Time(10, 0, 0), Time(10, 45, 0), Time(8, 0, 0), Time(8, 45, 0), subject = 20),
+        )
+        val e10 = examEvent(1, Time(8, 0, 0), subject = 10)
+        val e20 = examEvent(2, Time(8, 0, 0), subject = 20)
+        val c = TimetableDayBuilder.build(date, lessons, listOf(e10, e20), emptyList(), cfg) as TimetableDayUiState.Content
+        assertEquals(listOf(e10), c.blocks.first { it.lesson.id == 1L }.events)
+        assertEquals(listOf(e20), c.blocks.first { it.lesson.id == 2L }.events)
+    }
+
+    @Test
+    fun `the three-event cap counts only the block's own events`() {
+        val lessons = listOf(
+            normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = 10),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 20),
+        )
+        val e20 = (1L..4L).map { examEvent(it, Time(8, 0, 0), subject = 20) }
+        val e10 = examEvent(5, Time(8, 0, 0), subject = 10)
+        val c = TimetableDayBuilder.build(date, lessons, e20 + e10, emptyList(), cfg) as TimetableDayUiState.Content
+        assertEquals(listOf(e10), c.blocks.first { it.lesson.id == 1L }.events)
+        assertEquals(e20.take(3), c.blocks.first { it.lesson.id == 2L }.events)
+    }
 }

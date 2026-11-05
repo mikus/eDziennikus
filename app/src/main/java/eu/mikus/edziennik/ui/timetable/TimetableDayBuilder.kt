@@ -86,7 +86,7 @@ object TimetableDayBuilder {
                 column = pos.column,
                 columnCount = pos.columnCount,
                 events = if (config.showEvents)
-                    events.filter { it.time?.value == startTime.value }.take(3)
+                    events.forLesson(lesson, actual).take(3)
                 else emptyList(),
                 // The block's time is never null, so an attendance whose time is unknown
                 // matches no block. Marks in the block's slot are then told apart by subject.
