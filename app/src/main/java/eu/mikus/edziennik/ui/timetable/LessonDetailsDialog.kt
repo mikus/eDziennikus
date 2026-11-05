@@ -100,7 +100,11 @@ class LessonDetailsDialog(
         val lessonTime = lesson.displayStartTime ?: return
 
         val events by remember {
-            app.db.eventDao().getAllByDateTime(lesson.profileId, lessonDate, lessonTime).asFlow()
+            lessonEventsFlow(
+                lesson,
+                app.db.eventDao().getAllByDateTime(lesson.profileId, lessonDate, lessonTime).asFlow(),
+                app.db.timetableDao().getAllForDate(lesson.profileId, lessonDate).asFlow(),
+            )
         }.collectAsStateWithLifecycle(emptyList())
 
         Column(
