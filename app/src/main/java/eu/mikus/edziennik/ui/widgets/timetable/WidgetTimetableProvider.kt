@@ -36,6 +36,7 @@ import eu.mikus.edziennik.ext.pendingIntentFlag
 import eu.mikus.edziennik.ext.pendingIntentMutable
 import eu.mikus.edziennik.ext.putExtras
 import eu.mikus.edziennik.ui.base.enums.NavTarget
+import eu.mikus.edziennik.ui.timetable.forLesson
 import eu.mikus.edziennik.ui.timetable.missingWeekStart
 import eu.mikus.edziennik.ui.widgets.LessonDialogActivity
 import eu.mikus.edziennik.ui.widgets.WidgetConfig
@@ -325,10 +326,9 @@ class WidgetTimetableProvider : AppWidgetProvider() {
                     }
                 }
 
-                // add every event on this lesson
-                for (event in events) {
-                    if (event.time == null || event.time != lesson.displayStartTime)
-                        continue
+                // the whole profile window, not `lessons`: a lesson the display list ever drops
+                // still claims its slot; forLesson keeps only this lesson's day
+                for (event in events.forLesson(lesson, profileLessons)) {
                     model.eventColors.add(if (event.isHomework) ItemWidgetTimetableModel.EVENT_COLOR_HOMEWORK else event.eventColor)
                 }
 
