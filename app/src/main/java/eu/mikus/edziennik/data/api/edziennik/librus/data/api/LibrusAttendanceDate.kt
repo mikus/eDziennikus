@@ -27,10 +27,9 @@ internal data class LibrusAttendanceDate(val date: Date, val unknown: Boolean)
  * Do not "fix" the literal to today for consistency with it. `AttendanceDao.getAllByDateNow` is
  * an exact date match, and it is what `TimetableViewModel`'s `attendanceFetch` calls for each day
  * the Timetable draws. An attendance filed at today would be fetched for today and drawn on
- * today's timetable as a real absence, re-filed to the new day on every sync, and, with no start
- * time, it would feed the `null == null` start-time matcher in `TimetableDayBuilder` (backlog
- * item 65) and bind to every cancelled lesson of the day. 2019-01-01 matches no school day, so
- * the row stays off every timetable, and `ORDER BY attendanceDate DESC` already lists it last.
+ * today's timetable as a real absence, re-filed to the new day on every sync. 2019-01-01
+ * matches no school day, so the row stays off every timetable, and
+ * `ORDER BY attendanceDate DESC` already lists it last.
  * It is also the value the parser stored before, so no stored row changes meaning.
  *
  * None of `librusEventDate`'s reasons for today apply to attendance. An event's date is a

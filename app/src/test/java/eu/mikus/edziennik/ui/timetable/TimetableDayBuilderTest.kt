@@ -16,6 +16,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -70,9 +71,41 @@ class TimetableDayBuilderTest {
         every { this@mockk.time } returns time
     }
 
-    private fun attendance(start: Time): AttendanceFull = mockk(relaxed = true) {
+    private fun attendance(start: Time?): AttendanceFull = mockk(relaxed = true) {
         every { startTime } returns start
     }
+
+    // The three builders below are real LessonFull rows, in the shape LibrusApiTimetables.parseLesson
+    // stores: displayStartTime is computed from type, never stubbed alongside startTime.
+    private fun cancelled(id: Long, oldStart: Time, oldEnd: Time): LessonFull =
+        LessonFull(1, id).apply {
+            type = Lesson.TYPE_CANCELLED
+            oldDate = this@TimetableDayBuilderTest.date
+            oldStartTime = oldStart
+            oldEndTime = oldEnd
+            seen = true
+        }
+
+    private fun shiftedSource(id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time): LessonFull =
+        LessonFull(1, id).apply {
+            type = Lesson.TYPE_SHIFTED_SOURCE
+            oldDate = this@TimetableDayBuilderTest.date
+            oldStartTime = oldStart
+            oldEndTime = oldEnd
+            this.date = this@TimetableDayBuilderTest.date
+            startTime = newStart
+            endTime = newEnd
+            seen = true
+        }
+
+    private fun normal(id: Long, start: Time, end: Time): LessonFull =
+        LessonFull(1, id).apply {
+            type = Lesson.TYPE_NORMAL
+            this.date = this@TimetableDayBuilderTest.date
+            startTime = start
+            endTime = end
+            seen = true
+        }
 
     @Test
     fun `empty lessons yields NoTimetable with week start`() {
@@ -138,7 +171,7 @@ class TimetableDayBuilderTest {
     }
 
     @Test
-    fun `attendance matches by raw start time, gated by config`() {
+    fun `attendance matches by display start time, gated by config`() {
         val l = lesson(start = Time(8, 0, 0))
         val att = listOf(attendance(Time(8, 0, 0)), attendance(Time(9, 0, 0)))
         val c = TimetableDayBuilder.build(date, listOf(l), emptyList(), att, cfg) as TimetableDayUiState.Content
@@ -146,6 +179,44 @@ class TimetableDayBuilderTest {
 
         val off = TimetableDayBuilder.build(date, listOf(l), emptyList(), att, cfg.copy(showAttendance = false)) as TimetableDayUiState.Content
         assertNull(off.blocks[0].attendance)
+    }
+
+    @Test
+    fun `an attendance with no start time is drawn on no lesson`() {
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0)),
+            cancelled(2, Time(9, 0, 0), Time(9, 45, 0)),
+            normal(3, Time(10, 0, 0), Time(10, 45, 0)),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(attendance(null)), cfg) as TimetableDayUiState.Content
+        c.blocks.forEach { assertNull(it.attendance) }
+    }
+
+    @Test
+    fun `a cancelled lesson shows the attendance recorded in its slot`() {
+        val a8 = attendance(Time(8, 0, 0))
+        val a9 = attendance(Time(9, 0, 0))
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0)),
+            normal(2, Time(9, 0, 0), Time(9, 45, 0)),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(a8, a9), cfg) as TimetableDayUiState.Content
+        assertSame(a8, c.blocks[0].attendance)
+        assertSame(a9, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a shifted-away lesson shows its own slot's attendance, never its target's`() {
+        val a10 = attendance(Time(10, 0, 0))
+        val a8 = attendance(Time(8, 0, 0))
+        val l = shiftedSource(1, Time(8, 0, 0), Time(8, 45, 0), Time(10, 0, 0), Time(10, 45, 0))
+        val c = TimetableDayBuilder.build(date, listOf(l), emptyList(), listOf(a10, a8), cfg) as TimetableDayUiState.Content
+        assertSame(a8, c.blocks[0].attendance)
+        // Same-day shift: pins that oldDate == date in the fixture, as parseLesson stores it.
+        assertEquals(LessonAnnotation.Shifted(isSource = true, otherDateArg = null, otherTimeArg = "10:00"), c.blocks[0].annotation)
+
+        val onlyTarget = TimetableDayBuilder.build(date, listOf(l), emptyList(), listOf(a10), cfg) as TimetableDayUiState.Content
+        assertNull(onlyTarget.blocks[0].attendance)
     }
 
     @Test

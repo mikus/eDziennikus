@@ -76,8 +76,10 @@ object TimetableDayBuilder {
                 events = if (config.showEvents)
                     events.filter { it.time?.value == startTime.value }.take(3)
                 else emptyList(),
+                // The block's time is never null, so an attendance whose time is unknown
+                // matches no block.
                 attendance = if (config.showAttendance)
-                    attendance.firstOrNull { it.startTime?.value == lesson.startTime?.value }
+                    attendance.firstOrNull { it.startTime?.value == startTime.value }
                 else null,
                 annotation = classify(lesson),
                 unseen = lesson.type != Lesson.TYPE_NORMAL &&
