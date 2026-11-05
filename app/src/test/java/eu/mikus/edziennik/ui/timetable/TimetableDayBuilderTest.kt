@@ -76,66 +76,6 @@ class TimetableDayBuilderTest {
         every { this@mockk.subjectId } returns subjectId
     }
 
-    // The three builders below are real LessonFull rows, in the shape LibrusApiTimetables.parseLesson
-    // stores: displayStartTime is computed from type, never stubbed alongside startTime.
-    private fun cancelled(id: Long, oldStart: Time, oldEnd: Time, subject: Long? = null): LessonFull =
-        LessonFull(1, id).apply {
-            type = Lesson.TYPE_CANCELLED
-            oldSubjectId = subject
-            oldDate = this@TimetableDayBuilderTest.date
-            oldStartTime = oldStart
-            oldEndTime = oldEnd
-            seen = true
-        }
-
-    private fun shiftedSource(
-        id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null,
-    ): LessonFull =
-        LessonFull(1, id).apply {
-            type = Lesson.TYPE_SHIFTED_SOURCE
-            oldSubjectId = subject
-            subjectId = subject
-            oldDate = this@TimetableDayBuilderTest.date
-            oldStartTime = oldStart
-            oldEndTime = oldEnd
-            this.date = this@TimetableDayBuilderTest.date
-            startTime = newStart
-            endTime = newEnd
-            seen = true
-        }
-
-    private fun normal(id: Long, start: Time, end: Time, subject: Long? = null): LessonFull =
-        LessonFull(1, id).apply {
-            type = Lesson.TYPE_NORMAL
-            subjectId = subject
-            this.date = this@TimetableDayBuilderTest.date
-            startTime = start
-            endTime = end
-            seen = true
-        }
-
-    /**
-     * A lesson moved INTO this slot from elsewhere: the shape `LibrusApiTimetables` stores when a
-     * substitution's date or lesson number differs from the original's. It is the only non-cancelled
-     * type that can share a slot with a cancellation, and unlike [normal] it is not TYPE_NORMAL — so
-     * it is what tells `ran` apart from "is a plain lesson".
-     */
-    private fun shiftedTarget(
-        id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null,
-    ): LessonFull =
-        LessonFull(1, id).apply {
-            type = Lesson.TYPE_SHIFTED_TARGET
-            subjectId = subject
-            oldSubjectId = subject
-            oldDate = this@TimetableDayBuilderTest.date
-            oldStartTime = oldStart
-            oldEndTime = oldEnd
-            this.date = this@TimetableDayBuilderTest.date
-            startTime = newStart
-            endTime = newEnd
-            seen = true
-        }
-
     @Test
     fun `empty lessons yields NoTimetable with week start`() {
         val state = TimetableDayBuilder.build(date, emptyList(), emptyList(), emptyList(), cfg)
