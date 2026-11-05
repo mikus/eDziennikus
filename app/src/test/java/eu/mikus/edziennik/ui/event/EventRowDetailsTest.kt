@@ -107,7 +107,7 @@ class EventRowDetailsTest {
     fun `showDate false still shows the unknown label`() {
         // showDate = false means "the date is implied by what you are looking at" — a day dialog
         // (DayDialog.kt:149) under a title printing the weekday and date, or today's lesson details
-        // (LessonDetailsDialog.kt:345). For an unknown date that implication is false, and the row
+        // (LessonDetailsDialog.kt:349). For an unknown date that implication is false, and the row
         // is filed at today, so staying silent here reads as "due today" — the exact confident wrong
         // answer this phase removes. The label must survive showDate = false.
         // showWeekDay is left at true: an unknown date suppresses the weekday on its own.
@@ -131,7 +131,7 @@ class EventRowDetailsTest {
         // before this phase. Without this case the condition is indistinguishable from `if (true)`,
         // because every other case here has showDate = true or dateUnknown = true.
         // showWeekDay is false too, as the one EventRow call site that reaches this combination
-        // passes it — LessonDetailsDialog.kt:348-349 — so the line is the time and the subject
+        // passes it — LessonDetailsDialog.kt:352-353 — so the line is the time and the subject
         // alone. DayDialog.kt:151-152 passes the same pair, but it configures an EventListAdapter
         // and so renders through EventViewHolder.onBind, the twin the KDoc above excludes.
         val text = render(event(farDate(), unknown = false), showWeekDay = false, showDate = false)

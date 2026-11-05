@@ -198,7 +198,7 @@ internal fun eventDetails(
         // "cały dzień".
         if (showWeekDay && !event.dateUnknown) add(AnnotatedString(Week.getFullDayName(event.date.weekDay)))
         // `showDate = false` means "the date is implied by the surface you are looking at" — here
-        // only LessonDetailsDialog.kt:345, today's lesson. An unknown date makes that implication
+        // only LessonDetailsDialog.kt:349, today's lesson. An unknown date makes that implication
         // false, and the row is filed at today, so staying silent would read as "due today": the
         // confident wrong answer this whole branch removes. The label therefore survives
         // showDate = false; only the real date obeys it.

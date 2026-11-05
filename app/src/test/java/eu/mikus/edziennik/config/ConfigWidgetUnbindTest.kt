@@ -45,7 +45,7 @@ import org.junit.jupiter.api.Test
  * widget and add it again.
  *
  * `-1` is **not** that marker and must never be written here: the timetable widget reads it as "all
- * profiles" (`WidgetTimetableProvider.kt:156`) and every notifications widget already stores it,
+ * profiles" (`WidgetTimetableProvider.kt:157`) and every notifications widget already stores it,
  * because `WidgetConfigActivity` never asks a notifications widget to pick a profile.
  */
 @OptIn(ExperimentalCoroutinesApi::class)

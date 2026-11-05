@@ -134,7 +134,7 @@ class ConfigWidgetRepairTest {
     }
 
     /**
-     * `-1` is "all profiles" to the timetable widget (`WidgetTimetableProvider.kt:156`) and is what
+     * `-1` is "all profiles" to the timetable widget (`WidgetTimetableProvider.kt:157`) and is what
      * every notifications widget stores, because `WidgetConfigActivity` never asks a notifications
      * widget to pick a profile. No profile holds it, so a sweep that asked "is this id in the table"
      * without the `> 0` guard would mark it removed - turning a working all-children timetable
