@@ -8,6 +8,7 @@ import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.data.db.full.AttendanceFull
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.LessonFull
+import eu.mikus.edziennik.ext.takePositive
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Week
 
@@ -64,6 +65,11 @@ object TimetableDayBuilder {
         }
         val positions = TimetableArrange.arrange(spans)
 
+        // Known subjects of every block, by display start time: lets a slot's marks be told apart.
+        val slotSubjects: Map<Int, Set<Long>> = actual
+            .groupBy({ it.displayStartTime!!.value }) { it.displaySubjectId.takePositive() }
+            .mapValues { (_, subjects) -> subjects.filterNotNull().toSet() }
+
         val blocks = actual.mapIndexed { i, lesson ->
             val pos = positions[i]
             val startTime = lesson.displayStartTime!!
@@ -77,9 +83,13 @@ object TimetableDayBuilder {
                     events.filter { it.time?.value == startTime.value }.take(3)
                 else emptyList(),
                 // The block's time is never null, so an attendance whose time is unknown
-                // matches no block.
+                // matches no block. Marks in the block's slot are then told apart by subject.
                 attendance = if (config.showAttendance)
-                    attendance.firstOrNull { it.startTime?.value == startTime.value }
+                    slotAttendance(
+                        marks = attendance.filter { it.startTime?.value == startTime.value },
+                        subject = lesson.displaySubjectId,
+                        slotSubjects = slotSubjects.getValue(startTime.value),
+                    )
                 else null,
                 annotation = classify(lesson),
                 unseen = lesson.type != Lesson.TYPE_NORMAL &&
@@ -88,6 +98,18 @@ object TimetableDayBuilder {
         }
 
         return TimetableDayUiState.Content(startHour, endHour, blocks)
+    }
+
+    /**
+     * Picks the mark a block shows among [marks], those recorded in its slot. The block's own known
+     * subject wins; otherwise the first mark whose subject matches no block in the slot; otherwise
+     * nothing. An unknown subject (null, -1 or 0; see takePositive) matches nothing: slotSubjects holds only known ones.
+     * Two blocks of the same subject in one slot both match its mark: attendance stores no team to tell them apart.
+     */
+    private fun slotAttendance(marks: List<AttendanceFull>, subject: Long?, slotSubjects: Set<Long>): AttendanceFull? {
+        val own = subject.takePositive()
+        return marks.firstOrNull { it.subjectId == own }
+            ?: marks.firstOrNull { it.subjectId !in slotSubjects }
     }
 
     private fun classify(lesson: LessonFull): LessonAnnotation = when (lesson.type) {

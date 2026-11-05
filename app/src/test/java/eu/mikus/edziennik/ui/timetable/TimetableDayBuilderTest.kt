@@ -71,15 +71,17 @@ class TimetableDayBuilderTest {
         every { this@mockk.time } returns time
     }
 
-    private fun attendance(start: Time?): AttendanceFull = mockk(relaxed = true) {
+    private fun attendance(start: Time?, subjectId: Long = -1L): AttendanceFull = mockk(relaxed = true) {
         every { startTime } returns start
+        every { this@mockk.subjectId } returns subjectId
     }
 
     // The three builders below are real LessonFull rows, in the shape LibrusApiTimetables.parseLesson
     // stores: displayStartTime is computed from type, never stubbed alongside startTime.
-    private fun cancelled(id: Long, oldStart: Time, oldEnd: Time): LessonFull =
+    private fun cancelled(id: Long, oldStart: Time, oldEnd: Time, subject: Long? = null): LessonFull =
         LessonFull(1, id).apply {
             type = Lesson.TYPE_CANCELLED
+            oldSubjectId = subject
             oldDate = this@TimetableDayBuilderTest.date
             oldStartTime = oldStart
             oldEndTime = oldEnd
@@ -98,9 +100,10 @@ class TimetableDayBuilderTest {
             seen = true
         }
 
-    private fun normal(id: Long, start: Time, end: Time): LessonFull =
+    private fun normal(id: Long, start: Time, end: Time, subject: Long? = null): LessonFull =
         LessonFull(1, id).apply {
             type = Lesson.TYPE_NORMAL
+            subjectId = subject
             this.date = this@TimetableDayBuilderTest.date
             startTime = start
             endTime = end
@@ -217,6 +220,104 @@ class TimetableDayBuilderTest {
 
         val onlyTarget = TimetableDayBuilder.build(date, listOf(l), emptyList(), listOf(a10), cfg) as TimetableDayUiState.Content
         assertNull(onlyTarget.blocks[0].attendance)
+    }
+
+    @Test
+    fun `a co-slotted mark goes only to the lesson whose subject it carries`() {
+        val mY = attendance(Time(8, 0, 0), subjectId = 22)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 22),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mY), cfg) as TimetableDayUiState.Content
+        assertNull(c.blocks[0].attendance)
+        assertSame(mY, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a co-slotted mark matching no lesson shows on every one of them`() {
+        val mZ = attendance(Time(8, 0, 0), subjectId = 33)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 22),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mZ), cfg) as TimetableDayUiState.Content
+        assertSame(mZ, c.blocks[0].attendance)
+        assertSame(mZ, c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `an unknown subject never claims a co-slotted mark`() {
+        val unknown = attendance(Time(8, 0, 0), subjectId = -1)
+        val lessons = listOf(
+            normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = -1),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 22),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(unknown), cfg) as TimetableDayUiState.Content
+        assertSame(unknown, c.blocks[0].attendance)
+        assertSame(unknown, c.blocks[1].attendance)
+
+        // The first mark matching no block is the orphan; the unknown mark is not the -1 block's own.
+        val mZ = attendance(Time(8, 0, 0), subjectId = 33)
+        val both = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mZ, unknown), cfg) as TimetableDayUiState.Content
+        assertSame(mZ, both.blocks[0].attendance)
+        assertSame(mZ, both.blocks[1].attendance)
+
+        // Zero is unknown too: a block with subject 0 does not claim a mark with subject 0.
+        val m0 = attendance(Time(8, 0, 0), subjectId = 0)
+        val zeroLessons = listOf(
+            normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = 0),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 22),
+        )
+        val zero = TimetableDayBuilder.build(date, zeroLessons, emptyList(), listOf(mZ, m0), cfg) as TimetableDayUiState.Content
+        assertSame(mZ, zero.blocks[0].attendance)
+        assertSame(mZ, zero.blocks[1].attendance)
+    }
+
+    @Test
+    fun `a lone lesson keeps its slot's mark whatever its subject`() {
+        val mY = attendance(Time(8, 0, 0), subjectId = 22)
+        // A later lesson with the mark's subject must not count towards the 08:00 slot.
+        val lessons = listOf(
+            normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(9, 0, 0), Time(9, 45, 0), subject = 22),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mY), cfg) as TimetableDayUiState.Content
+        assertSame(mY, c.blocks[0].attendance)
+    }
+
+    @Test
+    fun `a lone lesson prefers its own subject's mark over input order`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val mY = attendance(Time(8, 0, 0), subjectId = 22)
+        val lessons = listOf(normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11))
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mY, mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+    }
+
+    @Test
+    fun `a cancelled lesson keeps a co-slotted mark carrying its own subject`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val lessons = listOf(
+            cancelled(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 22),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+        assertNull(c.blocks[1].attendance)
+    }
+
+    @Test
+    fun `each of two co-slotted lessons gets its own mark`() {
+        val mX = attendance(Time(8, 0, 0), subjectId = 11)
+        val mY = attendance(Time(8, 0, 0), subjectId = 22)
+        val lessons = listOf(
+            normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 22),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(mY, mX), cfg) as TimetableDayUiState.Content
+        assertSame(mX, c.blocks[0].attendance)
+        assertSame(mY, c.blocks[1].attendance)
     }
 
     @Test
