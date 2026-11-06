@@ -15,10 +15,11 @@ internal val FIXTURE_DATE = Date(2026, 6, 1)
 
 // The four builders below are real LessonFull rows, in the shape LibrusApiTimetables.parseLesson
 // stores: displayStartTime is computed from type, never stubbed alongside startTime.
-internal fun cancelled(id: Long, oldStart: Time, oldEnd: Time, subject: Long? = null, date: Date = FIXTURE_DATE): LessonFull =
+internal fun cancelled(id: Long, oldStart: Time, oldEnd: Time, subject: Long? = null, team: Long? = null, date: Date = FIXTURE_DATE): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_CANCELLED
         oldSubjectId = subject
+        oldTeamId = team
         oldDate = date
         oldStartTime = oldStart
         oldEndTime = oldEnd
@@ -26,12 +27,15 @@ internal fun cancelled(id: Long, oldStart: Time, oldEnd: Time, subject: Long? = 
     }
 
 internal fun shiftedSource(
-    id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null, date: Date = FIXTURE_DATE,
+    id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null, team: Long? = null,
+    date: Date = FIXTURE_DATE,
 ): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_SHIFTED_SOURCE
         oldSubjectId = subject
         subjectId = subject
+        oldTeamId = team
+        teamId = team
         oldDate = date
         oldStartTime = oldStart
         oldEndTime = oldEnd
@@ -41,10 +45,11 @@ internal fun shiftedSource(
         seen = true
     }
 
-internal fun normal(id: Long, start: Time, end: Time, subject: Long? = null, date: Date = FIXTURE_DATE): LessonFull =
+internal fun normal(id: Long, start: Time, end: Time, subject: Long? = null, team: Long? = null, date: Date = FIXTURE_DATE): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_NORMAL
         subjectId = subject
+        teamId = team
         this.date = date
         startTime = start
         endTime = end
@@ -58,12 +63,15 @@ internal fun normal(id: Long, start: Time, end: Time, subject: Long? = null, dat
  * it is what tells `ran` apart from "is a plain lesson".
  */
 internal fun shiftedTarget(
-    id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null, date: Date = FIXTURE_DATE,
+    id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null, team: Long? = null,
+    date: Date = FIXTURE_DATE,
 ): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_SHIFTED_TARGET
         subjectId = subject
         oldSubjectId = subject
+        teamId = team
+        oldTeamId = team
         oldDate = date
         oldStartTime = oldStart
         oldEndTime = oldEnd

@@ -154,3 +154,13 @@ open class Event(
  */
 val Event.knownSubjectId: Long?
     get() = subjectId.takePositive()
+
+/**
+ * [Event.teamId], or null when the team is unknown: -1 and 0 both mean "no team".
+ *
+ * Null is what every parser that cannot name a team writes, and what `LibrusApiEvents` wrote for
+ * a group's event until it read `VirtualClass`. The timetable's `forLesson` never narrows a slot
+ * on a null, so an event filed this way keeps showing on every block the subject allows.
+ */
+val Event.knownTeamId: Long?
+    get() = teamId.takePositive()
