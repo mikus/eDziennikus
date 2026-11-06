@@ -101,6 +101,7 @@ class ParseFailureMarkerTest {
     @Test
     fun `a retired instance refuses the marker without throwing`() {
         val config = RetirableConfig().apply { retireNow() }
+        assertFalse(config.has("parseFailure.theme"))
 
         config.recordParseFailure("theme", "dark")
 

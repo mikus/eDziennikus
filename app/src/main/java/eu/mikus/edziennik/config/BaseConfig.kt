@@ -131,8 +131,16 @@ abstract class BaseConfig(
      *
      * A marker that already holds this value is not written again. A property read on every render
      * would otherwise emit on [changes] each time, and a [configFlow] collector re-reading on that
-     * emission would read the property again - a loop. The `has` check is required: the value compare
-     * alone would rest on an absent key happening to read back as something other than [stored].
+     * emission would read the property again - a loop.
+     *
+     * The log line is per-event and the row is per-state: the line reports that a fallback fired on
+     * this launch, so it is written on every call, while the guard only dedupes what is persisted.
+     *
+     * The marker is deliberately never cleared, so it means "this key was bad once, and this is what
+     * it held", not "this key is currently bad". Clearing would need either a branch in
+     * `ConfigDelegate.setValue` on every write of every delegate-backed property, or a single-row
+     * delete on `ConfigDao`, which has only `add`, `addAll`, `getAllNow` and `clear(profileId)` - a
+     * DB-layer change.
      *
      * A retired instance drops the marker, as it does any write; see [retireInstance].
      */
@@ -140,7 +148,7 @@ abstract class BaseConfig(
         Utils.d(TAG, "stored value of $key does not parse")
         val markerKey = PARSE_FAILURE_PREFIX + key
         val marker = stored.take(PARSE_FAILURE_VALUE_LIMIT)
-        if (has(markerKey) && values[markerKey] == marker)
+        if (values[markerKey] == marker)
             return
         set(markerKey, marker)
     }
