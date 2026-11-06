@@ -157,6 +157,53 @@ class ConfigDelegateFallbackTest {
         assertEquals("[null]", config.values["parseFailure.homeCards"])
     }
 
+    /**
+     * The mixed shape, and the only one that tells `any` from `all`: `[null]` alone is both, so it
+     * cannot see `list.any { it == null }` mutated to `list.all { it == null }`. Under that mutation
+     * the guard passes and `listOf(HomeCardModel(1, 1), null)` reaches a `List<HomeCardModel>`,
+     * which is the escape this rule exists to stop.
+     */
+    @Test
+    fun `one null element among valid ones fails the whole collection`() {
+        val stored = """[{"profileId":1,"cardId":1},null]"""
+        val db = mockk<AppDb>(relaxed = true)
+        every { db.configDao() } returns FakeConfigDao()
+        val config = ProfileConfig(
+            db, 1,
+            listOf(
+                ConfigEntry(1, "dataVersion", ProfileConfig.DATA_VERSION.toString()),
+                ConfigEntry(1, "homeCards", stored),
+            ),
+        )
+
+        assertEquals(emptyList(), config.ui.homeCards)
+        assertEquals(stored, config.values["parseFailure.homeCards"])
+    }
+
+    /**
+     * No `config<Map<…>>` property is declared yet, so the Map arm is reachable only through a
+     * holder like this one - but it is live code on a shared delegate, and deleting its null rule
+     * is otherwise green.
+     */
+    private class MapHolder(base: BaseConfig) {
+        var sizes by base.config<Map<String, Int>>("sizes") { mapOf("fallback" to 0) }
+    }
+
+    @Test
+    fun `one null value among valid ones fails the whole map`() {
+        val bad = """{"a":"1","b":"nope"}"""
+        val config = configWith("sizes" to bad)
+
+        assertEquals(mapOf("fallback" to 0), MapHolder(config).sizes)
+        assertEquals(bad, config.values["parseFailure.sizes"])
+
+        // Control: without a map that parses, both assertions above would also hold for an arm that
+        // answered null for everything.
+        val valid = configWith("sizes" to """{"a":"1","b":"2"}""")
+        assertEquals(mapOf("a" to 1, "b" to 2), MapHolder(valid).sizes)
+        assertEquals(true, valid.noMarkers())
+    }
+
     @Test
     fun `a valid value is still deserialised`() {
         val config = configWith(
