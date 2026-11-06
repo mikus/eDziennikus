@@ -15,11 +15,15 @@ internal val FIXTURE_DATE = Date(2026, 6, 1)
 
 // The four builders below are real LessonFull rows, in the shape LibrusApiTimetables.parseLesson
 // stores: displayStartTime is computed from type, never stubbed alongside startTime.
-internal fun cancelled(id: Long, oldStart: Time, oldEnd: Time, subject: Long? = null, team: Long? = null, date: Date = FIXTURE_DATE): LessonFull =
+internal fun cancelled(
+    id: Long, oldStart: Time, oldEnd: Time, subject: Long? = null, team: Long? = null, date: Date = FIXTURE_DATE,
+    teacher: Long? = null,
+): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_CANCELLED
         oldSubjectId = subject
         oldTeamId = team
+        oldTeacherId = teacher
         oldDate = date
         oldStartTime = oldStart
         oldEndTime = oldEnd
@@ -28,7 +32,7 @@ internal fun cancelled(id: Long, oldStart: Time, oldEnd: Time, subject: Long? = 
 
 internal fun shiftedSource(
     id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null, team: Long? = null,
-    date: Date = FIXTURE_DATE,
+    date: Date = FIXTURE_DATE, teacher: Long? = null,
 ): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_SHIFTED_SOURCE
@@ -36,6 +40,8 @@ internal fun shiftedSource(
         subjectId = subject
         oldTeamId = team
         teamId = team
+        oldTeacherId = teacher
+        teacherId = teacher
         oldDate = date
         oldStartTime = oldStart
         oldEndTime = oldEnd
@@ -45,11 +51,15 @@ internal fun shiftedSource(
         seen = true
     }
 
-internal fun normal(id: Long, start: Time, end: Time, subject: Long? = null, team: Long? = null, date: Date = FIXTURE_DATE): LessonFull =
+internal fun normal(
+    id: Long, start: Time, end: Time, subject: Long? = null, team: Long? = null, date: Date = FIXTURE_DATE,
+    teacher: Long? = null,
+): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_NORMAL
         subjectId = subject
         teamId = team
+        teacherId = teacher
         this.date = date
         startTime = start
         endTime = end
@@ -64,7 +74,7 @@ internal fun normal(id: Long, start: Time, end: Time, subject: Long? = null, tea
  */
 internal fun shiftedTarget(
     id: Long, oldStart: Time, oldEnd: Time, newStart: Time, newEnd: Time, subject: Long? = null, team: Long? = null,
-    date: Date = FIXTURE_DATE,
+    date: Date = FIXTURE_DATE, teacher: Long? = null,
 ): LessonFull =
     LessonFull(1, id).apply {
         type = Lesson.TYPE_SHIFTED_TARGET
@@ -72,6 +82,8 @@ internal fun shiftedTarget(
         oldSubjectId = subject
         teamId = team
         oldTeamId = team
+        teacherId = teacher
+        oldTeacherId = teacher
         oldDate = date
         oldStartTime = oldStart
         oldEndTime = oldEnd
