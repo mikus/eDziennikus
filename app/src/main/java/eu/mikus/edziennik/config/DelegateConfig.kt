@@ -77,6 +77,28 @@ class ConfigDelegate<T>(
         config.set(fieldName ?: property.name, serialize(newValue)?.toString())
     }
 
+    /**
+     * Never yields null for a non-nullable [T], and never throws because of what is stored: a stored
+     * string that will not parse reads as the property's declared default.
+     *
+     * Before this, a stored string that would not parse behaved three ways by type: a reference
+     * type returned a bare null (the getter is `getValue -> checkcast`, which passes on null), a
+     * primitive-backed type threw an NPE at the unboxing, and the enum arm threw inside
+     * [deserialize] itself. The catch is deliberately broad for that last reason: it throws
+     * (`NoSuchElementException` via `EnumExtensions.kt:16` `first { }` for a retired id, NPE for a
+     * non-numeric element) rather than returning null, so a null check alone would not reach it.
+     *
+     * The fallback is read-through: the property's own row is never rewritten, so the next ordinary
+     * write through [setValue] will persist the default over the malformed row. That is accepted,
+     * and the `parseFailure.<key>` row, written here on the read and so before any such write can
+     * happen, is what keeps the original value recoverable.
+     *
+     * [isInitialized] is set before [BaseConfig.recordParseFailure] runs, mirroring [setValue]'s
+     * cache-before-write ordering (`:74-78`). That is defensive only, and is not protection against
+     * an inline re-entrant collector: `_changes` has `extraBufferCapacity = 64` and `configFlow`'s
+     * collectors are separate coroutines, so `tryEmit` buffers and returns rather than resuming
+     * anything inline. No test can distinguish the two orderings.
+     */
     operator fun getValue(_thisRef: Any, property: KProperty<*>): T {
         if (isInitialized)
             return value as T
@@ -89,14 +111,25 @@ class ConfigDelegate<T>(
         }
         val str = config.values[key]
 
+        var unparseable: String? = null
         value = if (str == null && nullable)
             null as T
         else if (str == null)
             getDefault()
         else
-            deserialize(str)
+            try {
+                deserialize<T>(str) ?: run {
+                    unparseable = str
+                    getDefault()
+                }
+            }
+            catch (_: Exception) {
+                unparseable = str
+                getDefault()
+            }
 
         isInitialized = true
+        unparseable?.let { config.recordParseFailure(key, it) }
         return value as T
     }
 

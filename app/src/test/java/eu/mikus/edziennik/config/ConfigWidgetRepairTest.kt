@@ -18,6 +18,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
@@ -371,9 +372,10 @@ class ConfigWidgetRepairTest {
      * every launch, and silently stops sync ever being scheduled, with no way for the user to reach
      * LAB and undo the edit that caused it.
      *
-     * A malformed blob is the shape Task 1's `boundProfileId` cannot reach: `ConfigDelegate`
-     * deserialises `JsonObject` with `toJsonObject()`, which answers null on a parse failure, into a
-     * property typed non-null, so reading `widgetConfigs` throws before any entry is examined.
+     * A malformed blob is the shape Task 1's `boundProfileId` cannot reach. Reading `widgetConfigs`
+     * does not throw: `ConfigDelegate.getValue` falls back to the declared empty default and records
+     * the stored string under `parseFailure.widgetConfigs`. (Before that it returned a bare null from
+     * `toJsonObject()` into a non-null-typed property, and the throw came at the first dereference.)
      */
     @Test
     fun `a corrupted widget blob does not take the migration down`() {
@@ -384,31 +386,39 @@ class ConfigWidgetRepairTest {
 
         // Reached at all only because nothing escaped `migrate` - which is the containment. The
         // assertion is that the row came back untouched: a contained failure must leave the blob
-        // exactly as stored, not half-rewritten by a sweep that got part way through it.
+        // exactly as stored, not half-rewritten by a sweep that got part way through it. The marker
+        // pins that the fallback both fired and was recorded, so this is not merely "nothing happened".
         assertEquals(blob, configDao.rows[-1 to "widgetConfigs"])
+        assertEquals("""{"10":{"profileId":""", config.values["parseFailure.widgetConfigs"])
     }
 
     /**
-     * A repair that failed has not run, so it must not be recorded as having run. Recording it would
-     * mean a device whose blob is repaired by hand later, or restored, never gets swept at all.
+     * A behaviour change, not merely a test edit. This used to assert that a repair that failed on a
+     * malformed blob is not recorded. `ConfigDelegate` now falls back to an empty default for that
+     * blob, so the repair sweeps nothing, succeeds vacuously, and records itself as done forever: a
+     * device whose blob is later restored by hand never gets the one-shot sweep.
      *
-     * Reconfiguring a widget is not that path for this shape: `WidgetConfigActivity` reads
-     * `getWidgetConfigs()`, which is the same null the repair just hit, and calls `configs.add` on
-     * it, so placing a widget on such a device throws rather than heals anything.
+     * That is accepted. A device whose blob is unparseable has no readable bindings for the sweep to
+     * find, and the sweep is prophylactic for a damage class `Config.kt:316` already documents as
+     * closed (`profileDao().remove` has one caller, with `removeProfile`'s unbind above it). The
+     * alternative, teaching `ConfigDelegate` to report that a value came from a fallback, adds
+     * public API to the delegate for a single caller and is rejected. The original intent, that a
+     * failed repair is not recorded, is still covered by
+     * `a database failure during the repair is contained too`.
      */
     @Test
-    fun `a failed repair is not recorded so it retries`() {
+    fun `a corrupted widget blob no longer fails the repair`() {
         val config = configWith("""{"10":{"profileId":""", 1)
 
         config.migrate(app)
 
-        assertFalse(config.widgetBindingsRepaired)
+        assertTrue(config.widgetBindingsRepaired)
     }
 
     /**
-     * The catch has to be broad, and nothing above pins that. Both tests above fail through the
-     * NPE a malformed blob produces, so narrowing the catch to `NullPointerException` leaves them
-     * green while re-opening the case this task exists to close: `idsNow` is a Room query, and a
+     * The catch has to be broad, and nothing above pins that: a malformed blob no longer reaches it
+     * at all, so narrowing the catch to `NullPointerException` leaves them green while re-opening
+     * the case this task exists to close: `idsNow` is a Room query, and a
      * SQLite failure in it would propagate out of `migrate` and take `SSLProviderInstaller` and
      * both `scheduleNext` calls down with it.
      */

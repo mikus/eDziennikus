@@ -111,10 +111,10 @@ class Config(db: AppDb) : BaseConfig(db) {
      *
      * The catch does not swallow a failure into silence: the flag stays unset, so the repair is
      * retried on the next launch, and it is logged through `Utils.d` - which is gated on `devMode`,
-     * so on a normal release build the unset flag is the only trace. The one shape that can still
-     * reach it is a `widgetConfigs` row holding malformed JSON, which [ConfigDelegate] deserialises
-     * to `null` into a non-null-typed property - a defect of that contract, shared by every
-     * `config<JsonObject>` property, and not fixed here.
+     * so on a normal release build the unset flag is the only trace. A `widgetConfigs` row holding
+     * malformed JSON no longer reaches it: [ConfigDelegate.getValue] falls back to the declared
+     * default for any stored string that will not parse. The catch stays for the *other* shapes a
+     * repair can fail in, such as a database failure in `idsNow`.
      */
     fun migrate(app: App) {
         if (dataVersion < DATA_VERSION || hash == "")
