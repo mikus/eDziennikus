@@ -29,7 +29,19 @@ import eu.mikus.edziennik.ext.getLong
  * This is a free function and not part of the parser's `init { apiGet { … } }` body so that it can
  * be driven from a JVM test, in the shape [librusEventDate] and [librusEventTime] already use.
  */
-internal fun librusEventTeamId(event: JsonObject): Long =
-    event.getJsonObject("Class")?.getLong("Id")
-        ?: event.getJsonObject("VirtualClass")?.getLong("Id")
-        ?: -1
+internal fun librusEventTeamId(event: JsonObject): Long = librusTeamId(event) ?: -1
+
+/**
+ * The team a Librus object names, or null when it names none.
+ *
+ * `Class` and `VirtualClass` are the two ways every Librus endpoint that mentions a team names one,
+ * and the capture above says an object carries one or the other and never both - so this order can
+ * only ever pick the key that is there. Every parser reading the pair must read it the same way, or
+ * an id stored by one will not match an id stored by another when they mean the same group.
+ *
+ * Null rather than a sentinel: `LibrusLesson.teamId` is a nullable column and wants null, while
+ * `Event.teamId` is not, which is what [librusEventTeamId] is for.
+ */
+internal fun librusTeamId(json: JsonObject): Long? =
+    json.getJsonObject("Class")?.getLong("Id")
+        ?: json.getJsonObject("VirtualClass")?.getLong("Id")

@@ -9,7 +9,7 @@ import com.google.gson.JsonParser
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 
-class LibrusEventTeamTest {
+class LibrusTeamIdTest {
 
     private fun event(json: String): JsonObject = JsonParser.parseString(json).asJsonObject
 
