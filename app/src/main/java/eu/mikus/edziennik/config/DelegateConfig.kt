@@ -94,15 +94,28 @@ class ConfigDelegate<T>(
      * happen, is what keeps the original value recoverable.
      *
      * [isInitialized] is set before [BaseConfig.recordParseFailure] runs, mirroring [setValue]'s
-     * cache-before-write ordering (`:74-78`), and **that order is load-bearing, not optional**.
-     * `recordParseFailure` ends in `BaseConfig.set`, whose `tryEmit` resumes any waiting collector,
-     * and whether that collector body runs inline is decided by the collector's dispatcher. Every
-     * `configFlow` consumer collects on `Dispatchers.Main.immediate`, which does not dispatch when
-     * already on the main thread, so a main-thread read can re-enter this getter on the same stack.
-     * With [isInitialized] already set that re-entrant read returns the cached fallback; do not
-     * reorder these two lines. The honest limit: no test can distinguish the two orderings, because
-     * `BaseConfig.set` writes `values[key]` before `tryEmit`, so `recordParseFailure`'s dedupe
-     * short-circuits a re-entrant call either way and the depth is bounded at 2.
+     * cache-before-write ordering (`:74-78`). `recordParseFailure` ends in `BaseConfig.set`, whose
+     * `tryEmit` can resume a waiting [BaseConfig.changes] collector; with [isInitialized] already
+     * set, a collector that re-read this property on that stack would get the cached fallback
+     * rather than re-parsing. Keep the order.
+     *
+     * **No current consumer can produce that re-entrancy, so the ordering is defensive rather than
+     * load-bearing** - an earlier revision of this KDoc claimed the opposite and named a dispatcher
+     * that nothing sets. The five ViewModel `configFlow` consumers sit upstream of
+     * `.flowOn(dispatcher)` with `dispatcher = Dispatchers.Default` (`HomeViewModel.kt:146`,
+     * `:181`; same shape in Attendance, Grades, Agenda and Timetable), and the four Fragment
+     * consumers collect inside a composition through `collectAsStateWithLifecycle`. Neither
+     * dispatcher runs a collector inline on the emitting stack, and `Dispatchers.Main.immediate`
+     * appears nowhere in the main sources.
+     *
+     * What `Dispatchers.Default` does mean is that this miss path can write [BaseConfig.values]
+     * from a worker thread while `App.kt:228` and `:236` read that same plain `HashMap` on the
+     * main thread. That is not a new hazard - [BaseConfig.set] already has arbitrary-thread
+     * writers - and it is not one this ordering addresses.
+     *
+     * No test distinguishes the two orderings, and none can until a consumer re-enters: a
+     * re-entrant call short-circuits on `recordParseFailure`'s dedupe either way. The
+     * default-counting harness in `ConfigDelegateFallbackTest` is what would tell them apart.
      */
     operator fun getValue(_thisRef: Any, property: KProperty<*>): T {
         if (isInitialized)

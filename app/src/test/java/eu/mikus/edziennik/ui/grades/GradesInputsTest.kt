@@ -33,7 +33,7 @@ class GradesInputsTest {
      *   its changes, so the real [Config] and [ProfileConfig] are built here and driven through the
      *   real [configFlow].
      * - **Every write goes through its delegate setter**, never `profile.set("plusValue", "2.0")`.
-     *   `ConfigDelegate.getValue` caches after first read (DelegateConfig.kt:60-61, :103-104) and
+     *   `ConfigDelegate.getValue` caches after first read (DelegateConfig.kt:60-61, :121-122) and
      *   `BaseConfig.set` does not invalidate that cache (BaseConfig.kt:108-118). `configFlow`'s
      *   `onStart` primes every delegate before the first write here, so a raw `set()` would emit a key
      *   whose re-read returns the stale value — `distinctUntilChanged` would drop it and every

@@ -129,9 +129,11 @@ abstract class BaseConfig(
      * One row per key rather than an accumulated list: there is no read-modify-write, and the marker
      * is never itself read through a [ConfigDelegate], so recording one cannot recurse into another.
      *
-     * A marker that already holds this value is not written again. A property read on every render
-     * would otherwise emit on [changes] each time, and a [configFlow] collector re-reading on that
-     * emission would read the property again - a loop.
+     * A marker that already holds this value is not written again. Not to break an intra-process
+     * loop: [ConfigDelegate] caches on the miss path, so a given key reaches here at most once per
+     * process however often the property is read. What the guard buys is across launches - `init`
+     * reloads the marker into [values], so without it every launch of a device that is already
+     * recorded would take another write of a row identical to the one already there.
      *
      * The log line is per-event and the row is per-state: the line reports that a fallback fired on
      * this launch, so it is written on every call, while the guard only dedupes what is persisted.
