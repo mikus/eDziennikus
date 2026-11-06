@@ -14,6 +14,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
@@ -135,6 +136,27 @@ class ConfigDelegateFallbackTest {
         assertEquals("[1,", config.values["parseFailure.miniMenuButtons"])
     }
 
+    /**
+     * An element that deserialises to null, not one that throws: `[null]` for a `List<HomeCardModel>`
+     * gives a non-null list holding a null, which would escape into a non-null element type. The
+     * whole property falls back, as it does for a throwing element.
+     */
+    @Test
+    fun `a collection element that deserialises to null falls back as a whole`() {
+        val db = mockk<AppDb>(relaxed = true)
+        every { db.configDao() } returns FakeConfigDao()
+        val config = ProfileConfig(
+            db, 1,
+            listOf(
+                ConfigEntry(1, "dataVersion", ProfileConfig.DATA_VERSION.toString()),
+                ConfigEntry(1, "homeCards", "[null]"),
+            ),
+        )
+
+        assertEquals(emptyList(), config.ui.homeCards)
+        assertEquals("[null]", config.values["parseFailure.homeCards"])
+    }
+
     @Test
     fun `a valid value is still deserialised`() {
         val config = configWith(
@@ -153,6 +175,9 @@ class ConfigDelegateFallbackTest {
     fun `a stored null on a nullable property still reads null`() {
         val config = configWith("language" to null)
 
+        // Without this the two assertions below pass identically for an ABSENT key, which is a
+        // different branch from the `str == null && nullable` one this test is named for.
+        assertTrue(config.has("language"))
         assertNull(config.ui.language)
         assertFalse(config.has("parseFailure.language"))
     }

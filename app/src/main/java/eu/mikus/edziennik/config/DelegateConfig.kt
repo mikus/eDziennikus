@@ -94,10 +94,15 @@ class ConfigDelegate<T>(
      * happen, is what keeps the original value recoverable.
      *
      * [isInitialized] is set before [BaseConfig.recordParseFailure] runs, mirroring [setValue]'s
-     * cache-before-write ordering (`:74-78`). That is defensive only, and is not protection against
-     * an inline re-entrant collector: `_changes` has `extraBufferCapacity = 64` and `configFlow`'s
-     * collectors are separate coroutines, so `tryEmit` buffers and returns rather than resuming
-     * anything inline. No test can distinguish the two orderings.
+     * cache-before-write ordering (`:74-78`), and **that order is load-bearing, not optional**.
+     * `recordParseFailure` ends in `BaseConfig.set`, whose `tryEmit` resumes any waiting collector,
+     * and whether that collector body runs inline is decided by the collector's dispatcher. Every
+     * `configFlow` consumer collects on `Dispatchers.Main.immediate`, which does not dispatch when
+     * already on the main thread, so a main-thread read can re-enter this getter on the same stack.
+     * With [isInitialized] already set that re-entrant read returns the cached fallback; do not
+     * reorder these two lines. The honest limit: no test can distinguish the two orderings, because
+     * `BaseConfig.set` writes `values[key]` before `tryEmit`, so `recordParseFailure`'s dedupe
+     * short-circuits a re-entrant call either way and the depth is bounded at 2.
      */
     operator fun getValue(_thisRef: Any, property: KProperty<*>): T {
         if (isInitialized)
@@ -185,7 +190,10 @@ class ConfigDelegate<T>(
                         val str = if (it.isJsonPrimitive) it.asString else it.toString()
                         deserialize<Any>(str, genericType)
                     }
+                    // an element that returns null (a throwing one never gets here) makes the whole
+                    // property unparseable, so no null reaches a non-null element type
                     when {
+                        list == null || list.any { it == null } -> null
                         List::class.java.isAssignableFrom(type) -> list
                         Set::class.java.isAssignableFrom(type) -> list?.toSet()
                         else -> list?.toTypedArray()
@@ -198,7 +206,8 @@ class ConfigDelegate<T>(
                         val str = if (it.isJsonPrimitive) it.asString else it.toString()
                         key to deserialize<Any>(str, genericType)
                     }
-                    map
+                    // same rule as the collection arm: one null value fails the whole map
+                    if (map == null || map.values.any { it == null }) null else map
                 }
                 // objects or else
                 else -> gson.fromJson(value, type)
