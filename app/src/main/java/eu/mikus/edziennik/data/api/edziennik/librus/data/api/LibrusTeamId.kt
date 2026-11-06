@@ -12,12 +12,14 @@ import eu.mikus.edziennik.ext.getLong
  * The team a Librus `HomeWorks` event belongs to, or `-1` when the endpoint names none.
  *
  * An event of a subject split into groups names a `VirtualClass` and no `Class`; one for the whole
- * class names a `Class` and no `VirtualClass`. A capture of 39 events taken from the device had 37
- * of the first shape, 2 of the second and **none carrying both** - the same split a capture of 36
- * lesson entries from `Timetables` shows (29 / 7 / 0), which is why `LibrusApiTimetables` can read
- * the pair as `Class ?: VirtualClass` without ever preferring a whole-class id over a group's. The
- * order is kept identical here so the event side and the lesson side cannot drift apart: an id
- * that matches across them names the same group.
+ * class names a `Class` and no `VirtualClass`. In a capture of 39 events taken from the device,
+ * **37 named a `Class` only, 2 a `VirtualClass` only, and none carried both**; a capture of 36
+ * `Timetables` lesson entries splits the same way, 29 `Class` only / 7 `VirtualClass` only / 0
+ * both. It is that last figure - never both - and not the ratio that lets `LibrusApiTimetables`
+ * read the pair as `Class ?: VirtualClass` without ever preferring a whole-class id over a
+ * group's. The order is kept identical here so the event side and the lesson side cannot drift
+ * apart: an id that matches across them names the same group. Group events are the rare shape,
+ * not the common one - replaying both readers over the captured bodies moves 2 events of 102.
  *
  * Reading `Class` alone, as this did until item 82, stored `-1` for every group event - the same
  * value as "the school named no team" - so the timetable could not tell a group's event from an

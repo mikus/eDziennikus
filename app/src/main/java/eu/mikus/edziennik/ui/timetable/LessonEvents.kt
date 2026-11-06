@@ -39,8 +39,9 @@ import eu.mikus.edziennik.data.db.full.knownSubjectId
  *
  * The stage only narrows an existing candidate set, and only onto a candidate, so it can never
  * empty a slot: whatever it hides from one block, the matching candidate shows. That is what keeps
- * a whole-class event safe. Nine events in a captured week carried the whole class for a subject
- * every one of whose lessons was a group lesson; no candidate of theirs carries the class id, so
+ * a whole-class event safe. In a captured `HomeWorks` feed, nine of the 36 subject-bearing events
+ * carried the whole class for a subject every one of whose lessons was a group lesson (they span
+ * six weeks, not one); no candidate of theirs carries the class id, so
  * nothing narrows and they still show. A rule that hid on any mismatch would have lost all nine.
  *
  * It does place an orphan or an unknown-subject event that carries a group team, which the subject

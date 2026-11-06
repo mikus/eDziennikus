@@ -22,9 +22,13 @@ import eu.mikus.edziennik.ext.getLong
  * usable teacher/subject lookup without it, so an entry naming no team is kept.
  *
  * The team goes through [librusTeamId], so a group's assignment is stored under the group and not
- * under null: `/2.0/Lessons` names a group with `VirtualClass` and gives it no `Class`, the same
- * way `/2.0/Timetables` and `/2.0/HomeWorks` do, and reading `Class` alone left `teamId` null for
- * exactly the assignments a team is wanted for.
+ * under null. **No `/2.0/Lessons` body was captured**, unlike `/2.0/Timetables` and
+ * `/2.0/HomeWorks`, which the evidence note does cover; what the device shows is the *result* of
+ * the old `Class`-only read - profile 3 held 26 rows at the class and 5 at null, and the null ones
+ * are assignments of exactly the two subjects whose lessons are group lessons. That proves `Class`
+ * is absent for them, and the `VirtualClass` half is inferred from the two endpoints that were
+ * captured. If a Lessons body ever turns out to name a group some third way, this read is where it
+ * would have to be fixed.
  *
  * This is a free function and not part of the parser's `init { apiGet { … } }` body so that it can
  * be driven from a JVM test, in the shape [librusEventDate] and [librusEvent] already use.

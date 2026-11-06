@@ -176,8 +176,9 @@ class LessonEventsTest {
     }
 
     /**
-     * Nine events in the captured week carried the whole class for a subject every one of whose
-     * lessons was a group lesson. No block of their slot carries the class id, so nothing may
+     * Nine of the 36 subject-bearing events in a captured `HomeWorks` feed carried the whole class
+     * for a subject every one of whose lessons was a group lesson. No block of their slot carries
+     * the class id, so nothing may
      * narrow and the event must still show - a rule that hid on any mismatch would lose them.
      */
     @Test
@@ -194,8 +195,11 @@ class LessonEventsTest {
     }
 
     /**
-     * A block with no team is in the slot, so a rule that treated the event's -1 or 0 as an id to
-     * match would find it there and take the event off every block that does carry a team.
+     * Pins that -1 and 0 are read as "no team" and never narrow. Note what this canNOT pin: the
+     * block with no team carries `displayTeamId` **null**, not -1, so a rule that matched on the
+     * event's raw -1 would find nothing to narrow onto and would leave these assertions green.
+     * Nothing can pin that direction, because `Lesson.teamId` is never written as a sentinel -
+     * `forLesson`'s KDoc says so rather than this test manufacturing a row that cannot exist.
      */
     @Test
     fun `an event with no team is not narrowed`() {
@@ -249,8 +253,10 @@ class LessonEventsTest {
 
     /**
      * A shifted source is drawn in its old slot, and `displayTeamId` answers `oldTeamId` for it -
-     * the team it had there, not the one it has where it moved to. Reading `teamId` instead would
-     * swap both assertions.
+     * the team it had there, not the one it has where it moved to. Reading `teamId` instead turns
+     * exactly one of these red, whichever way the mutation is applied: mutate both reads and `b`
+     * wrongly gains the event (nothing carries 100, so nothing narrows); mutate only the
+     * `lesson.displayTeamId` on the last line and `a` wrongly loses it. Neither swaps the pair.
      */
     @Test
     fun `a shifted-source block is matched on its old team`() {

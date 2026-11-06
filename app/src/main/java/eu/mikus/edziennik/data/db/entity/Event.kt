@@ -158,9 +158,10 @@ val Event.knownSubjectId: Long?
 /**
  * [Event.teamId], or null when the team is unknown: -1 and 0 both mean "no team".
  *
- * Null is what every parser that cannot name a team writes, and what `LibrusApiEvents` wrote for
- * a group's event until it read `VirtualClass`. The timetable's `forLesson` never narrows a slot
- * on a null, so an event filed this way keeps showing on every block the subject allows.
+ * `Event.teamId` is a non-null `Long`, so a parser that cannot name a team writes **-1**, not
+ * null - that is what `LibrusApiEvents` wrote for a group's event until it read `VirtualClass`.
+ * Null is what this property reads such a row back as. The timetable's `forLesson` never narrows
+ * a slot on a null, so an event filed this way keeps showing on every block the subject allows.
  */
 val Event.knownTeamId: Long?
     get() = teamId.takePositive()
