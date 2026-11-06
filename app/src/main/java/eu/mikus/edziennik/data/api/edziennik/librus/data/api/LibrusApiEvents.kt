@@ -42,7 +42,7 @@ class LibrusApiEvents(override val data: DataLibrus,
                 val type = event.getJsonObject("Category")?.getLong("Id") ?: -1
                 val teacherId = event.getJsonObject("CreatedBy")?.getLong("Id") ?: -1
                 val subjectId = event.getJsonObject("Subject")?.getLong("Id") ?: -1
-                val teamId = event.getJsonObject("Class")?.getLong("Id") ?: -1
+                val teamId = librusEventTeamId(event)
 
                 // No ?: return@forEach: a missing LessonNo already falls through to TimeFrom, and a skip drops the
                 // event from this sync, which can get a stored future event pruned.
