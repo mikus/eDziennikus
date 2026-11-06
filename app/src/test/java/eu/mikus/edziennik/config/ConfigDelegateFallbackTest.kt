@@ -14,10 +14,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
 /**
@@ -31,7 +27,6 @@ import org.junit.jupiter.api.Test
  * The three anti-goal tests pin behaviour that was already correct and must stay so: a valid value,
  * a stored null on a nullable property, and an absent key.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class ConfigDelegateFallbackTest {
 
     /** One map behind every read and every write. Assertions go on `values`, not on this. */
@@ -90,6 +85,7 @@ class ConfigDelegateFallbackTest {
 
         assertNotNull(read)
         assertEquals(JsonObject(), read)
+        assertEquals("""{"10":{"profileId":""", config.values["parseFailure.widgetConfigs"])
     }
 
     @Test
@@ -136,6 +132,7 @@ class ConfigDelegateFallbackTest {
         val config = configWith("miniMenuButtons" to "[1,")
 
         assertEquals(defaultButtons, config.ui.miniMenuButtons)
+        assertEquals("[1,", config.values["parseFailure.miniMenuButtons"])
     }
 
     @Test
@@ -177,18 +174,20 @@ class ConfigDelegateFallbackTest {
         assertEquals("dark", config.values["parseFailure.theme"])
     }
 
+    /** Counts how often the declared default is produced: equal reads of a constant prove nothing. */
+    private class CountingHolder(base: BaseConfig) {
+        var defaults = 0
+        var blob by base.config<JsonObject> { defaults++; JsonObject() }
+    }
+
     @Test
-    fun `the fallback is cached, not re-parsed`() = runTest {
-        val config = configWith("theme" to "dark")
-        val seen = mutableListOf<String>()
-        val collector = launch { config.changes.collect { seen += it } }
-        runCurrent()
+    fun `the fallback is cached, not re-parsed`() {
+        val config = configWith("blob" to """{"10":""")
+        val holder = CountingHolder(config)
 
-        assertEquals(1, config.ui.theme)
-        assertEquals(1, config.ui.theme)
-        runCurrent()
-        collector.cancel()
+        holder.blob
+        holder.blob
 
-        assertEquals(listOf("parseFailure.theme"), seen.filter { it == "parseFailure.theme" })
+        assertEquals(1, holder.defaults)
     }
 }
