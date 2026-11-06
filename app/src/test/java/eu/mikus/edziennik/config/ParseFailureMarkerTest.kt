@@ -51,6 +51,7 @@ class ParseFailureMarkerTest {
 
         assertEquals("{oops", config.values["widgetConfigs"])
         assertFalse("widgetConfigs" in seen)
+        assertTrue(markerKey in seen)
         job.cancel()
     }
 
