@@ -135,9 +135,13 @@ object TimetableDayBuilder {
      *
      * When two or more blocks are left holding a subject's marks after that, they are told apart by teacher
      * ([teacher], collected in [slotTeachers]). A mark whose teacher one of them carries is shown only on the blocks
-     * carrying it; a mark whose teacher none of them carries is shown on each of them that takes no mark of its own
-     * teacher. A block still shows one mark, so when a slot holds more marks of a subject than blocks to show them,
-     * some go unshown, as they did before this stage; it changes only which, preferring each block's own teacher's.
+     * carrying it. A mark whose teacher none of them carries is never hidden *for that mismatch* - but the unclaimed
+     * branch takes the **first** such mark, and a block shows one mark, so every block with no mark of its own
+     * teacher takes that same one and a second unclaimed mark is drawn nowhere. Two blocks and two unclaimed marks
+     * is enough; there is no "more marks than blocks" to explain it. Unchanged from before this stage, which also
+     * showed only the first of them - the stage changes which mark a block prefers, not how many a slot can show.
+     * For the same reason a *claimed* mark can also go unshown: two marks of one teacher, and the block carrying
+     * that teacher takes the earlier one while the other block rejects both as claimed.
      * A lone block of its subject is not narrowed and keeps the first mark, whoever recorded it. No sentinel needs
      * reading back: a block's display teacher is null or an id the API named, never -1 or 0, so a mark of unknown
      * teacher (-1) matches and claims nothing.

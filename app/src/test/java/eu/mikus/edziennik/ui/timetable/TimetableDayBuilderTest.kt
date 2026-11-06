@@ -438,6 +438,33 @@ class TimetableDayBuilderTest {
         assertSame(mZ, c.blocks[1].attendance)
     }
 
+    /**
+     * `claimed` is per-subject, not slot-wide. Two subjects are each split into two groups in this
+     * slot, and a subject-11 mark names teacher 103 - who teaches a group of subject 22, not of 11.
+     * Flattening `slotTeachers` across subjects would put 103 into subject 11's claimed set; no
+     * subject-11 block carries it, the unclaimed branch would then reject it too, and the orphan
+     * fallback cannot fire because 11 is a slot owner - so the mark would be drawn nowhere.
+     * Mutation this pins: `slotTeachers[subject].orEmpty()` -> `slotTeachers.values.flatten().toSet()`,
+     * which the suite was otherwise green against at 1237 tests.
+     */
+    @Test
+    fun `a teacher of another subject's group does not claim this subject's mark`() {
+        val m = attendance(Time(8, 0, 0), subjectId = 11, teacherId = 103)
+        val lessons = listOf(
+            normal(1, Time(8, 0, 0), Time(8, 45, 0), subject = 11, teacher = 101),
+            normal(2, Time(8, 0, 0), Time(8, 45, 0), subject = 11, teacher = 102),
+            normal(3, Time(8, 0, 0), Time(8, 45, 0), subject = 22, teacher = 103),
+            normal(4, Time(8, 0, 0), Time(8, 45, 0), subject = 22, teacher = 104),
+        )
+        val c = TimetableDayBuilder.build(date, lessons, emptyList(), listOf(m), cfg) as TimetableDayUiState.Content
+        assertSame(m, c.blocks[0].attendance)
+        assertSame(m, c.blocks[1].attendance)
+        // Control: the mark is not handed to the other subject's blocks either, so the assertions
+        // above cannot pass for a rule that simply stopped narrowing.
+        assertNull(c.blocks[2].attendance)
+        assertNull(c.blocks[3].attendance)
+    }
+
     @Test
     fun `a lone lesson keeps its first same-subject mark whoever recorded it`() {
         // The teacher stage tells blocks apart; with one block there is nothing to tell apart, so
