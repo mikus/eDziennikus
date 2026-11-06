@@ -26,6 +26,12 @@ abstract class BaseConfig(
 
     companion object {
         private const val TAG = "BaseConfig"
+
+        /** Key prefix of the rows [recordParseFailure] writes; the rest of the key is the failing key. */
+        const val PARSE_FAILURE_PREFIX = "parseFailure."
+
+        /** How much of an unparseable stored value a marker keeps. */
+        const val PARSE_FAILURE_VALUE_LIMIT = 120
     }
 
     private val job = Job()
@@ -109,6 +115,34 @@ abstract class BaseConfig(
         launch(Dispatchers.IO) {
             db.configDao().add(ConfigEntry(profileId ?: -1, key, value))
         }
+    }
+
+    /**
+     * Records that the stored value of [key] would not parse, as a row of its own under
+     * [PARSE_FAILURE_PREFIX] + [key], holding the first [PARSE_FAILURE_VALUE_LIMIT] characters of
+     * [stored].
+     *
+     * A separate key rather than the property's own row: the fallback to the declared default is
+     * read-through, so the unparseable row stays exactly as it is and is never overwritten by the
+     * default.
+     *
+     * One row per key rather than an accumulated list: there is no read-modify-write, and the marker
+     * is never itself read through a [ConfigDelegate], so recording one cannot recurse into another.
+     *
+     * A marker that already holds this value is not written again. A property read on every render
+     * would otherwise emit on [changes] each time, and a [configFlow] collector re-reading on that
+     * emission would read the property again - a loop. The `has` check is required: the value compare
+     * alone would rest on an absent key happening to read back as something other than [stored].
+     *
+     * A retired instance drops the marker, as it does any write; see [retireInstance].
+     */
+    fun recordParseFailure(key: String, stored: String) {
+        Utils.d(TAG, "stored value of $key does not parse")
+        val markerKey = PARSE_FAILURE_PREFIX + key
+        val marker = stored.take(PARSE_FAILURE_VALUE_LIMIT)
+        if (has(markerKey) && values[markerKey] == marker)
+            return
+        set(markerKey, marker)
     }
 
     fun has(key: String) = values.containsKey(key)
