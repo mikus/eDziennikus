@@ -84,7 +84,7 @@ sealed interface LabTarget {
     data class JsonLeaf(val parent: JsonObject, val name: String, val old: JsonPrimitive) : LabTarget
 
     /**
-     * The owning config, **not** its `values` map. `BaseConfig.kt:45` declares
+     * The owning config, **not** its `values` map. `BaseConfig.kt:51` declares
      * `val values = hashMapOf<String, String?>()`, inherited identically by `Config` and
      * `ProfileConfig`, so both roots reach a `when (parent)` as the same runtime type and dispatching
      * on it cannot tell them apart. Carrying the owner makes design D4 true by construction.

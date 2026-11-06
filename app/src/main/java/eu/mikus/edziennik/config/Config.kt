@@ -310,7 +310,7 @@ class Config(db: AppDb) : BaseConfig(db) {
      *
      * "The same instance" above is not guaranteed, and that is a second outcome that throws
      * nothing. [ConfigDelegate.getValue] is an unsynchronised check-then-set over two non-volatile
-     * fields (`DelegateConfig.kt:60-61`, `:80-101`), so a provider that races [migrate]'s first
+     * fields (`DelegateConfig.kt:60-61`, `:102-134`), so a provider that races [migrate]'s first
      * read of [widgetConfigs] can deserialise its own [JsonObject] rather than share this one.
      * The repair then mutates and persists instance A and sets [widgetBindingsRepaired], while a
      * provider's `onDeleted` write-back persists instance B - reverting the repair with the

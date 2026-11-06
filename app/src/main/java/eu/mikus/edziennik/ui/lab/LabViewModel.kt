@@ -240,7 +240,7 @@ internal fun writeLabValue(resolved: Resolved, newValue: Any?) {
             is Boolean -> target.parent.addProperty(target.name, newValue)
             else -> Unit
         }
-        // owner.set, not app.config.set: BaseConfig.set (`BaseConfig.kt:102-112`) writes
+        // owner.set, not app.config.set: BaseConfig.set (`BaseConfig.kt:108-118`) writes
         // ConfigEntry(profileId ?: -1, ...), so the row lands in the scope the path came from.
         is LabTarget.ConfigEntry -> target.owner.set(target.key, newValue as? String)
         is LabTarget.Field -> {

@@ -14,7 +14,7 @@ import eu.mikus.edziennik.config.BaseConfig
  *
  * Replaces `LabProfileFragment.kt@53a07964:66-87`, whose `when (el)` matched the root by its *display string*
  * and then re-dispatched on the parent's runtime type - which could not tell the two config roots
- * apart, because both are the same `HashMap<String, String?>` (`BaseConfig.kt:45`).
+ * apart, because both are the same `HashMap<String, String?>` (`BaseConfig.kt:51`).
  *
  * Returns a [Result] rather than throwing: the caller is a ViewModel with a [LabEffect] to emit, not
  * a `try` block that the write path escapes anyway.

@@ -40,8 +40,8 @@ class HomeInputsTest {
      *   here and driven through the real [configFlow]. A reader that subscribes to one and reads the
      *   other misses half its changes.
      * - **Every write goes through its delegate setter**, never `profile.set("homeEventsLimit", "7")`.
-     *   `ConfigDelegate.getValue` caches after first read (DelegateConfig.kt:60-61, :80-82) and
-     *   `BaseConfig.set` does not invalidate that cache (BaseConfig.kt:102-112). `configFlow`'s
+     *   `ConfigDelegate.getValue` caches after first read (DelegateConfig.kt:60-61, :103-104) and
+     *   `BaseConfig.set` does not invalidate that cache (BaseConfig.kt:108-118). `configFlow`'s
      *   `onStart` primes the delegates before the first write here, so a raw `set()` would emit a key
      *   whose re-read returns the stale value — `distinctUntilChanged` would drop it and every
      *   assertion below would fail against correct code. Only `setValue` (DelegateConfig.kt:74-78)

@@ -20,9 +20,11 @@ import kotlin.test.assertNull
  * always tolerant, and no decoder line changes in this phase. Say so rather than letting the file
  * read as hardening. The one row that is not pre-existing behaviour is
  * `a retired id thrown at the non-null decoder throws`, which makes the throw a decision instead of an
- * accident: `ext/EnumExtensions.kt:16` uses `first { }`, and `config/DelegateConfig.kt:147` reaches it
- * with no try/catch on every read of a `Set<NavTarget>` config field (`config/ConfigUI.kt:19`
- * `miniMenuButtons`).
+ * accident: `ext/EnumExtensions.kt:16` uses `first { }`, and `config/DelegateConfig.kt:180` reaches it
+ * on every read of a `Set<NavTarget>` config field (`config/ConfigUI.kt:19` `miniMenuButtons`). The
+ * throw is still the decoder's documented behaviour, which is what this test pins; but
+ * `ConfigDelegate.getValue` now catches it and falls back to the field's declared default, so a
+ * retired id sitting in a stored value no longer escapes to the caller.
  *
  * **One tolerant site is named here and deliberately not asserted:**
  * `config/utils/AppConfigMigrationV3.kt:26`, `.mapNotNull { it.toIntOrNull().asNavTargetOrNull() }`.

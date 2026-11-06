@@ -399,8 +399,9 @@ class ConfigWidgetRepairTest {
      * device whose blob is later restored by hand never gets the one-shot sweep.
      *
      * That is accepted. A device whose blob is unparseable has no readable bindings for the sweep to
-     * find, and the sweep is prophylactic for a damage class `Config.kt:316` already documents as
-     * closed (`profileDao().remove` has one caller, with `removeProfile`'s unbind above it). The
+     * find, and the sweep is prophylactic for a damage class that
+     * `Config.removeProfile` (`Config.kt:217-222`) closes at its only caller,
+     * `data/db/ProfileDataRemoval.kt:74-79`, where the unbind sits above `profileDao().remove`. The
      * alternative, teaching `ConfigDelegate` to report that a value came from a fallback, adds
      * public API to the delegate for a single caller and is rejected. The original intent, that a
      * failed repair is not recorded, is still covered by
