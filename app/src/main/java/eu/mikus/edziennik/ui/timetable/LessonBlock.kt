@@ -54,6 +54,9 @@ import eu.mikus.edziennik.utils.Colors
 private val BlockShape = RoundedCornerShape(6.dp)
 private val AnnotationShape = RoundedCornerShape(4.dp)
 
+/** One event dot (10 dp) plus the 4 dp gap before it. */
+private val EventDotsWidth = 14.dp
+
 /**
  * Full-parity Compose port of the legacy `timetable_lesson` view (TimetableDayFragment.buildLessonViews):
  * a big bold subject with the large lesson number + attendance check top-right, the exact time range and
@@ -175,7 +178,9 @@ fun LessonBlock(
                 )
             }
 
-            // Teacher • team (old→new struck when changed), with event dots pinned to the end
+            // Teacher • team (old→new struck when changed). The event dots are not in this row: it is the
+            // last child of a clipped column, so on a block carrying the annotation row it can fall below
+            // the block's bottom edge, and the dots went with it. They are pinned to the corner below.
             val teacher = fieldText(
                 unchanged = lesson.teacherId != null && lesson.teacherId == lesson.oldTeacherId,
                 oldVal = lesson.oldTeacherName, newVal = lesson.teacherName,
@@ -185,7 +190,10 @@ fun LessonBlock(
                 oldVal = lesson.oldTeamName, newVal = lesson.teamName,
             )
             val teacherTeam = joinAnnotated(listOf(teacher, team).filter { it.isNotEmpty() }, " • ")
-            Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 2.dp, end = EventDotsWidth * block.events.size),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 if (teacherTeam.isNotEmpty()) {
                     Text(
                         text = teacherTeam,
@@ -198,6 +206,10 @@ fun LessonBlock(
                 } else {
                     Spacer(Modifier.weight(1f))
                 }
+            }
+        }
+        if (block.events.isNotEmpty()) {
+            Row(Modifier.align(Alignment.BottomEnd), verticalAlignment = Alignment.CenterVertically) {
                 block.events.forEach { ev ->
                     Spacer(Modifier.width(4.dp))
                     Box(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(Color(ev.eventColor)))
