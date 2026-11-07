@@ -26,6 +26,9 @@ import org.junit.Assert.fail
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Runs a real Librus parser's `init { apiGet(…) { … } }` body over a canned response, on the JVM,
@@ -61,10 +64,17 @@ import java.io.IOException
  * - **An unregistered path must fail loudly**, for the same reason, so the interceptor throws rather
  *   than answering empty.
  *
- * OkHttp 3.12.13's `Dispatcher` cannot take a same-thread executor - it throws
- * `AssertionError: Call wasn't in-flight!` from `Dispatcher.finished`, because `promoteAndExecute`
- * records the call only after `executeOn` returns. So the request really is asynchronous and [drive]
- * waits for it, idling the Robolectric main looper that mhttp delivers the callback on.
+ * **The parser's callback does not run on a looper.** `LibrusApi.apiGet` sets no
+ * `callbackThreadMode`/`callbackExecutor`, so mhttp keeps its default `ThreadMode.BACKGROUND`, whose
+ * executor runs the runnable inline - which means the whole handler, and every row it stores, runs on
+ * the OkHttp dispatcher thread. Measured by printing `Thread.currentThread().name` from inside the
+ * continuation: `OkHttp Dispatcher`, against `SDK 35 Main Thread` in the test. [drive] therefore hands
+ * results across a thread boundary and needs a real happens-before edge, which is what the
+ * [CountDownLatch] gives it: everything the OkHttp thread did before `countDown` is visible to the
+ * test thread once `await` returns. An earlier revision of this KDoc claimed the callback arrived on
+ * the Robolectric main looper and spun on an unsynchronised field; both were wrong.
+ *
+ * The main looper is still idled once afterwards, cheaply, for anything the chain posts to it.
  *
  * The profile is null, which keeps `Data`'s init and `saveData` off the database, exactly as
  * `LibrusParserErrorRecoveryTest` and `LibrusApiUnitsNoUnitTest` already rely on. `profileId` is
@@ -96,6 +106,9 @@ internal class CannedLibrusApi {
 
         var installed = false
 
+        /** No real endpoint id, so an unreported run cannot be mistaken for a reported one. */
+        const val NOTHING_REPORTED = Int.MIN_VALUE
+
         /**
          * Installs the canned client and forces `MHttp` to memoise it, winning the race described
          * in the class KDoc. Idempotent, because a second install could not take effect anyway.
@@ -112,13 +125,19 @@ internal class CannedLibrusApi {
 
     private val app = RuntimeEnvironment.getApplication() as App
 
-    /** Errors the parser reported. A canned run that produces any has not done what it was asked. */
+    /**
+     * Errors the parser reported. A canned run that produces any has not done what it was asked.
+     * Written on the OkHttp thread, read by the test thread only after [done] has been awaited.
+     */
     val errors = mutableListOf<ApiError>()
+
+    /** Counted down by whichever of onSuccess / onError the parser reaches first; see [drive]. */
+    private val done = CountDownLatch(1)
 
     private val callback = object : EdziennikCallback {
         override fun onCompleted() {}
         override fun onRequiresUserAction(event: UserActionRequiredEvent) {}
-        override fun onError(apiError: ApiError) { errors += apiError }
+        override fun onError(apiError: ApiError) { errors += apiError; done.countDown() }
         override fun onProgress(step: Float) {}
         override fun onStartProgress(stringRes: Int) {}
     }
@@ -160,14 +179,10 @@ internal class CannedLibrusApi {
      * production construction it is: `drive { data, onSuccess -> LibrusApiX(data, null, onSuccess) }`.
      */
     fun drive(build: (DataLibrus, (Int) -> Unit) -> Unit): Int {
-        var reported: Int? = null
-        build(data) { reported = it }
+        val reported = AtomicInteger(NOTHING_REPORTED)
+        build(data) { reported.set(it); done.countDown() }
 
-        val deadline = System.currentTimeMillis() + 10_000
-        while (reported == null && errors.isEmpty() && System.currentTimeMillis() < deadline) {
-            shadowOf(app.mainLooper).idle()
-            Thread.sleep(2)
-        }
+        val finished = done.await(10, TimeUnit.SECONDS)
         shadowOf(app.mainLooper).idle()
 
         assertEquals(
@@ -175,6 +190,9 @@ internal class CannedLibrusApi {
             emptyList<String>(),
             errors.map { "${it.errorCode}: ${it.throwable?.message}" },
         )
-        return reported ?: fail("the parser never called onSuccess within 10 s").let { -1 }
+        if (!finished) fail("the parser reached neither onSuccess nor onError within 10 s")
+        val id = reported.get()
+        if (id == NOTHING_REPORTED) fail("the parser finished without reporting an endpoint id")
+        return id
     }
 }

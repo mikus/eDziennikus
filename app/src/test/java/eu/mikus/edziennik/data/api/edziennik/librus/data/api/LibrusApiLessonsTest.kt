@@ -25,10 +25,11 @@ import org.robolectric.annotation.Config
 class LibrusApiLessonsTest {
 
     /**
-     * One assignment of each shape the endpoint produces. The two unusable entries are what
-     * [librusLessonRow]'s null answer is for, and they sit in the same body as the usable ones so a
-     * parser that stopped dropping them would be caught by the row count rather than by their
-     * absence alone.
+     * One assignment of each shape the endpoint produces: three usable and **three** unusable - one
+     * missing its `Teacher`, one its `Subject`, one its own `Id`, matching [librusLessonRow]'s three
+     * `?: return null` guards. They sit in the same body as the usable ones so a parser that stopped
+     * dropping them is caught by the row count. The missing-`Id` entry is pinned by that count alone
+     * (it has no id to assert `null` on), so do not raise the expected 3 without replacing it.
      */
     private fun lessons() = CannedLibrusApi().apply {
         serve("Lessons", """
