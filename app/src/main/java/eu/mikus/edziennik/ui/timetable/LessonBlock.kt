@@ -11,7 +11,6 @@ import android.widget.ImageView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,11 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -38,6 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -56,6 +60,9 @@ private val AnnotationShape = RoundedCornerShape(4.dp)
 
 /** One event dot (10 dp) plus the 4 dp gap before it. */
 private val EventDotsWidth = 14.dp
+
+/** The height of the event dots' row: one dot. */
+private val EventDotsHeight = 10.dp
 
 /**
  * Full-parity Compose port of the legacy `timetable_lesson` view (TimetableDayFragment.buildLessonViews):
@@ -99,7 +106,9 @@ fun LessonBlock(
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Column(Modifier.fillMaxSize()) {
+        // The rows stack like a Column, but any row reaching the event dots' strip is narrowed by their
+        // width, so the dots drawn in the bottom-end corner below never paint over text. See the policy.
+        LessonRows(dotsWidth = EventDotsWidth * block.events.size, modifier = Modifier.fillMaxSize()) {
             // Top row: subject (grows) + unread dot + attendance check + big lesson number
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 if (lesson.hasNotes()) {
@@ -178,9 +187,9 @@ fun LessonBlock(
                 )
             }
 
-            // Teacher • team (old→new struck when changed). The event dots are not in this row: it is the
-            // last child of a clipped column, so on a block carrying the annotation row it can fall below
-            // the block's bottom edge, and the dots went with it. They are pinned to the corner below.
+            // Teacher • team (old→new struck when changed). The event dots are not in this row: as the last
+            // row it gets only the height the rows above leave, so on a block carrying the annotation row
+            // it was squeezed to little or nothing, and the dots with it. They are pinned to the corner below.
             val teacher = fieldText(
                 unchanged = lesson.teacherId != null && lesson.teacherId == lesson.oldTeacherId,
                 oldVal = lesson.oldTeacherName, newVal = lesson.teacherName,
@@ -190,10 +199,7 @@ fun LessonBlock(
                 oldVal = lesson.oldTeamName, newVal = lesson.teamName,
             )
             val teacherTeam = joinAnnotated(listOf(teacher, team).filter { it.isNotEmpty() }, " • ")
-            Row(
-                Modifier.fillMaxWidth().padding(top = 2.dp, end = EventDotsWidth * block.events.size),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (teacherTeam.isNotEmpty()) {
                     Text(
                         text = teacherTeam,
@@ -208,6 +214,8 @@ fun LessonBlock(
                 }
             }
         }
+        // Drawn over the rows, in the bottom-end corner of the content area (the block's rounded clip is
+        // 8 dp below it and 12 dp beyond its end); the policy above keeps every row that reaches it clear.
         if (block.events.isNotEmpty()) {
             Row(Modifier.align(Alignment.BottomEnd), verticalAlignment = Alignment.CenterVertically) {
                 block.events.forEach { ev ->
@@ -215,6 +223,45 @@ fun LessonBlock(
                     Box(Modifier.size(10.dp).clip(RoundedCornerShape(5.dp)).background(Color(ev.eventColor)))
                 }
             }
+        }
+    }
+}
+
+/** The block's rows, laid out by [lessonRowsMeasurePolicy] with the event dots' strip kept clear. */
+@Composable
+private fun LessonRows(dotsWidth: Dp, modifier: Modifier, content: @Composable () -> Unit) {
+    val policy = remember(dotsWidth) { lessonRowsMeasurePolicy(dotsWidth, EventDotsHeight) }
+    Layout(content, modifier, policy)
+}
+
+/**
+ * Stacks a lesson block's rows top to bottom as the `Column` it replaces did — start-aligned, each row
+ * measured with only the height the rows above it left, so a block too short for its content squeezes its
+ * last rows rather than overflowing — and narrows by [dotsWidth] every row that reaches into the bottom
+ * [dotsHeight] strip, where the event dots are drawn in the bottom-end corner.
+ *
+ * Which row lands there depends on the block: on a tall block no row does and none pays anything; on a
+ * cancelled block too short for its rows it is the time line or the annotation chip (the teacher row has
+ * been squeezed out); on a very short block, the top row. Deciding per row from its intrinsic height is
+ * what lets the reservation follow it. With no dots ([dotsWidth] 0) this is exactly a Column.
+ */
+internal fun lessonRowsMeasurePolicy(dotsWidth: Dp, dotsHeight: Dp) = MeasurePolicy { rows, constraints ->
+    val width = constraints.maxWidth
+    val height = constraints.maxHeight
+    val reserved = dotsWidth.roundToPx()
+    val stripTop = height - dotsHeight.roundToPx()
+    var y = 0
+    val placeables = rows.map { row ->
+        val narrowed = reserved > 0 && y + row.minIntrinsicHeight(width) > stripTop
+        val rowWidth = if (narrowed) (width - reserved).coerceAtLeast(0) else width
+        row.measure(Constraints(maxWidth = rowWidth, maxHeight = (height - y).coerceAtLeast(0)))
+            .also { y += it.height }
+    }
+    layout(width, height) {
+        var top = 0
+        placeables.forEach {
+            it.placeRelative(0, top)
+            top += it.height
         }
     }
 }
