@@ -68,6 +68,14 @@ class EventTimeItemsTest {
         assertEquals(once.selectedId, twice.selectedId)
     }
 
+    @Test fun `a second, different custom time gets its own row and is the one selected`() {
+        val earlier = EventTimeItems.select(EventTimeItems.build(emptyList(), labels), Time(14, 30, 0))
+        val later = EventTimeItems.select(earlier.items, Time(15, 0, 0))
+
+        assertEquals(TimeSelection.Custom(Time(15, 0, 0)), later.items.selected(later.selectedId).tag)
+        assertEquals(earlier.items.size + 1, later.items.size)
+    }
+
     @Test fun `an empty day ends with the no-timetable row`() {
         val items = EventTimeItems.build(emptyList(), labels)
         assertEquals(listOf("All day", "Custom…", "No timetable"), items.map { it.text })
@@ -75,7 +83,7 @@ class EventTimeItemsTest {
 
     @Test fun `a no-lessons row is a plain label row`() {
         val items = EventTimeItems.build(listOf(lesson(1L, type = Lesson.TYPE_NO_LESSONS)), labels)
-        assertEquals("No lessons", items[2].text)
+        assertEquals(listOf("All day", "Custom…", "No lessons"), items.map { it.text })
         assertEquals(null, items[2].tag)
     }
 
