@@ -53,10 +53,7 @@ class ProfileConfigDialog(
     override fun getTitleRes(): Int? = null
     override fun getPositiveButtonText() = R.string.close
 
-    private var nameChanged = false
-    private var syncChanged = false
-    private var imageChanged = false
-    private var profileRemoved = false
+    private val changes = ProfileConfigChanges()
     private var avatarKey by mutableIntStateOf(0)
     private var name by mutableStateOf(profile.name)
     private var syncEnabled by mutableStateOf(profile.syncEnabled)
@@ -84,7 +81,7 @@ class ProfileConfigDialog(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it; profile.name = it; nameChanged = true },
+                onValueChange = { name = it; profile.name = it; changes.name(it) },
                 singleLine = true,
                 label = { Text(stringResource(R.string.profile_config_name_hint)) },
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
@@ -97,12 +94,12 @@ class ProfileConfigDialog(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
             CheckboxRow(R.string.profile_config_sync_enabled, syncEnabled) {
-                syncEnabled = it; profile.syncEnabled = it; syncChanged = true
+                syncEnabled = it; profile.syncEnabled = it; changes.syncEnabled(it)
             }
             OutlinedButton(
                 onClick = {
                     profileRemoveConfirmation(mainActivity, profile) {
-                        profileRemoved = true; dialog.dismiss()
+                        changes.removed(); dialog.dismiss()
                     }.show()
                 },
                 modifier = Modifier.padding(top = 8.dp),
@@ -118,25 +115,13 @@ class ProfileConfigDialog(
     private fun requestImage() {
         mainActivity.requestHandler.requestProfileImage(profile) {
             val p = it as? Profile ?: return@requestProfileImage
-            if (this.profile == p) { imageChanged = true; avatarKey++ }
+            if (this.profile == p) { changes.image(p.image); avatarKey++ }
         }
     }
 
     override fun onDismiss() {
-        if (!profileRemoved && (nameChanged || syncChanged || imageChanged)) {
-            // name and syncEnabled are Compose state and the save runs on another thread, so read them here
-            val n = name
-            val s = syncEnabled
-            val img = profile.image
-            app.profileSave(
-                profile.id,
-                profileConfigEdit(
-                    name = n.takeIf { nameChanged },
-                    syncEnabled = s.takeIf { syncChanged },
-                    setImage = imageChanged,
-                    image = img,
-                ),
-            )
+        changes.edit()?.let { edit ->
+            app.profileSave(profile.id, edit)
             onProfileSaved?.invoke(profile)
         }
     }
