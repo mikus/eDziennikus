@@ -138,6 +138,19 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
     }
 
     /**
+     * Gives up on messages and goes on with the sync. Messages are optional: every other reply that
+     * leaves the Messages login unusable - a reCAPTCHA, `eAccessDeny` - sets
+     * [DataLibrus.messagesLoginSuccessful] and finishes the login, and the data phase then skips the
+     * message endpoints. A session id that never arrives is the same condition, so once the retry has
+     * also failed this answers it the same way. Ending the task instead would cost the whole profile's
+     * sync - grades, timetable and all - for a part of it the app already knows how to do without.
+     */
+    private fun giveUpOnMessages() {
+        data.messagesLoginSuccessful = false
+        login()
+    }
+
+    /**
      * Starts or resumes the data phase. In it no login is running and none is pending, so this clears
      * both: after `LibrusLogin` runs out of logins they are already empty, but several arms in
      * `wrapCallback` call this directly, and `LibrusLoginSynergia`'s `AutoLoginToken` request can raise
@@ -251,7 +264,12 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
             override fun onStartProgress(stringRes: Int) { callback.onStartProgress(stringRes) }
             override fun onError(apiError: ApiError) {
                 if (apiError.errorCode in internalErrorList) {
-                    // finish immediately if the same error occurs twice during the same sync
+                    // finish immediately if the same error occurs twice during the same sync - except
+                    // for the Messages session, which the sync can do without; see giveUpOnMessages
+                    if (apiError.errorCode == ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID) {
+                        giveUpOnMessages()
+                        return
+                    }
                     callback.onError(apiError)
                     return
                 }

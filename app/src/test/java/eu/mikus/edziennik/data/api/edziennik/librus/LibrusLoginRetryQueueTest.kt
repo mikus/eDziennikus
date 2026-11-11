@@ -155,7 +155,11 @@ class LibrusLoginRetryQueueTest {
         )
     }
 
-    /** `prepareFor(LIBRUS_MESSAGES)` already re-queued the whole chain: GREEN before and after. */
+    /**
+     * `prepareFor(LIBRUS_MESSAGES)` already re-queued the whole chain, so the queue is unchanged by
+     * this commit. The step is not: `prepareFor` zeroed it, so this case is RED on the base commit on
+     * `step=` alone.
+     */
     @Test
     fun `a Messages access denial during the Messages login re-runs the Messages login`() {
         assertEquals(
@@ -173,7 +177,8 @@ class LibrusLoginRetryQueueTest {
      * The data phase: every login has finished, so nothing was interrupted and the queue is empty. Only
      * the denied method's chain is logged in again, as before. The logins are drained through the real
      * `LibrusLogin` (all already done, so each is skipped), so nothing it records about them may
-     * survive into the retry. GREEN before and after.
+     * survive into the retry. The queue is unchanged by this commit; the step is not, so this case is
+     * RED on the base commit on `step=` alone.
      */
     @Test
     fun `an access denial with no login running re-logs only the denied method's chain`() {
@@ -280,6 +285,45 @@ class LibrusLoginRetryQueueTest {
     }
 
     /**
+     * Messages are optional, so a session that never arrives must not cost the rest of the sync. The
+     * first failure retries (test 9); a second gives up on messages and goes on to the data phase, the
+     * same answer the sibling arms give when the Messages login is unusable for any other reason.
+     */
+    @Test
+    fun `a Messages session error that repeats gives up on messages instead of the sync`() {
+        assertEquals(
+            "before=[LIBRUS_MESSAGES] after=[] queued=[] errors=[] step=$STEP messages=unavailable",
+            run(
+                satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API, LIBRUS_SYNERGIA),
+                pending = listOf(LIBRUS_MESSAGES),
+                tag = "LoginLibrusMessages",
+                errorCode = ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID,
+                earlier = ApiError("LoginLibrusMessages", ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID),
+            ),
+        )
+    }
+
+    /**
+     * `requeue` walks the denied method's dependencies. Every other case here has the whole chain in
+     * `loginMethods` already, where a walk and a bare `targetLoginMethods += denied` are
+     * indistinguishable. Here only the portal is satisfied, so the API login has to be queued ahead of
+     * Synergia by the walk alone; without it Synergia would start first and stop with
+     * `ERROR_LOGIN_DATA_MISSING`.
+     */
+    @Test
+    fun `an access denial queues the dependencies the denied login still needs`() {
+        assertEquals(
+            "before=[] after=[LIBRUS_API] queued=[LIBRUS_SYNERGIA] errors=[] step=$STEP",
+            run(
+                satisfied = listOf(LIBRUS_PORTAL),
+                pending = listOf(),
+                tag = "LibrusSynergiaHomework",
+                errorCode = ERROR_LIBRUS_SYNERGIA_ACCESS_DENIED,
+            ),
+        )
+    }
+
+    /**
      * Some arms answer an error by going straight on to the data phase. They are meant for endpoints,
      * but `LibrusLoginSynergia` extends `LibrusApi`, so its `AutoLoginToken` request can raise them while
      * the Synergia login runs: a parser exception (reported as non-critical) or a "not active" code.
@@ -350,7 +394,9 @@ class LibrusLoginRetryQueueTest {
 
         librus.data.error(ApiError(tag, errorCode))
 
-        return "before=$before after=$started queued=${librus.data.targetLoginMethods} errors=$errors step=${librus.data.progressStep}"
+        return "before=$before after=$started queued=${librus.data.targetLoginMethods} errors=$errors " +
+            "step=${librus.data.progressStep}" +
+            if (librus.data.messagesLoginSuccessful) "" else " messages=unavailable"
     }
 
     private fun profile() = Profile(

@@ -316,13 +316,14 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
      * `Librus` has entered the data phase.
      * `LibrusLogin` takes a method off [targetLoginMethods] when it starts it, and a login that fails
      * never joins [loginMethods], so after a login error this is the only record of which login was
-     * interrupted. `Librus` reads it to queue that login again when it logs in again after an
-     * access-denied error.
+     * interrupted. `Librus` reads it in both of its retry helpers: to queue the interrupted login
+     * alongside the denied one after an access-denied error, and to re-run the login that raised its
+     * own session error.
      *
-     * It is cleared when the queue runs out, not when a login finishes: an arm that answers a login
-     * error with a bare `login()` skips the failed login, and if nothing is queued behind it the data
-     * phase starts at once. Clearing only on success would leave the skipped login named here, and a
-     * later access denial would run it again.
+     * It is cleared when the queue runs out, not when a login finishes, so that a login which failed
+     * and was then passed over cannot be named here once the data phase has begun — a later access
+     * denial would run it again. No arm answers a login error with a bare `login()` any more, but
+     * clearing on success would still misreport the last login of a queue that ended in a failure.
      */
     var loginMethodInProgress: LoginMethod? = null
 }
