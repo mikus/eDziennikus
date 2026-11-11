@@ -222,10 +222,11 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
      * profile is gone and was the store's last user, the removal deleted the store, and writing it
      * would bring back an orphan. Only when a sibling profile still shares the store is something
      * lost: the portal token triple, which is the only login-store secret a sync rotates. The
-     * sibling's next sync then sends a stale refresh token, and `Librus` answers the three portal
-     * refresh errors by dropping the token and logging in again from the stored email and
-     * password: one extra silent login, no error shown. That holds as long as the portal reports a
-     * stale refresh token with one of the hints `LibrusLoginPortal` maps to those errors.
+     * sibling's next sync then sends a refresh token the portal has revoked, which it reports as
+     * `ERROR_LOGIN_LIBRUS_PORTAL_REFRESH_REVOKED` (measured on a device), and `Librus` answers by
+     * dropping the token and running the portal login again from the stored email and password,
+     * within that sync: one extra login, no error shown. Before `Librus.retryPortalLogin` existed,
+     * that retry skipped the portal and failed the sibling's sync with a critical error.
      */
     open fun saveData() {
         if (profile == null)
