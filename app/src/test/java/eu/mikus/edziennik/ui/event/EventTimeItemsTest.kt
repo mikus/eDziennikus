@@ -70,9 +70,10 @@ class EventTimeItemsTest {
 
     @Test fun `a second, different custom time gets its own row and is the one selected`() {
         val earlier = EventTimeItems.select(EventTimeItems.build(emptyList(), labels), Time(14, 30, 0))
-        val later = EventTimeItems.select(earlier.items, Time(15, 0, 0))
+        // Same hour on purpose: an id that kept only part of the time would still collide.
+        val later = EventTimeItems.select(earlier.items, Time(14, 45, 0))
 
-        assertEquals(TimeSelection.Custom(Time(15, 0, 0)), later.items.selected(later.selectedId).tag)
+        assertEquals(TimeSelection.Custom(Time(14, 45, 0)), later.items.selected(later.selectedId).tag)
         assertEquals(earlier.items.size + 1, later.items.size)
     }
 
