@@ -33,8 +33,7 @@ class LibrusLoginMessages(val data: DataLibrus, val onSuccess: () -> Unit) {
             when {
                 location?.contains("MultiDomainLogon") == true -> loginWithSynergia(location)
                 location?.contains("AutoLogon") == true -> {
-                    saveSessionId(response, text)
-                    onSuccess()
+                    if (saveSessionId(response, text)) onSuccess()
                 }
 
                 text?.contains("grecaptcha.ready") == true -> {
@@ -55,8 +54,7 @@ class LibrusLoginMessages(val data: DataLibrus, val onSuccess: () -> Unit) {
                 }
 
                 text?.contains("<status>ok</status>") == true -> {
-                    saveSessionId(response, text)
-                    onSuccess()
+                    if (saveSessionId(response, text)) onSuccess()
                 }
                 text?.contains("<message>Niepoprawny login i/lub hasło.</message>") == true -> data.error(TAG, ERROR_LOGIN_LIBRUS_MESSAGES_INVALID_LOGIN, response, text)
                 text?.contains("stop.png") == true -> data.error(TAG, ERROR_LIBRUS_SYNERGIA_ACCESS_DENIED, response, text)
@@ -164,7 +162,12 @@ class LibrusLoginMessages(val data: DataLibrus, val onSuccess: () -> Unit) {
                 .enqueue()
     }
 
-    private fun saveSessionId(response: Response?, text: String?) {
+    /**
+     * Stores the Messages session id from the cookie jar. Returns false, having raised
+     * `ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID`, when there is none: the caller must then not call
+     * `onSuccess()`, or `LibrusLogin` marks the failed login done and goes on while `Librus` retries it.
+     */
+    private fun saveSessionId(response: Response?, text: String?): Boolean {
         var sessionId = data.app.cookieJar.get("wiadomosci.librus.pl", "DZIENNIKSID")
         sessionId = sessionId?.replace("-MAINT", "") // dunno what's this
         sessionId = sessionId?.replace("MAINT", "") // dunno what's this
@@ -172,9 +175,10 @@ class LibrusLoginMessages(val data: DataLibrus, val onSuccess: () -> Unit) {
             data.error(ApiError(TAG, ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID)
                     .withResponse(response)
                     .withApiResponse(text))
-            return
+            return false
         }
         data.messagesSessionId = sessionId
         data.messagesSessionIdExpiryTime = response.getUnixDate() + 45 * 60 /* 45min */
+        return true
     }
 }
