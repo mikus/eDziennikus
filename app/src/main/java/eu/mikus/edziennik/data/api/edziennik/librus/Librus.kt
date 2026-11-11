@@ -108,8 +108,9 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
      * Synergia one from `LIBRUS_MESSAGES`), and that login failed, so it is neither queued nor done.
      * What is already queued stays queued.
      *
-     * `prepareFor(denied)` would clear the queue and keep only [denied]'s chain, dropping both. With no
-     * login running (the data phase, or `firstLogin()`) this queues the same logins it did. Unlike
+     * `prepareFor(denied)` would clear the queue and keep only [denied]'s chain, dropping both. Once a
+     * `LibrusLogin` has run out of logins, which is how a sync reaches its data phase, or when none has
+     * run (`firstLogin()`), no login is named and this queues the same logins it did. Unlike
      * `prepareFor` it does not zero the progress step, which froze the progress bar for the rest of the
      * sync; `ApiService` caps the progress at 100. [retryPortalLogin] does not fit: it queues only the
      * portal, so after an error from the API login it would start Synergia without the API.

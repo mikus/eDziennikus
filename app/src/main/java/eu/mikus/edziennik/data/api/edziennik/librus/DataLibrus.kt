@@ -312,11 +312,16 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
     var messagesLoginSuccessful: Boolean = true
 
     /**
-     * The login `LibrusLogin` has started and not yet seen finish, or null when none is running.
+     * The login `LibrusLogin` started last, or null once a `LibrusLogin` has found its queue empty.
      * `LibrusLogin` takes a method off [targetLoginMethods] when it starts it, and a login that fails
      * never joins [loginMethods], so after a login error this is the only record of which login was
      * interrupted. `Librus` reads it to queue that login again when it logs in again after an
      * access-denied error.
+     *
+     * It is cleared when the queue runs out, not when a login finishes: an arm that answers a login
+     * error with a bare `login()` skips the failed login, and if nothing is queued behind it the data
+     * phase starts at once. Clearing only on success would leave the skipped login named here, and a
+     * later access denial would run it again.
      */
     var loginMethodInProgress: LoginMethod? = null
 }

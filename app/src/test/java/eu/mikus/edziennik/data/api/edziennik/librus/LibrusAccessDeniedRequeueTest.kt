@@ -12,6 +12,7 @@ import eu.mikus.edziennik.data.api.ERROR_LIBRUS_MESSAGES_ACCESS_DENIED
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_PORTAL_ACCESS_DENIED
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_SYNERGIA_ACCESS_DENIED
 import eu.mikus.edziennik.data.api.ERROR_LOGIN_DATA_MISSING
+import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID
 import eu.mikus.edziennik.data.api.edziennik.librus.login.LibrusLogin
 import eu.mikus.edziennik.data.api.events.UserActionRequiredEvent
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
@@ -106,7 +107,7 @@ class LibrusAccessDeniedRequeueTest {
     fun `a portal access denial during the API login re-runs the portal, the API login and the logins behind it`() {
         assertEquals(
             "before=[LIBRUS_API] after=[LIBRUS_PORTAL] queued=[LIBRUS_API, LIBRUS_SYNERGIA, LIBRUS_MESSAGES] " +
-                "errors=[LoginLibrusPortal/$ERROR_LOGIN_DATA_MISSING]",
+                "errors=[LoginLibrusPortal/$ERROR_LOGIN_DATA_MISSING] step=$STEP",
             run(
                 satisfied = listOf(LIBRUS_PORTAL),
                 pending = listOf(LIBRUS_API, LIBRUS_SYNERGIA, LIBRUS_MESSAGES),
@@ -120,7 +121,7 @@ class LibrusAccessDeniedRequeueTest {
     fun `an API access denial during the Synergia login re-runs the API login, the Synergia login and the logins behind it`() {
         val codes = listOf(ERROR_LIBRUS_API_ACCESS_DENIED, ERROR_LIBRUS_API_TOKEN_EXPIRED)
         assertEquals(
-            codes.map { "$it: before=[LIBRUS_SYNERGIA] after=[LIBRUS_API] queued=[LIBRUS_SYNERGIA, LIBRUS_MESSAGES] errors=[]" },
+            codes.map { "$it: before=[LIBRUS_SYNERGIA] after=[LIBRUS_API] queued=[LIBRUS_SYNERGIA, LIBRUS_MESSAGES] errors=[] step=$STEP" },
             codes.map {
                 "$it: " + run(
                     satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
@@ -135,7 +136,7 @@ class LibrusAccessDeniedRequeueTest {
     @Test
     fun `a Synergia access denial during the Messages login re-runs the Synergia login and the Messages login`() {
         assertEquals(
-            "before=[LIBRUS_MESSAGES] after=[LIBRUS_SYNERGIA] queued=[LIBRUS_MESSAGES] errors=[]",
+            "before=[LIBRUS_MESSAGES] after=[LIBRUS_SYNERGIA] queued=[LIBRUS_MESSAGES] errors=[] step=$STEP",
             run(
                 satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API, LIBRUS_SYNERGIA),
                 pending = listOf(LIBRUS_MESSAGES),
@@ -149,7 +150,7 @@ class LibrusAccessDeniedRequeueTest {
     @Test
     fun `a Messages access denial during the Messages login re-runs the Messages login`() {
         assertEquals(
-            "before=[LIBRUS_MESSAGES] after=[LIBRUS_MESSAGES] queued=[] errors=[]",
+            "before=[LIBRUS_MESSAGES] after=[LIBRUS_MESSAGES] queued=[] errors=[] step=$STEP",
             run(
                 satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API, LIBRUS_SYNERGIA),
                 pending = listOf(LIBRUS_MESSAGES),
@@ -170,12 +171,34 @@ class LibrusAccessDeniedRequeueTest {
         val all = listOf(LIBRUS_PORTAL, LIBRUS_API, LIBRUS_SYNERGIA, LIBRUS_MESSAGES)
         assertEquals(
             listOf(
-                "before=[] after=[LIBRUS_API] queued=[] errors=[]",
-                "before=[] after=[LIBRUS_SYNERGIA] queued=[] errors=[]",
+                "before=[] after=[LIBRUS_API] queued=[] errors=[] step=$STEP",
+                "before=[] after=[LIBRUS_SYNERGIA] queued=[] errors=[] step=$STEP",
             ),
             listOf(
-                run(satisfied = all, pending = all, tag = "LibrusApi", errorCode = ERROR_LIBRUS_API_ACCESS_DENIED),
-                run(satisfied = all, pending = all, tag = "LibrusSynergia", errorCode = ERROR_LIBRUS_SYNERGIA_ACCESS_DENIED),
+                run(satisfied = all, pending = all, tag = "LibrusApiEvents", errorCode = ERROR_LIBRUS_API_ACCESS_DENIED),
+                run(satisfied = all, pending = all, tag = "LibrusSynergiaHomework", errorCode = ERROR_LIBRUS_SYNERGIA_ACCESS_DENIED),
+            ),
+        )
+    }
+
+    /**
+     * A login that fails with an error the old arm answers by a bare `login()` (here Synergia's
+     * `ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID`) is skipped: nothing is queued behind it, so the new
+     * `LibrusLogin` finishes at once and the data phase starts. An API access denial raised by an
+     * endpoint there must then re-log the API alone. If `LibrusLogin` still recorded the skipped
+     * Synergia login as running, the retry would queue it again, and a second failure of the same code
+     * would end the sync as a critical error.
+     */
+    @Test
+    fun `a login that failed and was skipped is not queued again by a later access denial`() {
+        assertEquals(
+            "before=[LIBRUS_SYNERGIA] after=[LIBRUS_API] queued=[] errors=[] step=$STEP",
+            run(
+                satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
+                pending = listOf(LIBRUS_SYNERGIA),
+                tag = "LibrusApiEvents",
+                errorCode = ERROR_LIBRUS_API_ACCESS_DENIED,
+                earlier = ApiError("LoginLibrusSynergia", ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID),
             ),
         )
     }
@@ -185,7 +208,13 @@ class LibrusAccessDeniedRequeueTest {
      * real `LibrusLogin` over the queue until it parks on a request (or drains it), raises [errorCode]
      * as [tag], and reports what happened.
      */
-    private fun run(satisfied: List<LoginMethod>, pending: List<LoginMethod>, tag: String, errorCode: Int): String {
+    private fun run(
+        satisfied: List<LoginMethod>,
+        pending: List<LoginMethod>,
+        tag: String,
+        errorCode: Int,
+        earlier: ApiError? = null,
+    ): String {
         val started = mutableListOf<LoginMethod>()
         val errors = mutableListOf<String>()
         val callback = object : EdziennikCallback {
@@ -206,14 +235,16 @@ class LibrusAccessDeniedRequeueTest {
         librus.data.loginMethods.clear()
         librus.data.loginMethods += satisfied
         librus.data.targetLoginMethods = pending.toMutableList()
+        librus.data.progressStep = STEP
 
         LibrusLogin(librus.data) {}
         val before = started.toList()
+        earlier?.let { librus.data.error(it) }
         started.clear()
 
         librus.data.error(ApiError(tag, errorCode))
 
-        return "before=$before after=$started queued=${librus.data.targetLoginMethods} errors=$errors"
+        return "before=$before after=$started queued=${librus.data.targetLoginMethods} errors=$errors step=${librus.data.progressStep}"
     }
 
     private fun profile() = Profile(
@@ -237,6 +268,9 @@ class LibrusAccessDeniedRequeueTest {
     private companion object {
         const val P = 9062
         const val L = 9162
+
+        /** A progress step no code path sets on its own, so a reset to 0 shows. */
+        const val STEP = 5f
 
         /** `MHttp`'s memoised client; see [parkEveryRequest]. */
         val mHttpClientField = MHttp::class.java.getDeclaredField("mInnerClient").apply { isAccessible = true }

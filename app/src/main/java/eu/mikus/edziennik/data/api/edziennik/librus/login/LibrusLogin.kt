@@ -22,6 +22,7 @@ class LibrusLogin(val data: DataLibrus, val onSuccess: () -> Unit) {
 
     private fun nextLoginMethod(onSuccess: () -> Unit) {
         if (data.targetLoginMethods.isEmpty()) {
+            data.loginMethodInProgress = null
             onSuccess()
             return
         }
@@ -32,7 +33,6 @@ class LibrusLogin(val data: DataLibrus, val onSuccess: () -> Unit) {
         val loginMethod = data.targetLoginMethods.removeAt(0)
         data.loginMethodInProgress = loginMethod
         useLoginMethod(loginMethod) { usedMethod ->
-            data.loginMethodInProgress = null
             data.progress(data.progressStep)
             if (usedMethod != null)
                 data.loginMethods.add(usedMethod)
