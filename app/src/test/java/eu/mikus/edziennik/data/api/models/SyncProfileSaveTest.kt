@@ -236,6 +236,23 @@ class SyncProfileSaveTest {
     }
 
     @Test
+    fun `a refused save leaves its changes to the next save`() {
+        // a refused save must not move the baseline: the next save computes its changes against
+        // it, so a baseline moved by a save that wrote nothing drops that save's changes for good
+        val d = startTask()
+        d.unitId = 6
+        App.db.profileDao().remove(P)
+        d.saveData()
+        assertNull("the first save must be refused", App.db.profileDao().getByIdNow(P))
+        replaceRow(1001, "1001u", "New")
+
+        d.saveData()
+
+        assertEquals("New", row().name)
+        assertEquals(6L, key("unitId")?.asLong)
+    }
+
+    @Test
     fun `a task that changes its own login is not refused`() {
         val d = startTask()
         d.apiLogin = "1001x"
