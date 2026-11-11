@@ -12,7 +12,10 @@ import eu.mikus.edziennik.data.api.ERROR_LIBRUS_MESSAGES_ACCESS_DENIED
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_PORTAL_ACCESS_DENIED
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_SYNERGIA_ACCESS_DENIED
 import eu.mikus.edziennik.data.api.ERROR_LOGIN_DATA_MISSING
+import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID
 import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID
+import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_SYNERGIA_NO_TOKEN
+import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_SYNERGIA_TOKEN_INVALID
 import eu.mikus.edziennik.data.api.edziennik.librus.login.LibrusLogin
 import eu.mikus.edziennik.data.api.events.UserActionRequiredEvent
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
@@ -42,14 +45,17 @@ import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.TimeUnit
 
 /**
- * Pins what `Librus` does when an "access denied" error arrives while a login is running: it must
- * log in again with the denied method, then re-run the login that was interrupted, then the logins
- * still queued behind it.
+ * Pins what `Librus` does when a login error it answers by logging in again arrives while a login is
+ * running. An "access denied" error must log in again with the denied method, then re-run the login
+ * that was interrupted, then the logins still queued behind it. A Synergia or Messages session error
+ * must re-run the login that raised it, then the logins queued behind it, and a second failure of the
+ * same code must end the task as a critical error.
  *
  * `LibrusLogin` takes each method off `targetLoginMethods` when it starts it, and a login that fails
  * never joins `loginMethods`. The old arms re-planned with `prepareFor(denied)`, which clears the
  * queue and rebuilds it from the denied method's dependency chain alone, so the interrupted login and
- * everything behind it were dropped, and the sync went on to the endpoints without them.
+ * everything behind it were dropped, and the sync went on to the endpoints without them. The old
+ * session arms called a bare `login()`, which resumed at the login after the failed one.
  *
  * Each case drives the real `LibrusLogin` over the logins that were pending, so the production code
  * consumes the queue and really starts the interrupted login. That login reaches a real request, which
@@ -58,14 +64,15 @@ import java.util.concurrent.TimeUnit
  * tag of the step that raises it in production, as if the parked response had come back. Recorded:
  * which logins `LibrusLogin` started before and after the error (`onStartProgress` fires only for a
  * login it actually starts, not one it skips as already done), the queue once the retried login has
- * parked or stopped, and every error that reached the task's callback.
+ * parked or stopped, and every error that reached the task's callback (`tag/code`, with a trailing `~`
+ * when it is not critical).
  *
  * The login store has no email or password, so a retried portal login stops at its first check with
  * `ERROR_LOGIN_DATA_MISSING`, before building any request.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
-class LibrusAccessDeniedRequeueTest {
+class LibrusLoginRetryQueueTest {
 
     private val app: App
         get() = RuntimeEnvironment.getApplication() as App
@@ -182,22 +189,89 @@ class LibrusAccessDeniedRequeueTest {
     }
 
     /**
-     * A login that fails with an error the old arm answers by a bare `login()` (here Synergia's
-     * `ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID`) is skipped: nothing is queued behind it, so the new
-     * `LibrusLogin` finishes at once and the data phase starts. An API access denial raised by an
-     * endpoint there must then re-log the API alone. If `LibrusLogin` still recorded the skipped
-     * Synergia login as running, the retry would queue it again, and a second failure of the same code
-     * would end the sync as a critical error.
+     * The two retries compose. A Synergia session error re-runs the Synergia login, and while that
+     * retried login is running an API access denial arrives: the API login runs again, then the
+     * retried Synergia login, which is again the interrupted one.
      */
     @Test
-    fun `a login that failed and was skipped is not queued again by a later access denial`() {
+    fun `an access denial while a retried login runs re-queues the retried login`() {
         assertEquals(
-            "before=[LIBRUS_SYNERGIA] after=[LIBRUS_API] queued=[] errors=[] step=$STEP",
+            "before=[LIBRUS_SYNERGIA] after=[LIBRUS_API] queued=[LIBRUS_SYNERGIA] errors=[] step=$STEP",
             run(
                 satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
                 pending = listOf(LIBRUS_SYNERGIA),
                 tag = "LibrusApiEvents",
                 errorCode = ERROR_LIBRUS_API_ACCESS_DENIED,
+                earlier = ApiError("LoginLibrusSynergia", ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID),
+            ),
+        )
+    }
+
+    /**
+     * Each code is raised only by `LibrusLoginSynergia` while it runs. The old bare `login()` started
+     * the Messages login instead, which needs Synergia done and stopped with `ERROR_LOGIN_DATA_MISSING`.
+     */
+    @Test
+    fun `a Synergia session error re-runs the Synergia login before the logins behind it`() {
+        val codes = listOf(
+            ERROR_LOGIN_LIBRUS_SYNERGIA_TOKEN_INVALID,
+            ERROR_LOGIN_LIBRUS_SYNERGIA_NO_TOKEN,
+            ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID,
+        )
+        assertEquals(
+            codes.map { "$it: before=[LIBRUS_SYNERGIA] after=[LIBRUS_SYNERGIA] queued=[LIBRUS_MESSAGES] errors=[] step=$STEP" },
+            codes.map {
+                "$it: " + run(
+                    satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
+                    pending = listOf(LIBRUS_SYNERGIA, LIBRUS_MESSAGES),
+                    tag = "LoginLibrusSynergia",
+                    errorCode = it,
+                )
+            },
+        )
+    }
+
+    /** With nothing queued behind it, the old bare `login()` went straight to the data phase. */
+    @Test
+    fun `a Synergia session error with nothing queued behind it re-runs the Synergia login`() {
+        assertEquals(
+            "before=[LIBRUS_SYNERGIA] after=[LIBRUS_SYNERGIA] queued=[] errors=[] step=$STEP",
+            run(
+                satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
+                pending = listOf(LIBRUS_SYNERGIA),
+                tag = "LoginLibrusSynergia",
+                errorCode = ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID,
+            ),
+        )
+    }
+
+    @Test
+    fun `a Messages session error re-runs the Messages login`() {
+        assertEquals(
+            "before=[LIBRUS_MESSAGES] after=[LIBRUS_MESSAGES] queued=[] errors=[] step=$STEP",
+            run(
+                satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API, LIBRUS_SYNERGIA),
+                pending = listOf(LIBRUS_MESSAGES),
+                tag = "LoginLibrusMessages",
+                errorCode = ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID,
+            ),
+        )
+    }
+
+    /**
+     * The retry is bounded: `Librus` reports a code it has already seen in this task as it is, which is
+     * critical, and starts nothing. The Messages login stays queued, unrun.
+     */
+    @Test
+    fun `a session error that repeats ends the task as a critical error`() {
+        assertEquals(
+            "before=[LIBRUS_SYNERGIA] after=[] queued=[LIBRUS_MESSAGES] " +
+                "errors=[LoginLibrusSynergia/$ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID] step=$STEP",
+            run(
+                satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
+                pending = listOf(LIBRUS_SYNERGIA, LIBRUS_MESSAGES),
+                tag = "LoginLibrusSynergia",
+                errorCode = ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID,
                 earlier = ApiError("LoginLibrusSynergia", ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID),
             ),
         )
@@ -225,7 +299,7 @@ class LibrusAccessDeniedRequeueTest {
                 started += LOGIN_PROGRESS.getValue(stringRes)
             }
             override fun onError(apiError: ApiError) {
-                errors += "${apiError.tag}/${apiError.errorCode}"
+                errors += "${apiError.tag}/${apiError.errorCode}" + if (apiError.isCritical) "" else "~"
             }
         }
         val store = LoginStore(L, LoginType.LIBRUS, LoginMode.LIBRUS_EMAIL, JsonObject())
