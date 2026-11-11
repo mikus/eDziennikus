@@ -30,6 +30,7 @@ import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,7 +71,18 @@ class LibrusAccessDeniedRequeueTest {
 
     private lateinit var savedHttp: OkHttpClient
     private lateinit var savedHttpLazy: OkHttpClient
+    private var savedMHttpClient: OkHttpClient? = null
 
+    /**
+     * Requests built with `withClient(app.httpLazy)` use that client. Every other one asks
+     * `MHttp.instance().client()` when it is enqueued, and that getter memoises: the first client it
+     * builds in a Robolectric sandbox stays in its private `mInnerClient` for good, and a later
+     * `customOkHttpClient(...)` only rewrites a builder nothing reads again (see `CannedLibrusApi`).
+     * So `customOkHttpClient` is no use here either way: run after another test it silently leaves
+     * the production client live, and these requests would go to Librus; run first, the parked client
+     * gets memoised for every later test in the sandbox, which broke `CannedLibrusApi`'s eleven tests.
+     * The memoised field itself is swapped, checked, and put back exactly as it was.
+     */
     @Before
     fun parkEveryRequest() {
         savedHttp = app.http
@@ -78,14 +90,16 @@ class LibrusAccessDeniedRequeueTest {
         val parked = OkHttpClient.Builder().dispatcher(Dispatcher(DroppingExecutor())).build()
         app.http = parked
         app.httpLazy = parked
-        MHttp.instance().customOkHttpClient(parked)
+        savedMHttpClient = mHttpClientField.get(MHttp.instance()) as OkHttpClient?
+        mHttpClientField.set(MHttp.instance(), parked)
+        assertSame("MHttp must hand out the parked client, or these requests reach the network", parked, MHttp.instance().client())
     }
 
     @After
     fun restoreClients() {
         app.http = savedHttp
         app.httpLazy = savedHttpLazy
-        MHttp.instance().customOkHttpClient(savedHttp)
+        mHttpClientField.set(MHttp.instance(), savedMHttpClient)
     }
 
     @Test
@@ -223,6 +237,9 @@ class LibrusAccessDeniedRequeueTest {
     private companion object {
         const val P = 9062
         const val L = 9162
+
+        /** `MHttp`'s memoised client; see [parkEveryRequest]. */
+        val mHttpClientField = MHttp::class.java.getDeclaredField("mInnerClient").apply { isAccessible = true }
         val LOGIN_PROGRESS = mapOf(
             R.string.edziennik_progress_login_librus_portal to LIBRUS_PORTAL,
             R.string.edziennik_progress_login_librus_api to LIBRUS_API,
