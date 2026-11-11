@@ -151,4 +151,13 @@ class EventTimeItemsTest {
 
         assertSame(first, sel.items.selected(sel.selectedId).tag)
     }
+
+    @Test fun `no subject preference does not pick a lesson that has no subject`() {
+        // A new event has no subject to prefer: null must not match a lesson whose subject is null.
+        val noSubject = lesson(300L, Time(8, 0, 0), subject = null, subjectId = null)
+        val items = EventTimeItems.build(listOf(first, noSubject), labels)
+        val sel = EventTimeItems.select(items, Time(8, 0, 0))
+
+        assertSame(first, sel.items.selected(sel.selectedId).tag)
+    }
 }
