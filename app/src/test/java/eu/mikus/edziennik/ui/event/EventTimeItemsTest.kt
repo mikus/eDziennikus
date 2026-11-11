@@ -218,6 +218,48 @@ class EventTimeItemsTest {
         assertEquals(null, EventTimeItems.reselect(EventTimeItems.build(listOf(moved), labels), heldRow))
     }
 
+    @Test fun `a held lesson whose id survived the sync keeps its own row`() {
+        // The usual sync: nothing about the lesson changed. Hold the second row, not the first, so
+        // "the first row" and "the held row" are different answers.
+        val items = EventTimeItems.build(listOf(first, second), labels)
+        val heldRow = items.first { it.tag === second }
+        val reloaded = EventTimeItems.build(listOf(first, second), labels)
+
+        val sel = EventTimeItems.reselect(reloaded, heldRow)
+
+        assertSame(second, sel?.items?.selected(sel.selectedId)?.tag)
+    }
+
+    @Test fun `a held cancelled lesson is found again by its old start time and subject`() {
+        // A cancelled lesson carries only old* fields (LibrusApiTimetables), so only the display*
+        // getters know its start time and subject.
+        fun cancelled(id: Long) = LessonFull(1, id).apply {
+            type = Lesson.TYPE_CANCELLED
+            oldStartTime = Time(8, 0, 0)
+            oldSubjectId = 11L
+            oldSubjectName = "Physics"
+        }
+        val heldRow = EventTimeItems.build(listOf(first, cancelled(200L)), labels).first { it.id == 200L }
+        val resynced = cancelled(999L)
+        val reloaded = EventTimeItems.build(listOf(first, resynced), labels)
+
+        val sel = EventTimeItems.reselect(reloaded, heldRow)
+
+        assertSame(resynced, sel?.items?.selected(sel.selectedId)?.tag)
+    }
+
+    @Test fun `a held custom time now taken by a lesson selects the lesson row, as select does`() {
+        val picked = EventTimeItems.select(EventTimeItems.build(listOf(first), labels), Time(14, 30, 0))
+        val heldRow = picked.items.selected(picked.selectedId)
+        val movedIn = lesson(300L, Time(14, 30, 0), "Physics", subjectId = 11L)
+        val reloaded = EventTimeItems.build(listOf(first, movedIn), labels)
+
+        val sel = EventTimeItems.reselect(reloaded, heldRow)
+
+        assertEquals(reloaded, sel?.items)
+        assertSame(movedIn, sel?.items?.selected(sel.selectedId)?.tag)
+    }
+
     @Test fun `nothing held reselects nothing`() {
         assertEquals(null, EventTimeItems.reselect(EventTimeItems.build(listOf(first), labels), null))
     }

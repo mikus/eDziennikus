@@ -673,13 +673,18 @@ class EventManualDialog(
         val app = activity.applicationContext as App
         // The sync may have re-keyed the selected lesson (see EventTimeItems), so remember the row
         // itself, not its id, and find it again in the rebuilt list.
-        val held = timeItems.value.firstOrNull { it.id == selectedTimeId.value }
+        val heldId = selectedTimeId.value
+        val held = timeItems.value.firstOrNull { it.id == heldId }
+        val heldDate = selectedDate.value
         launch {
             val date = selectedDate.value ?: Date.getToday()
             reloadTimeItems(app, date)
-            val reselected = EventTimeItems.reselect(timeItems.value, held)
-            reselected?.let { timeItems.value = it.items }
-            selectedTimeId.value = reselected?.selectedId
+            // The reload suspends: if the user picked another time or date meanwhile, theirs wins.
+            if (selectedTimeId.value == heldId && selectedDate.value === heldDate) {
+                val reselected = EventTimeItems.reselect(timeItems.value, held)
+                reselected?.let { timeItems.value = it.items }
+                selectedTimeId.value = reselected?.selectedId
+            }
             editingEvent?.time?.let { selectTimeValue(it, preferSubjectId = editingEvent.subjectId) }
                 ?: defaultLesson?.displayStartTime?.let { selectTimeValue(it, preferLessonId = defaultLesson.id) }
                 ?: defaultTime?.let { selectTimeValue(it) }
