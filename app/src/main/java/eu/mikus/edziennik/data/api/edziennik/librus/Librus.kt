@@ -81,6 +81,18 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
         }
     }
 
+    /**
+     * Runs the portal login again, then the logins still queued behind it, after a portal error that
+     * logging in again can fix. `LibrusLogin` took the portal off the queue when it started it, so a
+     * bare `login()` starts at the next method, which needs the portal, and fails the sync with
+     * `ERROR_LOGIN_METHOD_NOT_SATISFIED`. `prepareFor(LIBRUS_PORTAL)` would clear the queue and run
+     * the portal alone.
+     */
+    private fun retryPortalLogin() {
+        data.targetLoginMethods.add(0, LoginMethod.LIBRUS_PORTAL)
+        login()
+    }
+
     private fun data() {
         d(TAG, "Endpoint IDs: ${data.targetEndpoints}")
         if (internalErrorList.isNotEmpty()) {
@@ -222,13 +234,13 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
                     ERROR_LOGIN_LIBRUS_PORTAL_CSRF_EXPIRED,
                     ERROR_LOGIN_LIBRUS_PORTAL_CODE_REVOKED,
                     ERROR_LOGIN_LIBRUS_PORTAL_CODE_EXPIRED -> {
-                        login()
+                        retryPortalLogin()
                     }
                     ERROR_LOGIN_LIBRUS_PORTAL_NO_REFRESH,
                     ERROR_LOGIN_LIBRUS_PORTAL_REFRESH_REVOKED,
                     ERROR_LOGIN_LIBRUS_PORTAL_REFRESH_INVALID -> {
                         data.portalRefreshToken = null
-                        login()
+                        retryPortalLogin()
                     }
                     ERROR_LOGIN_LIBRUS_SYNERGIA_TOKEN_INVALID,
                     ERROR_LOGIN_LIBRUS_SYNERGIA_NO_TOKEN,
