@@ -49,6 +49,25 @@ class EventTimeItemsTest {
         assertSame(b, items[3].tag)
     }
 
+    @Test fun `a cancelled lesson's row shows its old start time and subject`() {
+        val cancelled = LessonFull(1, 300L).apply {
+            type = Lesson.TYPE_CANCELLED
+            oldStartTime = Time(8, 0, 0)
+            oldSubjectName = "Physics"
+        }
+        val items = EventTimeItems.build(listOf(cancelled), labels)
+
+        assertEquals("8:00 - Physics", items.first { it.tag === cancelled }.text)
+    }
+
+    @Test fun `picking the same custom time twice keeps one row`() {
+        val once = EventTimeItems.select(EventTimeItems.build(listOf(first), labels), Time(14, 30, 0))
+        val twice = EventTimeItems.select(once.items, Time(14, 30, 0))
+
+        assertEquals(once.items, twice.items)
+        assertEquals(once.selectedId, twice.selectedId)
+    }
+
     @Test fun `an empty day ends with the no-timetable row`() {
         val items = EventTimeItems.build(emptyList(), labels)
         assertEquals(listOf("All day", "Custom…", "No timetable"), items.map { it.text })
@@ -258,6 +277,19 @@ class EventTimeItemsTest {
 
         assertEquals(reloaded, sel?.items)
         assertSame(movedIn, sel?.items?.selected(sel.selectedId)?.tag)
+    }
+
+    @Test fun `a held lesson of a same-subject group split keeps its own row`() {
+        // Two groups of one subject in one slot: start time and subject cannot tell them apart, so
+        // only the surviving id can.
+        val group1 = lesson(100L, Time(8, 0, 0), "English", subjectId = 12L)
+        val group2 = lesson(200L, Time(8, 0, 0), "English", subjectId = 12L)
+        val heldRow = EventTimeItems.build(listOf(group1, group2), labels).first { it.tag === group2 }
+        val reloaded = EventTimeItems.build(listOf(group1, group2), labels)
+
+        val sel = EventTimeItems.reselect(reloaded, heldRow)
+
+        assertSame(group2, sel?.items?.selected(sel.selectedId)?.tag)
     }
 
     @Test fun `nothing held reselects nothing`() {

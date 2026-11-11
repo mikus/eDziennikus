@@ -21,8 +21,9 @@ import eu.mikus.edziennik.utils.models.Time
  * - a custom-time row is [customTimeId], a negative band below every fixed row.
  *
  * A [Lesson.id] is NOT stable across a sync: [Lesson.buildId] hashes the teacher, team, classroom
- * and type, so a substitution re-keys the row. A selection held across a rebuild of the list is
- * found again by meaning with [reselect], never by its old id.
+ * and type, so a substitution re-keys the row. A selection held across a rebuild of the list goes
+ * through [reselect], which keeps its id only if that id is still in the new list and otherwise
+ * finds the row again by start time and subject.
  */
 object EventTimeItems {
 

@@ -671,20 +671,19 @@ class EventManualDialog(
         if (event.profileId != profileId) return
         dismissWaitDialogs()
         val app = activity.applicationContext as App
-        // The sync may have re-keyed the selected lesson (see EventTimeItems), so remember the row
-        // itself, not its id, and find it again in the rebuilt list.
-        val heldId = selectedTimeId.value
-        val held = timeItems.value.firstOrNull { it.id == heldId }
-        val heldDate = selectedDate.value
+        val dateAtStart = selectedDate.value
         launch {
-            val date = selectedDate.value ?: Date.getToday()
-            reloadTimeItems(app, date)
-            // The reload suspends: if the user picked another time or date meanwhile, theirs wins.
-            if (selectedTimeId.value == heldId && selectedDate.value === heldDate) {
-                val reselected = EventTimeItems.reselect(timeItems.value, held)
-                reselected?.let { timeItems.value = it.items }
-                selectedTimeId.value = reselected?.selectedId
-            }
+            val (items, _) = buildTimeItems(app, dateAtStart ?: Date.getToday())
+            // The build suspends. If the user moved to another date meanwhile, that date's own reload
+            // owns the list; these rows are for the old one.
+            if (selectedDate.value !== dateAtStart) return@launch
+            // The sync may have re-keyed the selected lesson (see EventTimeItems), so take the row
+            // selected NOW (possibly picked during the build) from the list it was picked in, and
+            // find it again in the rebuilt one.
+            val held = timeItems.value.firstOrNull { it.id == selectedTimeId.value }
+            val reselected = EventTimeItems.reselect(items, held)
+            timeItems.value = reselected?.items ?: items
+            selectedTimeId.value = reselected?.selectedId
             editingEvent?.time?.let { selectTimeValue(it, preferSubjectId = editingEvent.subjectId) }
                 ?: defaultLesson?.displayStartTime?.let { selectTimeValue(it, preferLessonId = defaultLesson.id) }
                 ?: defaultTime?.let { selectTimeValue(it) }
