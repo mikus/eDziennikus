@@ -57,7 +57,6 @@ import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskFinishedEvent
 import eu.mikus.edziennik.data.db.entity.Event
 import eu.mikus.edziennik.data.db.entity.EventType
-import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.data.db.entity.Metadata
 import eu.mikus.edziennik.data.db.entity.Subject
 import eu.mikus.edziennik.data.db.entity.Teacher
@@ -428,45 +427,14 @@ class EventManualDialog(
      *  caller enqueues a sync), mirroring TimeDropdown.loadItems(). */
     private suspend fun buildTimeItems(app: App, date: Date): Pair<List<FormDropdownItem>, Boolean> =
         withContext(Dispatchers.Default) {
-            val list = mutableListOf<FormDropdownItem>()
-            list += FormDropdownItem(
-                id = 0L,
-                text = app.getString(R.string.dialog_event_manual_all_day),
-                tag = TimeSelection.AllDay,
-            )
-            list += FormDropdownItem(
-                id = -1L,
-                text = app.getString(R.string.dialog_event_manual_custom_time),
-            )
-
             val lessons = app.db.timetableDao().getAllForDateNow(profileId, date)
-            if (lessons.isEmpty()) {
-                list += FormDropdownItem(-2L, app.getString(R.string.dialog_event_manual_no_timetable))
-                return@withContext list to false
-            }
-
-            lessons.forEach { lesson ->
-                if (lesson.type == Lesson.TYPE_NO_LESSONS) {
-                    list += FormDropdownItem(-2L, app.getString(R.string.dialog_event_manual_no_lessons))
-                    return@forEach
-                }
-                // Plain-text label: FormDropdownItem.text is a String, so the legacy strikethrough/
-                // italic spannables for cancelled/shifted lessons collapse to plain text here.
-                val name = lesson.displaySubjectName
-                val label = buildString {
-                    append(lesson.displayStartTime?.stringHM ?: "")
-                    if (name != null) {
-                        append(" - ")
-                        append(name)
-                    }
-                }
-                list += FormDropdownItem(
-                    id = lesson.displayStartTime?.value?.toLong() ?: -1L,
-                    text = label,
-                    tag = lesson,
-                )
-            }
-            list to true
+            val labels = EventTimeItems.Labels(
+                allDay = app.getString(R.string.dialog_event_manual_all_day),
+                customTime = app.getString(R.string.dialog_event_manual_custom_time),
+                noTimetable = app.getString(R.string.dialog_event_manual_no_timetable),
+                noLessons = app.getString(R.string.dialog_event_manual_no_lessons),
+            )
+            EventTimeItems.build(lessons, labels) to lessons.isNotEmpty()
         }
 
     private suspend fun reloadTimeItems(app: App, date: Date): Boolean {
@@ -494,12 +462,9 @@ class EventManualDialog(
     }
 
     private fun selectTimeValue(time: Time) {
-        val id = time.value.toLong()
-        if (timeItems.value.none { it.id == id }) {
-            timeItems.value = timeItems.value +
-                FormDropdownItem(id = id, text = time.stringHM, tag = TimeSelection.Custom(time))
-        }
-        selectedTimeId.value = id
+        val selection = EventTimeItems.select(timeItems.value, time)
+        timeItems.value = selection.items
+        selectedTimeId.value = selection.selectedId
     }
 
     private fun selectDefaultTime(time: Time?) {
