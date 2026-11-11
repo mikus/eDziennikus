@@ -11,8 +11,26 @@ import eu.mikus.edziennik.utils.models.Time
 /**
  * The rows of [EventManualDialog]'s time dropdown and the [Time] → row lookup, kept free of
  * Android resources and the database so they can be tested on the JVM.
+ *
+ * Every row's id is unique within its list, because `FormDropdown` displays
+ * `items.firstOrNull { it.id == selectedId }`: two rows sharing an id would always display the
+ * first. Ids come from three disjoint ranges:
+ * - a lesson row is the lesson's timetable primary key, [Lesson.id] (unique per profile, stable
+ *   across a timetable reload, and never negative — see [Lesson.buildId]);
+ * - the fixed rows are the constants below, `0` and small negatives;
+ * - a custom-time row is [customTimeId], a negative band below every fixed row.
  */
 object EventTimeItems {
+
+    const val ALL_DAY_ID = 0L
+    const val CUSTOM_TRIGGER_ID = -1L
+    const val NO_TIMETABLE_ID = -2L
+    const val NO_LESSONS_ID = -3L
+
+    /** [Time.getValue] is at most 235959, so this band never reaches a fixed row's id. */
+    private const val CUSTOM_TIME_BASE = 1_000_000L
+
+    fun customTimeId(time: Time): Long = -(CUSTOM_TIME_BASE + time.value)
 
     /** The localized labels of the fixed rows, resolved by the dialog. */
     data class Labels(
@@ -31,21 +49,24 @@ object EventTimeItems {
      */
     fun build(lessons: List<LessonFull>, labels: Labels): List<FormDropdownItem> {
         val list = mutableListOf<FormDropdownItem>()
-        list += FormDropdownItem(id = 0L, text = labels.allDay, tag = TimeSelection.AllDay)
-        list += FormDropdownItem(id = -1L, text = labels.customTime)
+        list += FormDropdownItem(id = ALL_DAY_ID, text = labels.allDay, tag = TimeSelection.AllDay)
+        list += FormDropdownItem(id = CUSTOM_TRIGGER_ID, text = labels.customTime)
 
         if (lessons.isEmpty()) {
-            list += FormDropdownItem(-2L, labels.noTimetable)
+            list += FormDropdownItem(NO_TIMETABLE_ID, labels.noTimetable)
             return list
         }
 
+        var noLessonsAdded = false
         lessons.forEach { lesson ->
             if (lesson.type == Lesson.TYPE_NO_LESSONS) {
-                list += FormDropdownItem(-2L, labels.noLessons)
+                // At most one per date in practice (its id is the date), but one row would say it anyway.
+                if (!noLessonsAdded) list += FormDropdownItem(NO_LESSONS_ID, labels.noLessons)
+                noLessonsAdded = true
                 return@forEach
             }
             list += FormDropdownItem(
-                id = lesson.displayStartTime?.value?.toLong() ?: -1L,
+                id = lesson.id,
                 text = lessonLabel(lesson),
                 tag = lesson,
             )
@@ -67,11 +88,28 @@ object EventTimeItems {
     }
 
     /**
-     * Select [time] in [items]: an existing row with that time's id, else a new custom-time row
-     * appended to the list.
+     * Select [time] in [items]. Of the lesson rows starting at [time], the first match wins:
+     * the row of lesson [preferLessonId], a row of subject [preferSubjectId] (an edited event keeps
+     * its subject, not its lesson, and the row's label is its start and subject), the first row.
+     * With no lesson row at [time], an existing custom row for it is selected, else one is appended.
      */
-    fun select(items: List<FormDropdownItem>, time: Time): Selection {
-        val id = time.value.toLong()
+    fun select(
+        items: List<FormDropdownItem>,
+        time: Time,
+        preferLessonId: Long? = null,
+        preferSubjectId: Long? = null,
+    ): Selection {
+        val atTime = items.filter {
+            (it.tag as? LessonFull)?.displayStartTime?.value == time.value
+        }
+        val lessonRow = atTime.firstOrNull { (it.tag as LessonFull).id == preferLessonId }
+            ?: preferSubjectId?.let { id ->
+                atTime.firstOrNull { (it.tag as LessonFull).displaySubjectId == id }
+            }
+            ?: atTime.firstOrNull()
+        if (lessonRow != null) return Selection(items, lessonRow.id)
+
+        val id = customTimeId(time)
         val list = if (items.none { it.id == id })
             items + FormDropdownItem(id = id, text = time.stringHM, tag = TimeSelection.Custom(time))
         else

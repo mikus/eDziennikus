@@ -78,4 +78,77 @@ class EventTimeItemsTest {
         assertEquals(items, sel.items)
         assertSame(a, sel.items.selected(sel.selectedId).tag)
     }
+
+    // ---- item 79: every row has its own id, and a selection round-trips ----
+
+    // Two lessons in one slot (a group split, or a shifted lesson landing on a taken slot).
+    private val first = lesson(100L, Time(8, 0, 0), "Maths", subjectId = 10L)
+    private val second = lesson(200L, Time(8, 0, 0), "Physics", subjectId = 11L)
+
+    @Test fun `co-slotted lessons get distinct ids`() {
+        val items = EventTimeItems.build(listOf(first, second), labels)
+        val firstRow = items.first { it.tag === first }
+        val secondRow = items.first { it.tag === second }
+
+        // FormDropdown displays items.firstOrNull { it.id == selectedId }: tapping the second row
+        // must display the second row.
+        assertSame(secondRow, items.selected(secondRow.id))
+        assertSame(firstRow, items.selected(firstRow.id))
+    }
+
+    @Test fun `every id in a built list is unique`() {
+        val items = EventTimeItems.build(
+            listOf(
+                first,
+                second,
+                lesson(300L, start = null),
+                lesson(400L, Time(0, 0, 0)),
+                lesson(1L, type = Lesson.TYPE_NO_LESSONS),
+                lesson(2L, type = Lesson.TYPE_NO_LESSONS),
+            ),
+            labels,
+        )
+        val withCustom = EventTimeItems.select(items, Time(0, 0, 0)).items +
+            EventTimeItems.select(items, Time(12, 34, 0)).items.last()
+
+        assertEquals(withCustom.size, withCustom.map { it.id }.toSet().size, withCustom.toString())
+    }
+
+    @Test fun `a lesson with no start time does not take the custom-time trigger's id`() {
+        val noStart = lesson(300L, start = null)
+        val items = EventTimeItems.build(listOf(noStart), labels)
+
+        assertSame(noStart, items.selected(items.first { it.tag === noStart }.id).tag)
+    }
+
+    @Test fun `a custom midnight time is not all-day`() {
+        val items = EventTimeItems.build(listOf(first), labels)
+        val sel = EventTimeItems.select(items, Time(0, 0, 0))
+
+        assertEquals(TimeSelection.Custom(Time(0, 0, 0)), sel.items.selected(sel.selectedId).tag)
+    }
+
+    @Test fun `a known lesson selects its own row, not the first at its start`() {
+        val items = EventTimeItems.build(listOf(first, second), labels)
+        val sel = EventTimeItems.select(items, Time(8, 0, 0), preferLessonId = second.id)
+
+        assertEquals(items, sel.items)
+        assertSame(second, sel.items.selected(sel.selectedId).tag)
+    }
+
+    @Test fun `a preferred subject selects that subject's row at a shared start`() {
+        // Reopening an event saved against the second lesson: the event keeps its subject, not the lesson.
+        val items = EventTimeItems.build(listOf(first, second), labels)
+        val sel = EventTimeItems.select(items, Time(8, 0, 0), preferSubjectId = 11L)
+
+        assertEquals(items, sel.items)
+        assertSame(second, sel.items.selected(sel.selectedId).tag)
+    }
+
+    @Test fun `a time with no preference selects the first lesson row at that start`() {
+        val items = EventTimeItems.build(listOf(first, second), labels)
+        val sel = EventTimeItems.select(items, Time(8, 0, 0))
+
+        assertSame(first, sel.items.selected(sel.selectedId).tag)
+    }
 }

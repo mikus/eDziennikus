@@ -123,8 +123,8 @@ class EventManualDialog(
     // ---- Selection state --------------------------------------------------------------------
     private val selectedDate = mutableStateOf<Date?>(null)
     private val selectedDateId = mutableStateOf<Long?>(null)
-    // 0L = all-day; a lesson-start value = a lesson item; a Time value = a custom time. Resolved to
-    // a TimeSelection on demand via resolveTimeSelection().
+    // The id of a row in timeItems (EventTimeItems: all-day, a Lesson.id, or a custom time's id).
+    // Resolved to a TimeSelection on demand via resolveTimeSelection().
     private val selectedTimeId = mutableStateOf<Long?>(null)
     private val selectedTeamId = mutableStateOf<Long?>(null)
     private val selectedSubjectId = mutableStateOf<Long?>(null)
@@ -313,10 +313,10 @@ class EventManualDialog(
         val initialDate = selectedDate.value ?: Date.getToday()
         if (!reloadTimeItems(app, initialDate))
             syncTimetable(app, initialDate)
-        selectDefaultTime(editingEvent?.time)
+        selectDefaultTime(editingEvent?.time, preferSubjectId = editingEvent?.subjectId)
         if (editingEvent != null && editingEvent.time == null)
-            selectedTimeId.value = 0L // all-day
-        selectDefaultTime(defaultLesson?.displayStartTime ?: defaultTime)
+            selectedTimeId.value = EventTimeItems.ALL_DAY_ID
+        selectDefaultTime(defaultLesson?.displayStartTime ?: defaultTime, preferLessonId = defaultLesson?.id)
 
         // Team: default to the class team, then the (no-op unless still unset) defaults, then the
         // final forced override from defaultLesson — faithfully reproducing the legacy sequence.
@@ -461,15 +461,16 @@ class EventManualDialog(
         setDateSelection(date)
     }
 
-    private fun selectTimeValue(time: Time) {
-        val selection = EventTimeItems.select(timeItems.value, time)
+    /** [preferLessonId] / [preferSubjectId] pick between lessons sharing [time]; see [EventTimeItems.select]. */
+    private fun selectTimeValue(time: Time, preferLessonId: Long? = null, preferSubjectId: Long? = null) {
+        val selection = EventTimeItems.select(timeItems.value, time, preferLessonId, preferSubjectId)
         timeItems.value = selection.items
         selectedTimeId.value = selection.selectedId
     }
 
-    private fun selectDefaultTime(time: Time?) {
+    private fun selectDefaultTime(time: Time?, preferLessonId: Long? = null, preferSubjectId: Long? = null) {
         if (time == null || selectedTimeId.value != null) return
-        selectTimeValue(time)
+        selectTimeValue(time, preferLessonId, preferSubjectId)
     }
 
     private fun selectDefaultTeam(teamId: Long?) {
@@ -518,26 +519,28 @@ class EventManualDialog(
         launch {
             if (!reloadTimeItems(app, date))
                 syncTimetable(app, date)
-            lesson?.displayStartTime?.let { selectTimeValue(it) }
+            lesson?.displayStartTime?.let { selectTimeValue(it, preferLessonId = lesson.id) }
             applyCascade(EventManualLogic.cascadeFor(lesson))
         }
     }
 
     private fun onTimeSelect(item: FormDropdownItem) {
         clearValidation()
-        // Dispatch on the tag FIRST (mirroring the legacy TimeDropdown, which branched on it.tag):
-        // a lesson row whose displayStartTime is null carries id == -1L, which would otherwise
-        // collide with the custom-time trigger's -1L and wrongly open the time picker.
+        // Dispatch on the tag first (mirroring the legacy TimeDropdown, which branched on it.tag): a
+        // lesson row's id is its Lesson.id, which only the tag says is a lesson. Ids are unique per
+        // list (see EventTimeItems), so the fixed rows below cannot be mistaken for one.
         when (val tag = item.tag) {
             is LessonFull -> {
                 val sel = EventManualLogic.lessonToTimeSelection(tag)
                 selectedTimeId.value = if (sel is TimeSelection.None) null else item.id
                 applyCascade(EventManualLogic.cascadeFor(tag))
             }
-            is TimeSelection.AllDay -> selectedTimeId.value = 0L // all-day
+            is TimeSelection.AllDay -> selectedTimeId.value = EventTimeItems.ALL_DAY_ID
             else -> when (item.id) {
-                -1L -> openTimePicker()             // custom-time picker; keep prior selection until picked
-                -2L -> selectedTimeId.value = null  // "no timetable"/"no lessons" — not selectable
+                // custom-time picker; keep prior selection until picked
+                EventTimeItems.CUSTOM_TRIGGER_ID -> openTimePicker()
+                // "no timetable"/"no lessons" — not selectable
+                EventTimeItems.NO_TIMETABLE_ID, EventTimeItems.NO_LESSONS_ID -> selectedTimeId.value = null
                 else -> selectedTimeId.value = item.id // a manually-picked custom time
             }
         }
@@ -671,9 +674,9 @@ class EventManualDialog(
         launch {
             val date = selectedDate.value ?: Date.getToday()
             reloadTimeItems(app, date)
-            (editingEvent?.time ?: defaultLesson?.displayStartTime ?: defaultTime)?.let {
-                selectTimeValue(it)
-            }
+            editingEvent?.time?.let { selectTimeValue(it, preferSubjectId = editingEvent.subjectId) }
+                ?: defaultLesson?.displayStartTime?.let { selectTimeValue(it, preferLessonId = defaultLesson.id) }
+                ?: defaultTime?.let { selectTimeValue(it) }
         }
     }
 
@@ -773,7 +776,7 @@ class EventManualDialog(
 
     private fun resolveTimeSelection(id: Long?): TimeSelection {
         id ?: return TimeSelection.None
-        if (id == 0L) return TimeSelection.AllDay
+        if (id == EventTimeItems.ALL_DAY_ID) return TimeSelection.AllDay
         val item = timeItems.value.firstOrNull { it.id == id } ?: return TimeSelection.None
         return when (val tag = item.tag) {
             is LessonFull -> EventManualLogic.lessonToTimeSelection(tag)
