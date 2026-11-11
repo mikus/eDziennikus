@@ -116,3 +116,17 @@ fun Data.prepareFor(loginMethod: LoginMethod) {
     progressCount = 0
     progressStep = 0f
 }
+
+/**
+ * Adds [loginMethod] and every login method it depends on to the logins still queued, keeping the
+ * queue sorted and free of duplicates. Unlike [prepareFor] it keeps what is already queued and leaves
+ * the progress counters alone.
+ */
+fun Data.requeue(loginMethod: LoginMethod) {
+    var requiredLoginMethod: LoginMethod? = loginMethod
+    while (requiredLoginMethod != null) {
+        this.targetLoginMethods += requiredLoginMethod
+        requiredLoginMethod = requiredLoginMethod.requiredLoginMethod?.invoke(this.profile, this.loginStore)
+    }
+    this.targetLoginMethods = this.targetLoginMethods.distinct().sorted().toMutableList()
+}

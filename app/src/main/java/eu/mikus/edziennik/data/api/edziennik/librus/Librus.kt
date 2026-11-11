@@ -99,6 +99,28 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
         login()
     }
 
+    /**
+     * Logs in again after [denied]'s token or session was refused, then goes on with the logins that
+     * were interrupted or still queued. [denied] leaves [DataLibrus.loginMethods] so that it runs
+     * again, and is queued with its dependencies. So is the login that was running when the error
+     * arrived, if one was: these errors also arrive from inside a later login (the portal one from
+     * `LIBRUS_API`'s token exchange, the API ones from `LIBRUS_SYNERGIA`'s `AutoLoginToken`, the
+     * Synergia one from `LIBRUS_MESSAGES`), and that login failed, so it is neither queued nor done.
+     * What is already queued stays queued.
+     *
+     * `prepareFor(denied)` would clear the queue and keep only [denied]'s chain, dropping both. With no
+     * login running (the data phase, or `firstLogin()`) this queues the same logins it did. Unlike
+     * `prepareFor` it does not zero the progress step, which froze the progress bar for the rest of the
+     * sync; `ApiService` caps the progress at 100. [retryPortalLogin] does not fit: it queues only the
+     * portal, so after an error from the API login it would start Synergia without the API.
+     */
+    private fun loginAgainAfterAccessDenied(denied: LoginMethod) {
+        data.loginMethods.remove(denied)
+        data.requeue(denied)
+        data.loginMethodInProgress?.let { data.requeue(it) }
+        login()
+    }
+
     private fun data() {
         d(TAG, "Endpoint IDs: ${data.targetEndpoints}")
         if (internalErrorList.isNotEmpty()) {
@@ -211,29 +233,21 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
                 internalErrorList.add(apiError.errorCode)
                 when (apiError.errorCode) {
                     ERROR_LIBRUS_PORTAL_ACCESS_DENIED -> {
-                        data.loginMethods.remove(LoginMethod.LIBRUS_PORTAL)
-                        data.prepareFor(LoginMethod.LIBRUS_PORTAL)
                         data.portalTokenExpiryTime = 0
-                        login()
+                        loginAgainAfterAccessDenied(LoginMethod.LIBRUS_PORTAL)
                     }
                     ERROR_LIBRUS_API_ACCESS_DENIED,
                     ERROR_LIBRUS_API_TOKEN_EXPIRED -> {
-                        data.loginMethods.remove(LoginMethod.LIBRUS_API)
-                        data.prepareFor(LoginMethod.LIBRUS_API)
                         data.apiTokenExpiryTime = 0
-                        login()
+                        loginAgainAfterAccessDenied(LoginMethod.LIBRUS_API)
                     }
                     ERROR_LIBRUS_SYNERGIA_ACCESS_DENIED -> {
-                        data.loginMethods.remove(LoginMethod.LIBRUS_SYNERGIA)
-                        data.prepareFor(LoginMethod.LIBRUS_SYNERGIA)
                         data.synergiaSessionIdExpiryTime = 0
-                        login()
+                        loginAgainAfterAccessDenied(LoginMethod.LIBRUS_SYNERGIA)
                     }
                     ERROR_LIBRUS_MESSAGES_ACCESS_DENIED -> {
-                        data.loginMethods.remove(LoginMethod.LIBRUS_MESSAGES)
-                        data.prepareFor(LoginMethod.LIBRUS_MESSAGES)
                         data.messagesSessionIdExpiryTime = 0
-                        login()
+                        loginAgainAfterAccessDenied(LoginMethod.LIBRUS_MESSAGES)
                     }
                     ERROR_LOGIN_LIBRUS_PORTAL_NO_CODE,
                     ERROR_LOGIN_LIBRUS_PORTAL_CSRF_MISSING,

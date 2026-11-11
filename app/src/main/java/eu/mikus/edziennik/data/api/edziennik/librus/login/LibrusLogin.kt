@@ -29,7 +29,10 @@ class LibrusLogin(val data: DataLibrus, val onSuccess: () -> Unit) {
             onSuccess()
             return
         }
-        useLoginMethod(data.targetLoginMethods.removeAt(0)) { usedMethod ->
+        val loginMethod = data.targetLoginMethods.removeAt(0)
+        data.loginMethodInProgress = loginMethod
+        useLoginMethod(loginMethod) { usedMethod ->
+            data.loginMethodInProgress = null
             data.progress(data.progressStep)
             if (usedMethod != null)
                 data.loginMethods.add(usedMethod)

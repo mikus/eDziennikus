@@ -310,4 +310,13 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
      * When it's set to false uses Synergia for messages.
      */
     var messagesLoginSuccessful: Boolean = true
+
+    /**
+     * The login `LibrusLogin` has started and not yet seen finish, or null when none is running.
+     * `LibrusLogin` takes a method off [targetLoginMethods] when it starts it, and a login that fails
+     * never joins [loginMethods], so after a login error this is the only record of which login was
+     * interrupted. `Librus` reads it to queue that login again when it logs in again after an
+     * access-denied error.
+     */
+    var loginMethodInProgress: LoginMethod? = null
 }
