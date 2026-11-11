@@ -26,6 +26,11 @@ import org.junit.jupiter.api.Test
  * Density is 1, so 1 dp == 1 px. The row heights are illustrative, in the order a cancelled block has its
  * rows: a 38 px top row, an 18 px annotation chip, a 20 px time line and an 18 px teacher row. They are
  * chosen to put the strip boundary inside a known row, not measured from the real composables.
+ *
+ * Measuring a row narrower is only half of it: the saved width has to end up at the dots' end, and the
+ * row has to be free to be smaller than it is offered. Both are pinned below — the placed `x` in each
+ * layout direction, and the minimum the policy hands each row — because the width assertions alone stay
+ * green for a policy that narrows correctly and then places the row back under the dots.
  */
 class LessonRowsMeasurePolicyTest {
 
@@ -33,6 +38,12 @@ class LessonRowsMeasurePolicyTest {
         override val density = 1f
         override val fontScale = 1f
         override val layoutDirection = LayoutDirection.Ltr
+    }
+
+    private val rtlScope = object : MeasureScope {
+        override val density = 1f
+        override val fontScale = 1f
+        override val layoutDirection = LayoutDirection.Rtl
     }
 
     private class FakePlaceable(width: Int, height: Int) : Placeable() {
@@ -70,8 +81,8 @@ class LessonRowsMeasurePolicyTest {
         override fun maxIntrinsicWidth(height: Int): Int = 0
     }
 
-    private fun layOut(policy: MeasurePolicy, rows: List<FakeRow>, width: Int, height: Int) {
-        val result = with(policy) { scope.measure(rows, Constraints.fixed(width, height)) }
+    private fun layOut(policy: MeasurePolicy, rows: List<FakeRow>, width: Int, height: Int, on: MeasureScope = scope) {
+        val result = with(policy) { on.measure(rows, Constraints.fixed(width, height)) }
         assertEquals(width, result.width)
         assertEquals(height, result.height)
         result.placeChildren()
@@ -82,6 +93,7 @@ class LessonRowsMeasurePolicyTest {
     private fun widths(rows: List<FakeRow>) = rows.map { it.constraints?.maxWidth }
     private fun maxHeights(rows: List<FakeRow>) = rows.map { it.constraints?.maxHeight }
     private fun tops(rows: List<FakeRow>) = rows.map { it.placeable?.placedAt?.y }
+    private fun lefts(rows: List<FakeRow>) = rows.map { it.placeable?.placedAt?.x }
 
     private fun cancelledBlockRows() = listOf(FakeRow(38), FakeRow(18), FakeRow(20), FakeRow(18))
 
@@ -148,5 +160,41 @@ class LessonRowsMeasurePolicyTest {
         layOut(policy(events = 3), rows, width = 30, height = 40)
 
         assertEquals(listOf(0, 0), widths(rows))
+    }
+
+    @Test
+    fun aNarrowedRowStartsAtZero_soTheWidthItGaveUpIsTheTrailingEdge() {
+        val rows = cancelledBlockRows()
+        layOut(policy(events = 3), rows, width = 100, height = 70)
+
+        assertEquals(listOf(100, 100, 58, 58), widths(rows))
+        // Narrowing is only half of it. Every row starts at 0, so the 42 px the time and teacher rows
+        // gave up is the *trailing* 42 px — the strip the dots occupy. A policy that narrowed a row and
+        // then placed it at the end would satisfy every width assertion above and redraw the dots over it.
+        assertEquals(listOf(0, 0, 0, 0), lefts(rows))
+    }
+
+    @Test
+    fun inRtlTheRowsMirror_soTheGapStaysUnderTheDots() {
+        val rows = cancelledBlockRows()
+        layOut(policy(events = 3), rows, width = 100, height = 70, on = rtlScope)
+
+        assertEquals(listOf(100, 100, 58, 58), widths(rows))
+        // `placeRelative` mirrors: a 58 px row in a 100 px parent starts at 42, leaving the *leading*
+        // 42 px free — which is where `Alignment.BottomEnd` puts the dots under Rtl. A plain `place`
+        // would leave both at 0 and overlap them. The manifest sets android:supportsRtl="true".
+        assertEquals(listOf(0, 0, 42, 42), lefts(rows))
+    }
+
+    @Test
+    fun everyRowIsOfferedAMinimumOfZero_asAColumnOffersAStartAlignedChild() {
+        val rows = cancelledBlockRows()
+        layOut(policy(events = 3), rows, width = 100, height = 70)
+
+        // The maxima alone do not pin the constraint. Handing a minimum instead — `Constraints.fixed`
+        // — leaves every assertion in this class green while on device the first row coerces itself up
+        // to the block's whole content height and the rows below it are measured with nothing left.
+        assertEquals(listOf(0, 0, 0, 0), rows.map { it.constraints?.minWidth })
+        assertEquals(listOf(0, 0, 0, 0), rows.map { it.constraints?.minHeight })
     }
 }
