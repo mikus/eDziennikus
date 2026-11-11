@@ -312,7 +312,8 @@ class DataLibrus(app: App, profile: Profile?, loginStore: LoginStore) : Data(app
     var messagesLoginSuccessful: Boolean = true
 
     /**
-     * The login `LibrusLogin` started last, or null once a `LibrusLogin` has found its queue empty.
+     * The login `LibrusLogin` started last, or null once a `LibrusLogin` has found its queue empty or
+     * `Librus` has entered the data phase.
      * `LibrusLogin` takes a method off [targetLoginMethods] when it starts it, and a login that fails
      * never joins [loginMethods], so after a login error this is the only record of which login was
      * interrupted. `Librus` reads it to queue that login again when it logs in again after an

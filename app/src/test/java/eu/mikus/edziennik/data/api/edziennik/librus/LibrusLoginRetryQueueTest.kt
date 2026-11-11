@@ -7,6 +7,7 @@ import com.google.gson.JsonObject
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_API_ACCESS_DENIED
+import eu.mikus.edziennik.data.api.ERROR_LIBRUS_API_LUCKY_NUMBER_NOT_ACTIVE
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_API_TOKEN_EXPIRED
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_MESSAGES_ACCESS_DENIED
 import eu.mikus.edziennik.data.api.ERROR_LIBRUS_PORTAL_ACCESS_DENIED
@@ -16,6 +17,7 @@ import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_MESSAGES_NO_SESSION_ID
 import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID
 import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_SYNERGIA_NO_TOKEN
 import eu.mikus.edziennik.data.api.ERROR_LOGIN_LIBRUS_SYNERGIA_TOKEN_INVALID
+import eu.mikus.edziennik.data.api.EXCEPTION_LIBRUS_API_REQUEST
 import eu.mikus.edziennik.data.api.edziennik.librus.login.LibrusLogin
 import eu.mikus.edziennik.data.api.events.UserActionRequiredEvent
 import eu.mikus.edziennik.data.api.interfaces.EdziennikCallback
@@ -274,6 +276,36 @@ class LibrusLoginRetryQueueTest {
                 errorCode = ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID,
                 earlier = ApiError("LoginLibrusSynergia", ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID),
             ),
+        )
+    }
+
+    /**
+     * Some arms answer an error by going straight on to the data phase. They are meant for endpoints,
+     * but `LibrusLoginSynergia` extends `LibrusApi`, so its `AutoLoginToken` request can raise them while
+     * the Synergia login runs: a parser exception (reported as non-critical) or a "not active" code.
+     * The data phase then starts without `LibrusLogin` having run out of logins. Nothing may survive
+     * from the abandoned login phase: an endpoint's API access denial must re-log the API alone, not
+     * also the Synergia login that was running and the Messages login that was queued behind it.
+     */
+    @Test
+    fun `a login error that goes straight on to the data phase leaves no login to re-run`() {
+        val codes = listOf(EXCEPTION_LIBRUS_API_REQUEST, ERROR_LIBRUS_API_LUCKY_NUMBER_NOT_ACTIVE)
+        assertEquals(
+            listOf(
+                "$EXCEPTION_LIBRUS_API_REQUEST: before=[LIBRUS_SYNERGIA] after=[LIBRUS_API] queued=[] " +
+                    "errors=[LoginLibrusSynergia/$EXCEPTION_LIBRUS_API_REQUEST~] step=$STEP",
+                "$ERROR_LIBRUS_API_LUCKY_NUMBER_NOT_ACTIVE: before=[LIBRUS_SYNERGIA] after=[LIBRUS_API] queued=[] " +
+                    "errors=[] step=$STEP",
+            ),
+            codes.map {
+                "$it: " + run(
+                    satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
+                    pending = listOf(LIBRUS_SYNERGIA, LIBRUS_MESSAGES),
+                    tag = "LibrusApiEvents",
+                    errorCode = ERROR_LIBRUS_API_ACCESS_DENIED,
+                    earlier = ApiError("LoginLibrusSynergia", it),
+                )
+            },
         )
     }
 
