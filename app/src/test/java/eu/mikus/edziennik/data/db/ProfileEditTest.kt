@@ -9,6 +9,8 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import com.google.gson.JsonObject
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.data.db.enums.LoginType
+import io.mockk.every
+import io.mockk.spyk
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -99,6 +101,27 @@ class ProfileEditTest {
         appDb.editProfile(PROFILE_ID) { inTransaction = appDb.inTransaction() }
 
         assertTrue(inTransaction)
+    }
+
+    @Test
+    fun `the read and the write run inside the transaction`() {
+        // The transaction keeps other writers out only between its begin and its commit, so a read
+        // taken before it, or a write made after it, leaves a window for another write to be lost.
+        // Membership of the edit alone, which the test above pins, cannot see either.
+        val appDb = openDb()
+        appDb.profileDao().add(storedProfile())
+        val dao = spyk(appDb.profileDao())
+        val seen = mutableListOf<String>()
+        every { dao.getByIdNow(PROFILE_ID) } answers { seen += "read in transaction: ${appDb.inTransaction()}"; callOriginal() }
+        every { dao.add(any()) } answers { seen += "write in transaction: ${appDb.inTransaction()}"; callOriginal() }
+        val spied = spyk(appDb)
+        every { spied.profileDao() } returns dao
+
+        val applied = spied.editProfile(PROFILE_ID) { it.studentNumber = 12 }
+
+        assertTrue(applied)
+        assertEquals(listOf("read in transaction: true", "write in transaction: true"), seen)
+        assertEquals(12, storedRow(appDb, PROFILE_ID).studentNumber)
     }
 
     @Test
