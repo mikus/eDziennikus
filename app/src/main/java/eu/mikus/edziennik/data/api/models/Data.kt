@@ -217,16 +217,24 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
      * only when that row is still this task's account. When it is not, nothing is written, the
      * login store included, and the baseline stays put so the next save still carries the changes.
      *
-     * Skipping the login store there is deliberate. If another account now owns the id, the store
-     * under the same id is that account's, and writing ours would overwrite its credentials. If the
-     * profile is gone and was the store's last user, the removal deleted the store, and writing it
-     * would bring back an orphan. Only when a sibling profile still shares the store is something
-     * lost: the portal token triple, which is the only login-store secret a sync rotates. The
-     * sibling's next sync then sends a refresh token the portal has revoked, which it reports as
-     * `ERROR_LOGIN_LIBRUS_PORTAL_REFRESH_REVOKED` (measured on a device), and `Librus` answers by
-     * dropping the token and running the portal login again from the stored email and password,
-     * within that sync: one extra login, no error shown. Before `Librus.retryPortalLogin` existed,
-     * that retry skipped the portal and failed the sibling's sync with a critical error.
+     * Skipping the login store there is deliberate, for a different reason in each refusal shape.
+     * Stores are keyed by [Profile.loginStoreId], not by the profile id, so when another account now
+     * owns the profile id the store this task holds is still its own; what is skipped is a write of
+     * a copy that may already be older than the one the new login wrote, and `LoginViewModel`
+     * allocates a store as `maxId + 1`, so an id the removal freed can be handed to the account that
+     * replaced us — then the write would overwrite its credentials. If the profile is gone and was
+     * the store's last user, `ProfileDataRemoval` deleted the store, and writing it would bring back
+     * an orphan. Only when a sibling profile still shares the store is something lost: the portal
+     * token triple, which is the only login-store secret a sync rotates.
+     *
+     * The sibling's next sync then sends a refresh token the portal has revoked. Measured on a
+     * device, the portal reported that as `ERROR_LOGIN_LIBRUS_PORTAL_REFRESH_REVOKED`, and `Librus`
+     * answered by dropping the token and running the portal login again from the stored email and
+     * password within that sync: one extra login, no error shown. That holds only for the hints
+     * `LibrusLoginPortal` maps to the three refresh errors; any other answer becomes
+     * `ERROR_LOGIN_LIBRUS_PORTAL_OTHER`, which nothing retries and which does reach the user. Before
+     * `Librus.retryPortalLogin` existed, even the mapped hints failed the sibling's sync with a
+     * critical error.
      */
     open fun saveData() {
         if (profile == null)

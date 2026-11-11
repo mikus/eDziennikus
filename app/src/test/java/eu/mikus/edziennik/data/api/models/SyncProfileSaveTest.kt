@@ -193,6 +193,18 @@ class SyncProfileSaveTest {
     }
 
     @Test
+    fun `an accepted save writes the task's login store`() {
+        // the refusal tests above assert the STORED marker survives, which a save that never writes
+        // the store satisfies too; only an accepted save can tell the write apart from its absence
+        val d = startTask()
+        d.loginStore.data.addProperty("marker", "fromTask")
+
+        d.saveData()
+
+        assertEquals("fromTask", storeMarker())
+    }
+
+    @Test
     fun `the baseline is taken when Data is built`() {
         val c = App.db.profileDao().getByIdNow(P)!!
         c.studentClassName = "Before"

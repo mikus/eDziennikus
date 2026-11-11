@@ -83,10 +83,16 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
 
     /**
      * Runs the portal login again, then the logins still queued behind it, after a portal error that
-     * logging in again can fix. `LibrusLogin` took the portal off the queue when it started it, so a
-     * bare `login()` starts at the next method, which needs the portal, and fails the sync with
-     * `ERROR_LOGIN_METHOD_NOT_SATISFIED`. `prepareFor(LIBRUS_PORTAL)` would clear the queue and run
-     * the portal alone.
+     * logging in again can fix. In a sync `LibrusLogin` takes the portal off the queue when it starts
+     * it, so a bare `login()` resumes at the next method; when that method still needs the portal it
+     * fails the sync with `ERROR_LOGIN_METHOD_NOT_SATISFIED`. It does not always get that far — a
+     * method already satisfied is skipped, and an empty queue just finishes — so the old code failed
+     * this way on the common path, not on every one. `prepareFor(LIBRUS_PORTAL)` would clear the
+     * queue and run the portal alone.
+     *
+     * On the `firstLogin()` path there is no queue: `LibrusFirstLogin` drives `LibrusLoginPortal`
+     * itself. The re-queued portal is then one extra credential login that cannot resume that flow,
+     * and it fails as it did before.
      */
     private fun retryPortalLogin() {
         data.targetLoginMethods.add(0, LoginMethod.LIBRUS_PORTAL)

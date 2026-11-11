@@ -107,7 +107,13 @@ class ProfileConfigChangesTest {
         return profile
     }
 
-    /** Every field set, `syncEnabled` off, so writing any field's default would show. */
+    /**
+     * The fields these tests guard are set away from their defaults — `image`, `empty`, `syncEnabled`
+     * off, `studentNumber`, `studentClassName`, and the constructor's own — so an edit writing any of
+     * those defaults would show. Fields left at the defaults declared in `Profile` are not guarded
+     * here; the rest-unchanged check compares the whole row, so an edit touching one of those would
+     * still be caught unless it happened to write that exact default.
+     */
     private fun profile() = Profile(
         id = 1,
         loginStoreId = 2,
