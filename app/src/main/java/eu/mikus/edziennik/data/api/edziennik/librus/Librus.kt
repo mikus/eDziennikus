@@ -100,6 +100,21 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
     }
 
     /**
+     * Runs the login that just failed again, then the logins still queued behind it. For errors only
+     * the failing login raises about itself: Synergia's token and session errors, and the Messages
+     * session error. `LibrusLogin` took that login off the queue when it started it and it never
+     * finished, so a bare `login()` resumed at the next login. That login either needed the failed one
+     * and stopped with `ERROR_LOGIN_DATA_MISSING`, or was already done (a cached Messages session) and
+     * was skipped; or nothing was queued. In the last two cases the data phase ran without the failed
+     * login's session. The guard in `wrapCallback` reports the same code a second time as critical, so
+     * this retries once. With no `LibrusLogin` having run, nothing is named and it is a plain `login()`.
+     */
+    private fun retryInterruptedLogin() {
+        data.loginMethodInProgress?.let { data.requeue(it) }
+        login()
+    }
+
+    /**
      * Logs in again after [denied]'s token or session was refused, then goes on with the logins that
      * were interrupted or still queued. [denied] leaves [DataLibrus.loginMethods] so that it runs
      * again, and is queued with its dependencies. So is the login that was running when the error
@@ -115,20 +130,6 @@ class Librus(val app: App, val profile: Profile?, val loginStore: LoginStore, va
      * sync; `ApiService` caps the progress at 100. [retryPortalLogin] does not fit: it queues only the
      * portal, so after an error from the API login it would start Synergia without the API.
      */
-    /**
-     * Runs the login that just failed again, then the logins still queued behind it. For errors only
-     * the failing login raises about itself: Synergia's token and session errors, and the Messages
-     * session error. `LibrusLogin` took that login off the queue when it started it and it never
-     * finished, so a bare `login()` resumed at the next login, which either needed the failed one and
-     * stopped with `ERROR_LOGIN_DATA_MISSING`, or, with nothing queued, went to the data phase without
-     * its session. The guard in `wrapCallback` reports the same code a second time as critical, so
-     * this retries once. With no `LibrusLogin` having run, nothing is named and it is a plain `login()`.
-     */
-    private fun retryInterruptedLogin() {
-        data.loginMethodInProgress?.let { data.requeue(it) }
-        login()
-    }
-
     private fun loginAgainAfterAccessDenied(denied: LoginMethod) {
         data.loginMethods.remove(denied)
         data.requeue(denied)

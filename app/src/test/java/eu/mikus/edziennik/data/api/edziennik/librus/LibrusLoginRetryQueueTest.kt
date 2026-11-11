@@ -200,7 +200,7 @@ class LibrusLoginRetryQueueTest {
             run(
                 satisfied = listOf(LIBRUS_PORTAL, LIBRUS_API),
                 pending = listOf(LIBRUS_SYNERGIA),
-                tag = "LibrusApiEvents",
+                tag = "LoginLibrusSynergia",
                 errorCode = ERROR_LIBRUS_API_ACCESS_DENIED,
                 earlier = ApiError("LoginLibrusSynergia", ERROR_LOGIN_LIBRUS_SYNERGIA_NO_SESSION_ID),
             ),
