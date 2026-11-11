@@ -209,6 +209,24 @@ abstract class Data(val app: App, val profile: Profile?, val loginStore: LoginSt
         setSeenMetadataList.clear()
     }
 
+    /**
+     * Writes what this task changed to the database: the profile row, the login store, then the
+     * content rows.
+     *
+     * The profile row gets only the changes since the last save, onto the row as stored now, and
+     * only when that row is still this task's account. When it is not, nothing is written, the
+     * login store included, and the baseline stays put so the next save still carries the changes.
+     *
+     * Skipping the login store there is deliberate. If another account now owns the id, the store
+     * under the same id is that account's, and writing ours would overwrite its credentials. If the
+     * profile is gone and was the store's last user, the removal deleted the store, and writing it
+     * would bring back an orphan. Only when a sibling profile still shares the store is something
+     * lost: the portal token triple, which is the only login-store secret a sync rotates. The
+     * sibling's next sync then sends a stale refresh token, and `Librus` answers the three portal
+     * refresh errors by dropping the token and logging in again from the stored email and
+     * password: one extra silent login, no error shown. That holds as long as the portal reports a
+     * stale refresh token with one of the hints `LibrusLoginPortal` maps to those errors.
+     */
     open fun saveData() {
         if (profile == null)
             return // return on first login
