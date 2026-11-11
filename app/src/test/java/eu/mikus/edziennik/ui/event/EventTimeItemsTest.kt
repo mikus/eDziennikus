@@ -160,4 +160,65 @@ class EventTimeItemsTest {
 
         assertSame(first, sel.items.selected(sel.selectedId).tag)
     }
+
+    @Test fun `a subject preference only looks at lessons starting at the requested time`() {
+        // Reopening a Physics event saved at 8:00 must not jump to the 10:00 Physics lesson.
+        val physicsLater = lesson(200L, Time(10, 0, 0), "Physics", subjectId = 11L)
+        val items = EventTimeItems.build(listOf(first, physicsLater), labels)
+        val sel = EventTimeItems.select(items, Time(8, 0, 0), preferSubjectId = 11L)
+
+        assertSame(first, sel.items.selected(sel.selectedId).tag)
+    }
+
+    @Test fun `a custom time on a day without a timetable gets its own row`() {
+        val items = EventTimeItems.build(emptyList(), labels)
+        val sel = EventTimeItems.select(items, Time(0, 0, 0))
+
+        assertEquals(TimeSelection.Custom(Time(0, 0, 0)), sel.items.selected(sel.selectedId).tag)
+        assertEquals(sel.items.size, sel.items.map { it.id }.toSet().size)
+    }
+
+    // ---- a timetable reload (a sync finishing while the dialog is open) ----
+
+    // A sync that changes a lesson's teacher, team, classroom or type gives it a new Lesson.id
+    // (Lesson.buildId hashes them), so the held id can vanish from the rebuilt list.
+
+    @Test fun `a held lesson whose id changed in a sync is found again by its start and subject`() {
+        val heldRow = EventTimeItems.build(listOf(first, second), labels).first { it.tag === second }
+        val physicsResynced = lesson(999L, Time(8, 0, 0), "Physics", subjectId = 11L)
+        val reloaded = EventTimeItems.build(listOf(first, physicsResynced), labels)
+
+        val sel = EventTimeItems.reselect(reloaded, heldRow)
+
+        assertEquals(reloaded, sel?.items)
+        assertSame(physicsResynced, sel?.items?.selected(sel.selectedId)?.tag)
+    }
+
+    @Test fun `a held row still in the rebuilt list keeps its id`() {
+        val items = EventTimeItems.build(listOf(first), labels)
+        val allDay = items.first { it.id == EventTimeItems.ALL_DAY_ID }
+
+        assertEquals(EventTimeItems.ALL_DAY_ID, EventTimeItems.reselect(items, allDay)?.selectedId)
+    }
+
+    @Test fun `a held custom time is kept across a reload`() {
+        val picked = EventTimeItems.select(EventTimeItems.build(listOf(first), labels), Time(14, 30, 0))
+        val heldRow = picked.items.selected(picked.selectedId)
+        val reloaded = EventTimeItems.build(listOf(first), labels)
+
+        val sel = EventTimeItems.reselect(reloaded, heldRow)
+
+        assertEquals(TimeSelection.Custom(Time(14, 30, 0)), sel?.items?.selected(sel.selectedId)?.tag)
+    }
+
+    @Test fun `a held lesson with no lesson left at its start time is dropped`() {
+        val heldRow = EventTimeItems.build(listOf(first), labels).first { it.tag === first }
+        val moved = lesson(999L, Time(9, 0, 0), "Maths", subjectId = 10L)
+
+        assertEquals(null, EventTimeItems.reselect(EventTimeItems.build(listOf(moved), labels), heldRow))
+    }
+
+    @Test fun `nothing held reselects nothing`() {
+        assertEquals(null, EventTimeItems.reselect(EventTimeItems.build(listOf(first), labels), null))
+    }
 }

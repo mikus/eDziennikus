@@ -15,10 +15,14 @@ import eu.mikus.edziennik.utils.models.Time
  * Every row's id is unique within its list, because `FormDropdown` displays
  * `items.firstOrNull { it.id == selectedId }`: two rows sharing an id would always display the
  * first. Ids come from three disjoint ranges:
- * - a lesson row is the lesson's timetable primary key, [Lesson.id] (unique per profile, stable
- *   across a timetable reload, and never negative — see [Lesson.buildId]);
+ * - a lesson row is the lesson's timetable primary key, [Lesson.id] (unique per profile and never
+ *   negative — see [Lesson.buildId]);
  * - the fixed rows are the constants below, `0` and small negatives;
  * - a custom-time row is [customTimeId], a negative band below every fixed row.
+ *
+ * A [Lesson.id] is NOT stable across a sync: [Lesson.buildId] hashes the teacher, team, classroom
+ * and type, so a substitution re-keys the row. A selection held across a rebuild of the list is
+ * found again by meaning with [reselect], never by its old id.
  */
 object EventTimeItems {
 
@@ -27,7 +31,10 @@ object EventTimeItems {
     const val NO_TIMETABLE_ID = -2L
     const val NO_LESSONS_ID = -3L
 
-    /** [Time.getValue] is at most 235959, so this band never reaches a fixed row's id. */
+    /**
+     * [Time] does not bound its fields, but every parser reads two digits per field and the picker
+     * gives 0–23 / 0–59, so `|value| < 1_000_000` and the band stays below every fixed row's id.
+     */
     private const val CUSTOM_TIME_BASE = 1_000_000L
 
     fun customTimeId(time: Time): Long = -(CUSTOM_TIME_BASE + time.value)
@@ -115,5 +122,25 @@ object EventTimeItems {
         else
             items
         return Selection(list, id)
+    }
+
+    /**
+     * Find [held], a row selected in an earlier list, again in the rebuilt [items]. A row whose id is
+     * still there keeps it; a lesson is found by its start time and subject (its id may have changed,
+     * see the class KDoc) and is dropped if no lesson starts at that time any more; a custom time is
+     * selected again as by [select]. Returns null when nothing should stay selected.
+     */
+    fun reselect(items: List<FormDropdownItem>, held: FormDropdownItem?): Selection? {
+        held ?: return null
+        if (items.any { it.id == held.id }) return Selection(items, held.id)
+        return when (val tag = held.tag) {
+            is LessonFull -> {
+                val start = tag.displayStartTime ?: return null
+                select(items, start, preferSubjectId = tag.displaySubjectId)
+                    .takeIf { sel -> sel.items.first { it.id == sel.selectedId }.tag is LessonFull }
+            }
+            is TimeSelection.Custom -> select(items, tag.start)
+            else -> null
+        }
     }
 }
