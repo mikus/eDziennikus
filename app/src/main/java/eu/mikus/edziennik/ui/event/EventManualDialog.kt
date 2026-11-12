@@ -87,7 +87,6 @@ class EventManualDialog(
     private val profileId: Int,
     private val defaultLesson: LessonFull? = null,
     private val defaultDate: Date? = null,
-    private val defaultTime: Time? = null,
     private val defaultType: Long? = null,
     private val editingEvent: EventFull? = null,
     private val onSaveListener: ((event: EventFull?) -> Unit)? = null,
@@ -317,7 +316,7 @@ class EventManualDialog(
         if (editingEvent != null && editingEvent.time == null)
             selectedTimeId.value = EventTimeItems.ALL_DAY_ID
         selectDefaultTime(
-            defaultLesson?.displayStartTime ?: defaultTime,
+            defaultLesson?.displayStartTime,
             preferLessonId = defaultLesson?.id,
             preferSubjectId = defaultLesson?.displaySubjectId,
         )
@@ -698,7 +697,6 @@ class EventManualDialog(
                     // Lesson.id is what this sync may just have re-keyed, so fall back to the subject
                     selectTimeValue(it, preferLessonId = defaultLesson.id, preferSubjectId = defaultLesson.displaySubjectId)
                 }
-                ?: defaultTime?.let { selectTimeValue(it) }
         }
     }
 
