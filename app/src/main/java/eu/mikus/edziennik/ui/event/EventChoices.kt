@@ -44,7 +44,9 @@ class EventChoices {
     /**
      * Offers each default to its value: it lands only where the user set nothing while the lists
      * loaded. (Where they did, it was a team or colour that used to be overwritten, or a "no subject"
-     * / "no teacher" that used to be refilled.)
+     * that used to be refilled. Teacher and type take the same rule for symmetry, but neither had a
+     * window: the teacher list is the last one built and nothing suspends between it and these
+     * defaults, and a picked type is never null, so the old type default already kept it.)
      */
     fun applyDefaults(defaults: Defaults) {
         team.default(defaults.teamId)

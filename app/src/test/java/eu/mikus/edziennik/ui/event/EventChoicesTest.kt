@@ -75,6 +75,12 @@ class EventChoicesTest {
         assertEquals(null to null, d.subjectId to d.teacherId)
     }
 
+    @Test fun `an Add-from-lesson dialog takes the lesson's subject and teacher`() {
+        // The shape with no edited event: firstSet must skip the leading null rather than return it.
+        val d = Defaults.of(classTeam, null, lesson(), null)
+        assertEquals(10L to 20L, d.subjectId to d.teacherId)
+    }
+
     @Test fun `an edited event's type wins over the given type`() {
         assertEquals(7L, Defaults.of(null, event(type = 7L), null, 3L).typeId)
     }

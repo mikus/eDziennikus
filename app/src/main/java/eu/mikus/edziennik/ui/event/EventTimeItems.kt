@@ -106,7 +106,7 @@ object EventTimeItems {
      *
      * A [preferSubjectId] of 0 or less is "no subject", not a subject to look for: an event with no
      * subject stores `-1` (`EventManualDialog.onPositiveClick`), and the dialog reads that back as
-     * null (`selectDefaultSubject`). Without this a subject-less event would prefer a subject-less
+     * null (`EventChoices.Defaults.of`). Without this a subject-less event would prefer a subject-less
      * lesson at its start over the first one.
      */
     fun select(
