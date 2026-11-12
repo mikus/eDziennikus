@@ -289,7 +289,8 @@ class EventManualDialog(
     }
 
     // =========================================================================================
-    // Initial load + defaults (mirrors the legacy loadLists() ordering exactly)
+    // Initial load + defaults (the legacy loadLists() ordering, except that the time rows are built
+    // last: see the comment above that build)
     // =========================================================================================
 
     private suspend fun loadInitial(app: App) {
@@ -504,20 +505,23 @@ class EventManualDialog(
         }
     }
 
-    /** Select a concrete date, then run the legacy date cascade: reload the time list (sync if the
-     *  timetable is missing) and auto-fill subject/teacher/team from [lesson] (all-cleared if null). */
+    /** Select a concrete date, then run the legacy date cascade: auto-fill subject/teacher/team from
+     *  [lesson] (all-cleared if null) and reload the time list (sync if the timetable is missing),
+     *  unless another date is chosen before that reload is built. */
     private fun selectConcreteDate(date: Date, lesson: LessonFull?) {
         val app = activity.applicationContext as App
         setDateSelection(date)
         val ticket = changeTime { chooseDate(lesson) }
+        // The cascade reads no time rows, so it goes with the choice rather than after the build. A sync
+        // can show this date's rows before that build lands, and a lesson the user picks from them
+        // cascades its own subject/teacher/team, which must not be overwritten when the build lands.
+        applyCascade(EventManualLogic.cascadeFor(lesson))
         launch {
             val (rows, hasTimetable) = buildTimeItems(app, date)
-            // A date chosen during the build owns the dialog now: drop this choice's rows, sync and
-            // cascade alike.
+            // A date chosen during the build owns the dialog now: drop this choice's rows and sync.
             if (!changeTime { install(ticket, rows) }) return@launch
             if (!hasTimetable)
                 syncTimetable(app, date)
-            applyCascade(EventManualLogic.cascadeFor(lesson))
         }
     }
 
