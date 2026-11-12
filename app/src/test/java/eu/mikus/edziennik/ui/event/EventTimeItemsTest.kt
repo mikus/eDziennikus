@@ -173,6 +173,25 @@ class EventTimeItemsTest {
         assertSame(second, sel.items.selected(sel.selectedId).tag)
     }
 
+    @Test fun `a known lesson beats a preferred subject when both are given`() {
+        // The KDoc orders the two preferences; every call site passes at most one, so swapping the arms
+        // was invisible until this case. `second` is asked for by id while `first`'s subject is asked for.
+        val items = EventTimeItems.build(listOf(first, second), labels)
+        val sel = EventTimeItems.select(items, Time(8, 0, 0), preferLessonId = second.id, preferSubjectId = 10L)
+
+        assertSame(second, sel.items.selected(sel.selectedId).tag)
+    }
+
+    @Test fun `the no-subject sentinel is not a subject to prefer`() {
+        // An event with no subject stores -1, and this dialog hands that straight to select(). Treating
+        // it as a real id would prefer a subject-less lesson over the first row at that start.
+        val noSubject = lesson(300L, Time(8, 0, 0), "Reading", subjectId = -1L)
+        val items = EventTimeItems.build(listOf(first, noSubject), labels)
+        val sel = EventTimeItems.select(items, Time(8, 0, 0), preferSubjectId = -1L)
+
+        assertSame(first, sel.items.selected(sel.selectedId).tag)
+    }
+
     @Test fun `a time with no preference selects the first lesson row at that start`() {
         val items = EventTimeItems.build(listOf(first, second), labels)
         val sel = EventTimeItems.select(items, Time(8, 0, 0))

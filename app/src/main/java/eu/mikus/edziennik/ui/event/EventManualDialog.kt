@@ -316,7 +316,11 @@ class EventManualDialog(
         selectDefaultTime(editingEvent?.time, preferSubjectId = editingEvent?.subjectId)
         if (editingEvent != null && editingEvent.time == null)
             selectedTimeId.value = EventTimeItems.ALL_DAY_ID
-        selectDefaultTime(defaultLesson?.displayStartTime ?: defaultTime, preferLessonId = defaultLesson?.id)
+        selectDefaultTime(
+            defaultLesson?.displayStartTime ?: defaultTime,
+            preferLessonId = defaultLesson?.id,
+            preferSubjectId = defaultLesson?.displaySubjectId,
+        )
 
         // Team: default to the class team, then the (no-op unless still unset) defaults, then the
         // final forced override from defaultLesson — faithfully reproducing the legacy sequence.
@@ -519,7 +523,9 @@ class EventManualDialog(
         launch {
             if (!reloadTimeItems(app, date))
                 syncTimetable(app, date)
-            lesson?.displayStartTime?.let { selectTimeValue(it, preferLessonId = lesson.id) }
+            lesson?.displayStartTime?.let {
+                selectTimeValue(it, preferLessonId = lesson.id, preferSubjectId = lesson.displaySubjectId)
+            }
             applyCascade(EventManualLogic.cascadeFor(lesson))
         }
     }
@@ -671,9 +677,12 @@ class EventManualDialog(
         if (event.profileId != profileId) return
         dismissWaitDialogs()
         val app = activity.applicationContext as App
-        val dateAtStart = selectedDate.value
+        // Before loadInitial picks the date there is no list to re-find anything in, and it is about
+        // to build one for the real date: rebuilding today's here would leave a selection whose id is
+        // in no list, and the field blank. (Base survived that by keying rows on the time's value.)
+        val dateAtStart = selectedDate.value ?: return
         launch {
-            val (items, _) = buildTimeItems(app, dateAtStart ?: Date.getToday())
+            val (items, _) = buildTimeItems(app, dateAtStart)
             // The build suspends. If the user moved to another date meanwhile, that date's own reload
             // owns the list; these rows are for the old one.
             if (selectedDate.value !== dateAtStart) return@launch
@@ -685,7 +694,10 @@ class EventManualDialog(
             timeItems.value = reselected?.items ?: items
             selectedTimeId.value = reselected?.selectedId
             editingEvent?.time?.let { selectTimeValue(it, preferSubjectId = editingEvent.subjectId) }
-                ?: defaultLesson?.displayStartTime?.let { selectTimeValue(it, preferLessonId = defaultLesson.id) }
+                ?: defaultLesson?.displayStartTime?.let {
+                    // Lesson.id is what this sync may just have re-keyed, so fall back to the subject
+                    selectTimeValue(it, preferLessonId = defaultLesson.id, preferSubjectId = defaultLesson.displaySubjectId)
+                }
                 ?: defaultTime?.let { selectTimeValue(it) }
         }
     }

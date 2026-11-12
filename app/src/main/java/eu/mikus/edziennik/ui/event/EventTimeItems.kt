@@ -33,8 +33,11 @@ object EventTimeItems {
     const val NO_LESSONS_ID = -3L
 
     /**
-     * [Time] does not bound its fields, but every parser reads two digits per field and the picker
-     * gives 0–23 / 0–59, so `|value| < 1_000_000` and the band stays below every fixed row's id.
+     * [Time] does not bound its fields. Every string parser reads two digits per field and the picker
+     * gives 0–23 / 0–59, so a time this dialog can produce has `value < 1_000_000` and the band stays
+     * below every fixed row's id. `Time.fromValue`, which the Room converter uses, divides without
+     * bounding, so a corrupt stored value could in principle exceed it — then two custom rows could
+     * share an id, which shows the first. Nothing else breaks, and no such value is known to exist.
      */
     private const val CUSTOM_TIME_BASE = 1_000_000L
 
@@ -100,6 +103,11 @@ object EventTimeItems {
      * the row of lesson [preferLessonId], a row of subject [preferSubjectId] (an edited event keeps
      * its subject, not its lesson, and the row's label is its start and subject), the first row.
      * With no lesson row at [time], an existing custom row for it is selected, else one is appended.
+     *
+     * A [preferSubjectId] of 0 or less is "no subject", not a subject to look for: an event with no
+     * subject stores `-1` (`EventManualDialog.onPositiveClick`), and the dialog reads that back as
+     * null (`selectDefaultSubject`). Without this a subject-less event would prefer a subject-less
+     * lesson at its start over the first one.
      */
     fun select(
         items: List<FormDropdownItem>,
@@ -111,7 +119,7 @@ object EventTimeItems {
             (it.tag as? LessonFull)?.displayStartTime?.value == time.value
         }
         val lessonRow = atTime.firstOrNull { (it.tag as LessonFull).id == preferLessonId }
-            ?: preferSubjectId?.let { id ->
+            ?: preferSubjectId?.takeIf { it > 0 }?.let { id ->
                 atTime.firstOrNull { (it.tag as LessonFull).displaySubjectId == id }
             }
             ?: atTime.firstOrNull()
