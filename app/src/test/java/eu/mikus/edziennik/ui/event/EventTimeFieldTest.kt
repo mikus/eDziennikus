@@ -222,6 +222,73 @@ class EventTimeFieldTest {
         assertEquals(emptyList(), field.customRows)
     }
 
+    // ---- item 89 + 90b: the opening time until the user touches time or date, then theirs ----
+
+    @Test fun `a sync after the user picks another lesson keeps their lesson`() {
+        val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths, physics))
+        field.pick(physics.id)
+        val rebuilt = rows(maths, physics)
+        assertTrue(field.sync(rebuilt))
+
+        assertSame(physics, field.selectedRow?.tag)
+        assertInvariants(field, rebuilt)
+    }
+
+    @Test fun `a sync after the user picks another lesson of an Add-from-lesson dialog keeps their lesson`() {
+        val field = opened(Opening.of(null, maths), rows(maths, physics))
+        assertSame(maths, field.selectedRow?.tag)
+        field.pick(physics.id)
+        val rebuilt = rows(maths, physics)
+        assertTrue(field.sync(rebuilt))
+
+        assertSame(physics, field.selectedRow?.tag)
+        assertInvariants(field, rebuilt)
+    }
+
+    @Test fun `a sync after a custom pick keeps it as the only custom row`() {
+        // Edited at 8:00 on a day with no 8:00 lesson, so the opening time is itself a custom row.
+        val field = opened(Opening.At(Time(8, 0, 0)), rows(physics))
+        field.pickCustom(Time(10, 15, 0))
+        val rebuilt = rows(physics)
+        assertTrue(field.sync(rebuilt))
+
+        assertEquals(TimeSelection.Custom(Time(10, 15, 0)), field.selectedRow?.tag)
+        assertEquals(listOf(TimeSelection.Custom(Time(10, 15, 0))), field.customRows.map { it.tag })
+        assertInvariants(field, rebuilt)
+    }
+
+    @Test fun `a sync after a date choice leaves the time empty`() {
+        val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths))
+        val chosen = rows(english, maths)
+        assertTrue(field.install(field.chooseDate(null), chosen))
+        assertTrue(field.sync(chosen))
+
+        assertNull(field.selectedId)
+        assertEquals(chosen, field.items)
+    }
+
+    @Test fun `a sync after tapping no timetable leaves the time empty`() {
+        val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows())
+        field.pick(null) // "no timetable" clears the field
+        val rebuilt = rows(maths)
+        assertTrue(field.sync(rebuilt))
+
+        assertNull(field.selectedId)
+        assertEquals(rebuilt, field.items)
+    }
+
+    @Test fun `a pick after a sync showed the chosen date's rows survives that date's own late install`() {
+        val field = opened(Opening.None, rows(english))
+        val dateTicket = field.chooseDate(maths)
+        val chosen = rows(maths, physics)
+        assertTrue(field.sync(chosen)) // a sync finishes first and shows the chosen date's rows
+        field.pick(physics.id)
+        assertTrue(field.install(dateTicket, chosen)) // the date's own build lands last
+
+        assertSame(physics, field.selectedRow?.tag)
+        assertInvariants(field, chosen)
+    }
+
     // ---- resolved(): what Save stores ----
 
     @Test fun `resolved is none when nothing is selected`() {

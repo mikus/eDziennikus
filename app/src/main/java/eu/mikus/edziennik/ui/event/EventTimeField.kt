@@ -53,7 +53,17 @@ class EventTimeField(private val opening: Opening) {
     internal sealed interface Kind {
         data object Opening : Kind
         data object Sync : Kind
-        data class Chosen(val lesson: EventTimeField.Opening.At?) : Kind
+        data object Chosen : Kind
+    }
+
+    /** What the user last asked the field for: what a rebuild of the rows must keep. */
+    private sealed interface Intent {
+        /** Nothing touched yet: every rebuild re-applies the [opening] time. */
+        data object Opening : Intent
+        /** A "next lesson" date choice whose rows no install has shown yet. */
+        data class Lesson(val at: EventTimeField.Opening.At) : Intent
+        /** The user chose: keep what is selected, found again in the rebuilt rows. */
+        data object Held : Intent
     }
 
     var items: List<FormDropdownItem> = emptyList()
@@ -64,6 +74,8 @@ class EventTimeField(private val opening: Opening) {
     /** Bumped by every date choice; a ticket from an earlier generation was issued for another date. */
     private var generation = 0
 
+    private var intent: Intent = Intent.Opening
+
     /** The ticket for the dialog's first build of the rows, for its opening date. */
     fun open(): Ticket = Ticket(generation, Kind.Opening)
 
@@ -72,39 +84,41 @@ class EventTimeField(private val opening: Opening) {
 
     /**
      * The user chose a date: the time is cleared until that date's rows arrive. With a [lesson] (the
-     * "next lesson" choice) its start is selected then.
+     * "next lesson" choice) its start is selected then, by whichever install shows those rows first.
      */
     fun chooseDate(lesson: LessonFull?): Ticket {
         generation++
         selectedId = null
-        val at = lesson?.let { l -> l.displayStartTime?.let { Opening.At(it, l.id, l.displaySubjectId) } }
-        return Ticket(generation, Kind.Chosen(at))
+        intent = lesson?.let { l -> l.displayStartTime?.let { Intent.Lesson(Opening.At(it, l.id, l.displaySubjectId)) } }
+            ?: Intent.Held
+        return Ticket(generation, Kind.Chosen)
     }
 
     /**
      * The rows built for [ticket] are ready. Returns `false`, changing nothing, when they no longer
      * belong in the field.
+     *
+     * Otherwise they replace the list and the selection follows the user's most recent intent: the
+     * opening time until they touch the time or the date (re-applied with its lesson and subject, which
+     * is what tells apart two lessons at that time), then whatever they chose.
      */
     fun install(ticket: Ticket, rows: List<FormDropdownItem>): Boolean {
-        when (val kind = ticket.kind) {
-            Kind.Opening -> {
-                items = rows
-                if (selectedId == null) apply(opening)
+        if (ticket.kind == Kind.Sync && ticket.generation != generation) return false
+        // Read the selection now, not when the ticket was issued: a pick made during the build is the
+        // most recent choice. It is a row of the list it was picked in, and a sync may have re-keyed
+        // it (see EventTimeItems), so it is found again in the new rows.
+        val held = items.firstOrNull { it.id == selectedId }
+        items = rows
+        selectedId = null
+        when (val i = intent) {
+            Intent.Opening -> apply(opening)
+            is Intent.Lesson -> {
+                apply(i.at)
+                intent = Intent.Held
             }
-            Kind.Sync -> {
-                if (ticket.generation != generation) return false
-                // The sync may have re-keyed the selected lesson (see EventTimeItems), so take the row
-                // selected NOW (possibly picked during the build) from the list it was picked in, and
-                // find it again in the rebuilt one.
-                val held = items.firstOrNull { it.id == selectedId }
-                val reselected = EventTimeItems.reselect(rows, held)
-                items = reselected?.items ?: rows
-                selectedId = reselected?.selectedId
-                (opening as? Opening.At)?.let { apply(it) }
-            }
-            is Kind.Chosen -> {
-                items = rows
-                kind.lesson?.let { apply(it) }
+            Intent.Held -> EventTimeItems.reselect(rows, held)?.let {
+                items = it.items
+                selectedId = it.selectedId
             }
         }
         return true
@@ -113,10 +127,14 @@ class EventTimeField(private val opening: Opening) {
     /** The user tapped the row [id]; null for a row that clears the field ("no timetable"/"no lessons"). */
     fun pick(id: Long?) {
         selectedId = id
+        intent = Intent.Held
     }
 
     /** The user picked [time] in the custom-time picker. */
-    fun pickCustom(time: Time) = select(time)
+    fun pickCustom(time: Time) {
+        select(time)
+        intent = Intent.Held
+    }
 
     /** What the selected row stands for. */
     fun resolved(): TimeSelection {
