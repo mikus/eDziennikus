@@ -161,7 +161,7 @@
     <string name="dialog_event_manual_choose_lesson">Wählen Sie eine Lektion aus</string>
     <string name="dialog_event_manual_custom_time">-- andere Zeit --</string>
     <string name="dialog_event_manual_date">Datum</string>
-    <string name="dialog_event_manual_date_choose">Wählen Sie die Uhrzeit</string>
+    <string name="dialog_event_manual_date_choose">Wählen Sie das Datum</string>
     <string name="dialog_event_manual_date_header">Termin</string>
     <string name="dialog_event_manual_date_next_lesson">nächste lektion %s</string>
     <string name="dialog_event_manual_date_next_week">nächste %s (%s)</string>
