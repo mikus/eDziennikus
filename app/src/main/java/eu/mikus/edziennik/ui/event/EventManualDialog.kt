@@ -337,11 +337,11 @@ class EventManualDialog(
         // date's week, belong to a choice they already replaced. The subject, teacher and team
         // defaults are applied above, before the build, so they cannot overwrite what that date
         // choice's cascade applied; the type and colour ones, which no cascade touches, follow them.
-        val initialDate = selectedDate.value ?: Date.getToday()
-        val opening = timeField.ticket()
-        val (timeRows, hasTimetable) = buildTimeItems(app, initialDate)
+        // With no date (Homework -> Add) the Date field stays empty, and the rows are today's.
+        val opening = timeField.open(selectedDate.value ?: Date.getToday())
+        val (timeRows, hasTimetable) = buildTimeItems(app, opening.date)
         if (changeTime { install(opening, timeRows) } && !hasTimetable)
-            syncTimetable(app, initialDate)
+            syncTimetable(app, opening.date)
     }
 
     private suspend fun buildTypeItems(app: App) {
@@ -511,13 +511,13 @@ class EventManualDialog(
     private fun selectConcreteDate(date: Date, lesson: LessonFull?) {
         val app = activity.applicationContext as App
         setDateSelection(date)
-        val ticket = changeTime { chooseDate(lesson) }
+        val ticket = changeTime { chooseDate(date, lesson) }
         // The cascade reads no time rows, so it goes with the choice rather than after the build. A sync
         // can show this date's rows before that build lands, and a lesson the user picks from them
         // cascades its own subject/teacher/team, which must not be overwritten when the build lands.
         applyCascade(EventManualLogic.cascadeFor(lesson))
         launch {
-            val (rows, hasTimetable) = buildTimeItems(app, date)
+            val (rows, hasTimetable) = buildTimeItems(app, ticket.date)
             // A date chosen during the build owns the dialog now: drop this choice's rows and sync.
             if (!changeTime { install(ticket, rows) }) return@launch
             if (!hasTimetable)
@@ -627,8 +627,9 @@ class EventManualDialog(
     private fun resolveNextLesson(subjectId: Long) {
         val app = activity.applicationContext as App
         val startDate = selectedDate.value ?: Date.getToday()
-        // The lookup is asynchronous: a date chosen before it answers is the user's newer choice.
-        val ticket = timeField.ticket()
+        // The lookup is asynchronous: a date chosen before it answers is the user's newer choice. (Never
+        // null: the date rows that lead here are shown in the same main-thread turn the field is opened.)
+        val ticket = timeField.ticket() ?: return
         val source = if (nextLessonTeamId == null)
             app.db.timetableDao().getNextWithSubject(profileId, startDate, subjectId)
         else
@@ -675,13 +676,11 @@ class EventManualDialog(
         if (event.profileId != profileId) return
         dismissWaitDialogs()
         val app = activity.applicationContext as App
-        // Before loadInitial picks the date there is no list to re-find anything in, and it is about
-        // to build one for the real date: a build for today would race that one at the same
-        // generation, last install winning. (The old reason, a blank field, EventTimeField rules out.)
-        val dateAtStart = selectedDate.value ?: return
-        val ticket = timeField.ticket()
+        // No ticket before loadInitial opens the field on its date. Nothing is lost: the sync saved its
+        // lessons before posting this, and loadInitial's build reads them only after that.
+        val ticket = timeField.ticket() ?: return
         launch {
-            val (rows, _) = buildTimeItems(app, dateAtStart)
+            val (rows, _) = buildTimeItems(app, ticket.date)
             // The build suspends: the field decides whether these rows still belong (a date chosen
             // meanwhile owns the list) and what to select in them.
             changeTime { install(ticket, rows) }

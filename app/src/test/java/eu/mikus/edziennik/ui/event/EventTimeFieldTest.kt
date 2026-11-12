@@ -13,11 +13,15 @@ import eu.mikus.edziennik.utils.models.Time
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class EventTimeFieldTest {
+
+    private val monday = Date(2026, 11, 16)
+    private val tuesday = Date(2026, 11, 17)
 
     private val labels = EventTimeItems.Labels(
         allDay = "All day",
@@ -52,12 +56,15 @@ class EventTimeFieldTest {
     private fun EventTimeField.checkedInstall(ticket: EventTimeField.Ticket, rows: List<FormDropdownItem>) =
         install(ticket, rows).also { if (it) assertInvariants(this, rows) }
 
-    /** Opens the field the way loadInitial does: take a ticket, then install the first rows. */
+    /** Opens the field the way loadInitial does: open it on its date, then install the first rows. */
     private fun opened(opening: Opening, first: List<FormDropdownItem>) =
-        EventTimeField(opening).also { field -> assertTrue(field.checkedInstall(field.ticket(), first)) }
+        EventTimeField(opening).also { field -> assertTrue(field.checkedInstall(field.open(monday), first)) }
 
     /** A sync rebuild: take the ticket, install the rebuilt rows. */
-    private fun EventTimeField.sync(rebuilt: List<FormDropdownItem>) = checkedInstall(ticket(), rebuilt)
+    private fun EventTimeField.sync(rebuilt: List<FormDropdownItem>) = checkedInstall(syncTicket(), rebuilt)
+
+    /** The ticket a sync takes: the field has a date by then. */
+    private fun EventTimeField.syncTicket() = assertNotNull(ticket())
 
     /**
      * I1: the selection is a row of the list (or nothing). I2: ids are unique. I3: beside the [built]
@@ -174,7 +181,7 @@ class EventTimeFieldTest {
     @Test fun `a row picked during a sync build is the one re-found`() {
         val field = opened(Opening.None, rows(maths, physics))
         field.pick(maths.id)
-        val ticket = field.ticket()
+        val ticket = field.syncTicket()
         field.pick(physics.id) // while the rows are being rebuilt
         val rekeyed = lesson(30L, Time(10, 0, 0), "Physics", subjectId = 12L)
         val rebuilt = rows(maths, rekeyed)
@@ -186,8 +193,8 @@ class EventTimeFieldTest {
 
     @Test fun `a sync ticket taken before a date choice installs nothing`() {
         val field = opened(Opening.None, rows(maths))
-        val stale = field.ticket()
-        val date = field.chooseDate(null)
+        val stale = field.syncTicket()
+        val date = field.chooseDate(tuesday, null)
         val chosen = rows(physics)
         assertTrue(field.checkedInstall(date, chosen))
         field.pick(physics.id)
@@ -199,7 +206,7 @@ class EventTimeFieldTest {
 
     @Test fun `a plain date choice clears the time`() {
         val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths))
-        val ticket = field.chooseDate(null)
+        val ticket = field.chooseDate(tuesday, null)
         assertNull(field.selectedId)
         val chosen = rows(english, physics)
         assertTrue(field.checkedInstall(ticket, chosen))
@@ -210,7 +217,7 @@ class EventTimeFieldTest {
 
     @Test fun `a next-lesson date choice selects that lesson once its rows arrive`() {
         val field = opened(Opening.None, rows(physics))
-        val ticket = field.chooseDate(maths)
+        val ticket = field.chooseDate(tuesday, maths)
         val chosen = rows(english, maths)
         assertTrue(field.checkedInstall(ticket, chosen))
 
@@ -264,7 +271,7 @@ class EventTimeFieldTest {
     @Test fun `a sync after a date choice leaves the time empty`() {
         val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths))
         val chosen = rows(english, maths)
-        assertTrue(field.checkedInstall(field.chooseDate(null), chosen))
+        assertTrue(field.checkedInstall(field.chooseDate(tuesday, null), chosen))
         assertTrue(field.sync(chosen))
 
         assertNull(field.selectedId)
@@ -283,7 +290,7 @@ class EventTimeFieldTest {
 
     @Test fun `a pick after a sync showed the chosen date's rows survives that date's own late install`() {
         val field = opened(Opening.None, rows(english))
-        val dateTicket = field.chooseDate(maths)
+        val dateTicket = field.chooseDate(tuesday, maths)
         val chosen = rows(maths, physics)
         assertTrue(field.sync(chosen)) // a sync finishes first and shows the chosen date's rows
         field.pick(physics.id)
@@ -297,8 +304,8 @@ class EventTimeFieldTest {
 
     @Test fun `a date reload superseded by a later date choice installs nothing`() {
         val field = opened(Opening.None, rows(english))
-        val first = field.chooseDate(maths)
-        val second = field.chooseDate(physics)
+        val first = field.chooseDate(tuesday, maths)
+        val second = field.chooseDate(tuesday, physics)
         val before = field.items
 
         assertFalse(field.checkedInstall(first, rows(english, maths)))
@@ -313,8 +320,8 @@ class EventTimeFieldTest {
 
     @Test fun `the opening build superseded by a date choice installs nothing`() {
         val field = EventTimeField(Opening.At(Time(8, 0, 0), preferSubjectId = 10L))
-        val opening = field.ticket()
-        val date = field.chooseDate(null)
+        val opening = field.open(monday)
+        val date = field.chooseDate(tuesday, null)
 
         assertFalse(field.checkedInstall(opening, rows(maths)))
         assertEquals(emptyList(), field.items)
@@ -330,7 +337,7 @@ class EventTimeFieldTest {
         // Otherwise a lesson of the old date could be picked meanwhile: its id is in no row of the new
         // date (Lesson.buildId hashes the date), and its cascade would fight the date choice's own.
         val field = opened(Opening.None, rows(maths, physics))
-        field.chooseDate(null)
+        field.chooseDate(tuesday, null)
 
         assertEquals(emptyList(), field.items)
         assertNull(field.selectedId)
@@ -338,7 +345,7 @@ class EventTimeFieldTest {
 
     @Test fun `a sync ticket taken after a date choice installs`() {
         val field = opened(Opening.None, rows(english))
-        field.chooseDate(maths)
+        field.chooseDate(tuesday, maths)
         val chosen = rows(maths, physics)
         assertTrue(field.sync(chosen))
 
@@ -349,13 +356,13 @@ class EventTimeFieldTest {
     @Test fun `a ticket stops being current when a date is chosen`() {
         // What the next-lesson lookup checks before it applies the lesson it found.
         val field = opened(Opening.None, rows(maths))
-        val lookup = field.ticket()
+        val lookup = field.syncTicket()
         assertTrue(field.isCurrent(lookup))
 
-        val date = field.chooseDate(null)
+        val date = field.chooseDate(tuesday, null)
         assertFalse(field.isCurrent(lookup))
         assertTrue(field.isCurrent(date))
-        assertTrue(field.isCurrent(field.ticket()))
+        assertTrue(field.isCurrent(field.syncTicket()))
     }
 
     // ---- pinned after the branch review: lines whose mutants survived every case above ----
@@ -367,7 +374,7 @@ class EventTimeFieldTest {
     @Test fun `a sync after a next-lesson choice keeps that lesson, not the opening time`() {
         val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths, physics))
         val chosen = rows(maths, physics)
-        assertTrue(field.checkedInstall(field.chooseDate(physics), chosen))
+        assertTrue(field.checkedInstall(field.chooseDate(tuesday, physics), chosen))
         assertSame(physics, field.selectedRow?.tag)
         assertTrue(field.sync(chosen))
 
@@ -392,14 +399,14 @@ class EventTimeFieldTest {
 
     @Test fun `a next-lesson choice selects that very lesson among two of its subject at the same start`() {
         val field = opened(Opening.None, rows(english))
-        assertTrue(field.checkedInstall(field.chooseDate(groupB), rows(groupA, groupB)))
+        assertTrue(field.checkedInstall(field.chooseDate(tuesday, groupB), rows(groupA, groupB)))
 
         assertSame(groupB, field.selectedRow?.tag)
     }
 
     @Test fun `a next-lesson choice whose lesson has no start leaves the time empty`() {
         val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths))
-        assertTrue(field.checkedInstall(field.chooseDate(lesson(9L, start = null)), rows(maths, physics)))
+        assertTrue(field.checkedInstall(field.chooseDate(tuesday, lesson(9L, start = null)), rows(maths, physics)))
 
         assertNull(field.selectedId)
     }
@@ -410,7 +417,7 @@ class EventTimeFieldTest {
         val field = opened(Opening.None, rows(english))
         val rekeyed = lesson(50L, Time(8, 0, 0), "Maths", subjectId = 10L)
         val chosen = rows(english, rekeyed)
-        assertTrue(field.checkedInstall(field.chooseDate(maths), chosen))
+        assertTrue(field.checkedInstall(field.chooseDate(tuesday, maths), chosen))
 
         assertSame(rekeyed, field.selectedRow?.tag)
         assertInvariants(field, chosen)
@@ -418,7 +425,7 @@ class EventTimeFieldTest {
 
     @Test fun `a next-lesson lesson a later sync removes leaves the time empty, not a custom row`() {
         val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths))
-        assertTrue(field.checkedInstall(field.chooseDate(physics), rows(maths, physics)))
+        assertTrue(field.checkedInstall(field.chooseDate(tuesday, physics), rows(maths, physics)))
         assertSame(physics, field.selectedRow?.tag)
         val rebuilt = rows(maths) // the 10:00 lesson is gone
         assertTrue(field.sync(rebuilt))
@@ -459,5 +466,39 @@ class EventTimeFieldTest {
         field.pick(999L)
 
         assertSame(TimeSelection.None, field.resolved())
+    }
+
+    // ---- item 91: the rows belong to the date the field is for ----
+
+    @Test fun `a field the dialog has not opened on a date issues no ticket`() {
+        // A sync before loadInitial opens the field would otherwise build for a guessed date and race
+        // the opening build at the same generation, the last install winning.
+        assertNull(EventTimeField(Opening.None).ticket())
+    }
+
+    @Test fun `the opening ticket is for the date the dialog opened on`() {
+        val field = EventTimeField(Opening.None)
+        assertEquals(monday, field.open(monday).date)
+        assertEquals(monday, field.date)
+    }
+
+    @Test fun `a sync ticket is for the opening date when no date was chosen`() {
+        // Homework -> Add: the Date field stays empty, but the rows are the opening date's, and a sync
+        // (the dialog's own timetable sync included) must rebuild them.
+        val field = opened(Opening.None, rows(maths))
+        assertEquals(monday, field.syncTicket().date)
+        assertTrue(field.sync(rows(maths, physics)))
+    }
+
+    @Test fun `a date choice's ticket is for that date`() {
+        val field = opened(Opening.None, rows(maths))
+        assertEquals(tuesday, field.chooseDate(tuesday, null).date)
+        assertEquals(tuesday, field.date)
+    }
+
+    @Test fun `a sync ticket after a date choice is for the chosen date`() {
+        val field = opened(Opening.None, rows(maths))
+        field.chooseDate(tuesday, maths)
+        assertEquals(tuesday, field.syncTicket().date)
     }
 }

@@ -6,6 +6,7 @@ package eu.mikus.edziennik.ui.event
 import eu.mikus.edziennik.data.db.full.EventFull
 import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.ui.dialogs.base.FormDropdownItem
+import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 
 /**
@@ -15,10 +16,14 @@ import eu.mikus.edziennik.utils.models.Time
  * tested on the JVM, which the dialog cannot.
  *
  * The rows are rebuilt off the main thread, so a rebuild is split in two: the caller takes a
- * [Ticket] (from [ticket] or [chooseDate]) when it starts building, and hands the rows back
- * to [install] when the build is done. Anything the user does in between happens before [install]
- * reads the selection. A date chosen in between makes the ticket stale: rows built for the old date,
- * and everything else the caller still had in flight for it, no longer belong (see [isCurrent]).
+ * [Ticket] (from [open], [ticket] or [chooseDate]) when it starts building, builds the rows of the
+ * ticket's [Ticket.date], and hands them back to [install] when the build is done. Anything the user
+ * does in between happens before [install] reads the selection. A date chosen in between makes the
+ * ticket stale: rows built for the old date, and everything else the caller still had in flight for
+ * it, no longer belong (see [isCurrent]).
+ *
+ * The field's [date] is the date its rows are for, which is not always the date the user chose: a
+ * dialog opened with no date shows a date's rows (today's) while its Date field stays empty.
  */
 class EventTimeField(private val opening: Opening) {
 
@@ -48,8 +53,11 @@ class EventTimeField(private val opening: Opening) {
         }
     }
 
-    /** Issued when a build of the rows (or anything else that belongs to the current date) starts. */
-    class Ticket internal constructor(internal val generation: Int)
+    /**
+     * Issued when a build of the rows (or anything else that belongs to the current date) starts.
+     * [date] is the date whose rows the caller builds.
+     */
+    class Ticket internal constructor(internal val generation: Int, val date: Date)
 
     /** What the user last asked the field for: what a rebuild of the rows must keep. */
     private sealed interface Intent {
@@ -66,33 +74,47 @@ class EventTimeField(private val opening: Opening) {
     var selectedId: Long? = null
         private set
 
+    /** The date the rows are for; null until the dialog [open]s the field on one. */
+    var date: Date? = null
+        private set
+
     /** Bumped by every date choice; a ticket from an earlier generation was issued for another date. */
     private var generation = 0
 
     private var intent: Intent = Intent.Opening
 
     /**
-     * The ticket for a build of the current date's rows (the dialog's first one, or one after a sync),
-     * or for a next-lesson lookup.
+     * The dialog's first build: the rows are for [date] (the date it opened with, or the date shown
+     * when it opened with none) until the user chooses another.
      */
-    fun ticket(): Ticket = Ticket(generation)
+    fun open(date: Date): Ticket {
+        this.date = date
+        return Ticket(generation, date)
+    }
+
+    /**
+     * The ticket for a build of the current date's rows after a sync, or for a next-lesson lookup; null
+     * before the field is [open]ed, when there are no rows of any date to rebuild yet.
+     */
+    fun ticket(): Ticket? = date?.let { Ticket(generation, it) }
 
     /** Whether no date was chosen since [ticket] was issued. */
     fun isCurrent(ticket: Ticket): Boolean = ticket.generation == generation
 
     /**
-     * The user chose a date: the time and the rows are cleared until that date's rows arrive (a row of
+     * The user chose [date]: the time and the rows are cleared until that date's rows arrive (a row of
      * the old date picked meanwhile would be for the wrong day). With a [lesson] (the "next lesson"
      * choice) its start is selected then, by whichever install shows those rows first.
      */
-    fun chooseDate(lesson: LessonFull?): Ticket {
+    fun chooseDate(date: Date, lesson: LessonFull?): Ticket {
         generation++
+        this.date = date
         items = emptyList()
         selectedId = null
         intent = lesson?.let { l ->
             l.displayStartTime?.let { Intent.Lesson(Opening.At(it, l.id, l.displaySubjectId)) }
         } ?: Intent.Held
-        return Ticket(generation)
+        return Ticket(generation, date)
     }
 
     /**
