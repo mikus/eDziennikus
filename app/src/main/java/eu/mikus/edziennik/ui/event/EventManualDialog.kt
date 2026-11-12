@@ -312,14 +312,6 @@ class EventManualDialog(
         selectDefaultDate(editingEvent?.date)
         selectDefaultDate(defaultLesson?.displayDate ?: defaultDate)
 
-        // Time items belong to the chosen date; the field selects its opening time in them.
-        val initialDate = selectedDate.value ?: Date.getToday()
-        val opening = timeField.open()
-        val (timeRows, hasTimetable) = buildTimeItems(app, initialDate)
-        changeTime { install(opening, timeRows) }
-        if (!hasTimetable)
-            syncTimetable(app, initialDate)
-
         // Team: default to the class team, then the (no-op unless still unset) defaults, then the
         // final forced override from defaultLesson — faithfully reproducing the legacy sequence.
         selectedTeamId.value = classTeamId
@@ -338,6 +330,17 @@ class EventManualDialog(
         customColor.value = EventManualLogic.seedCustomColor(editingEvent?.color)
 
         defaultLesson?.let { selectedTeamId.value = it.displayTeamId }
+
+        // Time items belong to the chosen date; the field selects its opening time in them. The build
+        // suspends and the user may choose a date meanwhile: then these rows, and the sync for this
+        // date's week, belong to a choice they already replaced. That is why every other default is
+        // applied above, before the build: none of them reads the time rows, and run after it they
+        // would refill what the date choice's cascade had just cleared.
+        val initialDate = selectedDate.value ?: Date.getToday()
+        val opening = timeField.ticket()
+        val (timeRows, hasTimetable) = buildTimeItems(app, initialDate)
+        if (changeTime { install(opening, timeRows) } && !hasTimetable)
+            syncTimetable(app, initialDate)
     }
 
     private suspend fun buildTypeItems(app: App) {
@@ -509,7 +512,9 @@ class EventManualDialog(
         val ticket = changeTime { chooseDate(lesson) }
         launch {
             val (rows, hasTimetable) = buildTimeItems(app, date)
-            changeTime { install(ticket, rows) }
+            // A date chosen during the build owns the dialog now: drop this choice's rows, sync and
+            // cascade alike.
+            if (!changeTime { install(ticket, rows) }) return@launch
             if (!hasTimetable)
                 syncTimetable(app, date)
             applyCascade(EventManualLogic.cascadeFor(lesson))
@@ -618,11 +623,14 @@ class EventManualDialog(
     private fun resolveNextLesson(subjectId: Long) {
         val app = activity.applicationContext as App
         val startDate = selectedDate.value ?: Date.getToday()
+        // The lookup is asynchronous: a date chosen before it answers is the user's newer choice.
+        val ticket = timeField.ticket()
         val source = if (nextLessonTeamId == null)
             app.db.timetableDao().getNextWithSubject(profileId, startDate, subjectId)
         else
             app.db.timetableDao().getNextWithSubjectAndTeam(profileId, startDate, subjectId, nextLessonTeamId)
         source.observeOnce(activity, Observer { lesson ->
+            if (!timeField.isCurrent(ticket)) return@Observer
             if (lesson == null) {
                 Toast.makeText(activity, R.string.dropdown_date_no_more_lessons, Toast.LENGTH_LONG).show()
                 return@Observer

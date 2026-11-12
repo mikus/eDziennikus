@@ -48,9 +48,9 @@ class EventTimeFieldTest {
     private val EventTimeField.selectedRow get() = items.firstOrNull { it.id == selectedId }
     private val EventTimeField.customRows get() = items.filter { it.tag is TimeSelection.Custom }
 
-    /** Opens the field the way loadInitial does: take the ticket, then install the first rows. */
+    /** Opens the field the way loadInitial does: take a ticket, then install the first rows. */
     private fun opened(opening: Opening, first: List<FormDropdownItem>) =
-        EventTimeField(opening).also { field -> assertTrue(field.install(field.open(), first)) }
+        EventTimeField(opening).also { field -> assertTrue(field.install(field.ticket(), first)) }
 
     /** A sync rebuild: take the ticket, install the rebuilt rows. */
     private fun EventTimeField.sync(rebuilt: List<FormDropdownItem>) = install(ticket(), rebuilt)
@@ -287,6 +287,71 @@ class EventTimeFieldTest {
 
         assertSame(physics, field.selectedRow?.tag)
         assertInvariants(field, chosen)
+    }
+
+    // ---- item 90a: nothing from a superseded date choice reaches the field ----
+
+    @Test fun `a date reload superseded by a later date choice installs nothing`() {
+        val field = opened(Opening.None, rows(english))
+        val first = field.chooseDate(maths)
+        val second = field.chooseDate(physics)
+        val before = field.items
+
+        assertFalse(field.install(first, rows(english, maths)))
+        assertEquals(before, field.items)
+        assertNull(field.selectedId)
+
+        val chosen = rows(physics)
+        assertTrue(field.install(second, chosen))
+        assertSame(physics, field.selectedRow?.tag)
+        assertInvariants(field, chosen)
+    }
+
+    @Test fun `the opening build superseded by a date choice installs nothing`() {
+        val field = EventTimeField(Opening.At(Time(8, 0, 0), preferSubjectId = 10L))
+        val opening = field.ticket()
+        val date = field.chooseDate(null)
+
+        assertFalse(field.install(opening, rows(maths)))
+        assertEquals(emptyList(), field.items)
+        assertNull(field.selectedId)
+
+        val chosen = rows(english, physics)
+        assertTrue(field.install(date, chosen))
+        assertNull(field.selectedId)
+        assertEquals(chosen, field.items)
+    }
+
+    @Test fun `a date choice empties the rows until its own arrive`() {
+        // Otherwise a lesson of the old date could be picked meanwhile: its id is in no row of the new
+        // date (Lesson.buildId hashes the date), and its cascade would fight the date choice's own.
+        val field = opened(Opening.None, rows(maths, physics))
+        field.chooseDate(null)
+
+        assertEquals(emptyList(), field.items)
+        assertNull(field.selectedId)
+    }
+
+    @Test fun `a sync ticket taken after a date choice installs`() {
+        val field = opened(Opening.None, rows(english))
+        field.chooseDate(maths)
+        val chosen = rows(maths, physics)
+        assertTrue(field.sync(chosen))
+
+        assertSame(maths, field.selectedRow?.tag)
+        assertInvariants(field, chosen)
+    }
+
+    @Test fun `a ticket stops being current when a date is chosen`() {
+        // What the next-lesson lookup checks before it applies the lesson it found.
+        val field = opened(Opening.None, rows(maths))
+        val lookup = field.ticket()
+        assertTrue(field.isCurrent(lookup))
+
+        val date = field.chooseDate(null)
+        assertFalse(field.isCurrent(lookup))
+        assertTrue(field.isCurrent(date))
+        assertTrue(field.isCurrent(field.ticket()))
     }
 
     // ---- resolved(): what Save stores ----

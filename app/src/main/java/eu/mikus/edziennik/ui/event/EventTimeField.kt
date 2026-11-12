@@ -15,9 +15,10 @@ import eu.mikus.edziennik.utils.models.Time
  * tested on the JVM, which the dialog cannot.
  *
  * The rows are rebuilt off the main thread, so a rebuild is split in two: the caller takes a
- * [Ticket] (from [open], [ticket] or [chooseDate]) when it starts building, and hands the rows back
+ * [Ticket] (from [ticket] or [chooseDate]) when it starts building, and hands the rows back
  * to [install] when the build is done. Anything the user does in between happens before [install]
- * reads the selection.
+ * reads the selection. A date chosen in between makes the ticket stale: rows built for the old date,
+ * and everything else the caller still had in flight for it, no longer belong (see [isCurrent]).
  */
 class EventTimeField(private val opening: Opening) {
 
@@ -47,14 +48,8 @@ class EventTimeField(private val opening: Opening) {
         }
     }
 
-    /** Issued when a build of the rows starts; see [install]. */
-    class Ticket internal constructor(internal val generation: Int, internal val kind: Kind)
-
-    internal sealed interface Kind {
-        data object Opening : Kind
-        data object Sync : Kind
-        data object Chosen : Kind
-    }
+    /** Issued when a build of the rows (or anything else that belongs to the current date) starts. */
+    class Ticket internal constructor(internal val generation: Int)
 
     /** What the user last asked the field for: what a rebuild of the rows must keep. */
     private sealed interface Intent {
@@ -76,22 +71,28 @@ class EventTimeField(private val opening: Opening) {
 
     private var intent: Intent = Intent.Opening
 
-    /** The ticket for the dialog's first build of the rows, for its opening date. */
-    fun open(): Ticket = Ticket(generation, Kind.Opening)
+    /**
+     * The ticket for a build of the current date's rows (the dialog's first one, or one after a sync),
+     * or for a next-lesson lookup.
+     */
+    fun ticket(): Ticket = Ticket(generation)
 
-    /** The ticket for a rebuild of the current date's rows, e.g. after a sync. */
-    fun ticket(): Ticket = Ticket(generation, Kind.Sync)
+    /** Whether no date was chosen since [ticket] was issued. */
+    fun isCurrent(ticket: Ticket): Boolean = ticket.generation == generation
 
     /**
-     * The user chose a date: the time is cleared until that date's rows arrive. With a [lesson] (the
-     * "next lesson" choice) its start is selected then, by whichever install shows those rows first.
+     * The user chose a date: the time and the rows are cleared until that date's rows arrive (a row of
+     * the old date picked meanwhile would be for the wrong day). With a [lesson] (the "next lesson"
+     * choice) its start is selected then, by whichever install shows those rows first.
      */
     fun chooseDate(lesson: LessonFull?): Ticket {
         generation++
+        items = emptyList()
         selectedId = null
-        intent = lesson?.let { l -> l.displayStartTime?.let { Intent.Lesson(Opening.At(it, l.id, l.displaySubjectId)) } }
-            ?: Intent.Held
-        return Ticket(generation, Kind.Chosen)
+        intent = lesson?.let { l ->
+            l.displayStartTime?.let { Intent.Lesson(Opening.At(it, l.id, l.displaySubjectId)) }
+        } ?: Intent.Held
+        return Ticket(generation)
     }
 
     /**
@@ -103,7 +104,7 @@ class EventTimeField(private val opening: Opening) {
      * is what tells apart two lessons at that time), then whatever they chose.
      */
     fun install(ticket: Ticket, rows: List<FormDropdownItem>): Boolean {
-        if (ticket.kind == Kind.Sync && ticket.generation != generation) return false
+        if (!isCurrent(ticket)) return false
         // Read the selection now, not when the ticket was issued: a pick made during the build is the
         // most recent choice. It is a row of the list it was picked in, and a sync may have re-keyed
         // it (see EventTimeItems), so it is found again in the new rows.
