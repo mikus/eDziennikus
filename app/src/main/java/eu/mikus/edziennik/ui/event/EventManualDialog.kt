@@ -129,11 +129,13 @@ class EventManualDialog(
     // The id of a row in timeItems (EventTimeItems: all-day, a Lesson.id, or a custom time's id).
     // Resolved to a TimeSelection on demand via timeField.resolved().
     private val selectedTimeId = mutableStateOf<Long?>(null)
-    private val selectedTeamId = mutableStateOf<Long?>(null)
-    private val selectedSubjectId = mutableStateOf<Long?>(null)
-    private val selectedTeacherId = mutableStateOf<Long?>(null)
-    private val selectedTypeId = mutableStateOf<Long?>(null)
-    private val customColor = mutableStateOf<Int?>(null)
+    // Set them with set() from what the user does; loadInitial offers their defaults (see EventChoices).
+    private val choices = EventChoices()
+    private val selectedTeamId = choices.team
+    private val selectedSubjectId = choices.subject
+    private val selectedTeacherId = choices.teacher
+    private val selectedTypeId = choices.type
+    private val customColor = choices.color
 
     private val showSubjectInMain = mutableStateOf(false)
     private val moreExpanded = mutableStateOf(false)
@@ -313,24 +315,7 @@ class EventManualDialog(
         selectDefaultDate(editingEvent?.date)
         selectDefaultDate(defaultLesson?.displayDate ?: defaultDate)
 
-        // Team: default to the class team, then the (no-op unless still unset) defaults, then the
-        // final forced override from defaultLesson — faithfully reproducing the legacy sequence.
-        selectedTeamId.value = classTeamId
-        selectDefaultTeam(editingEvent?.teamId)
-        selectDefaultTeam(defaultLesson?.displayTeamId)
-
-        selectDefaultSubject(editingEvent?.subjectId)
-        selectDefaultSubject(defaultLesson?.displaySubjectId)
-
-        selectDefaultTeacher(editingEvent?.teacherId)
-        selectDefaultTeacher(defaultLesson?.displayTeacherId)
-
-        selectDefaultType(editingEvent?.type)
-        selectDefaultType(defaultType)
-
-        customColor.value = EventManualLogic.seedCustomColor(editingEvent?.color)
-
-        defaultLesson?.let { selectedTeamId.value = it.displayTeamId }
+        choices.applyDefaults(EventChoices.Defaults.of(classTeamId, editingEvent, defaultLesson, defaultType))
 
         // Time items belong to the chosen date; the field selects its opening time in them. The build
         // suspends and the user may choose a date meanwhile: then these rows, and the sync for this
@@ -468,27 +453,6 @@ class EventManualDialog(
             selectedTimeId.value = timeField.selectedId
         }
 
-    private fun selectDefaultTeam(teamId: Long?) {
-        // Faithful to TeamDropdown.selectDefault: never overrides an existing selection.
-        if (teamId == null || selectedTeamId.value != null) return
-        selectedTeamId.value = if (teamId == -1L) null else teamId
-    }
-
-    private fun selectDefaultSubject(subjectId: Long?) {
-        if (subjectId == null || selectedSubjectId.value != null) return
-        selectedSubjectId.value = if (subjectId == -1L) null else subjectId
-    }
-
-    private fun selectDefaultTeacher(teacherId: Long?) {
-        if (teacherId == null || selectedTeacherId.value != null) return
-        selectedTeacherId.value = if (teacherId == -1L) null else teacherId
-    }
-
-    private fun selectDefaultType(typeId: Long?) {
-        if (typeId == null || selectedTypeId.value != null) return
-        selectedTypeId.value = typeId
-    }
-
     // =========================================================================================
     // User-driven selection + cascade
     // =========================================================================================
@@ -548,30 +512,30 @@ class EventManualDialog(
     }
 
     private fun onTeamSelect(item: FormDropdownItem) {
-        selectedTeamId.value = if (item.id == -1L) null else item.id
+        selectedTeamId.set(if (item.id == -1L) null else item.id)
     }
 
     private fun onSubjectSelect(item: FormDropdownItem) {
-        selectedSubjectId.value = if (item.id == -1L) null else item.id
+        selectedSubjectId.set(if (item.id == -1L) null else item.id)
     }
 
     private fun onTeacherSelect(item: FormDropdownItem) {
-        selectedTeacherId.value = if (item.id == -1L) null else item.id
+        selectedTeacherId.set(if (item.id == -1L) null else item.id)
     }
 
     private fun onTypeSelect(item: FormDropdownItem) {
         clearValidation()
-        selectedTypeId.value = item.id
-        customColor.value = EventManualLogic.customColorAfterTypeChange() // reset → retint from type
+        selectedTypeId.set(item.id)
+        customColor.set(EventManualLogic.customColorAfterTypeChange()) // reset → retint from type
     }
 
     private fun applyCascade(cascade: CascadeSelection) {
-        selectedSubjectId.value =
-            cascade.subjectId?.takeIf { id -> subjectItems.value.any { it.id == id } }
-        selectedTeacherId.value =
-            cascade.teacherId?.takeIf { id -> teacherItems.value.any { it.id == id } }
-        selectedTeamId.value =
-            cascade.teamId?.takeIf { id -> teamItems.value.any { it.id == id } } ?: classTeamId
+        selectedSubjectId.set(
+            cascade.subjectId?.takeIf { id -> subjectItems.value.any { it.id == id } })
+        selectedTeacherId.set(
+            cascade.teacherId?.takeIf { id -> teacherItems.value.any { it.id == id } })
+        selectedTeamId.set(
+            cascade.teamId?.takeIf { id -> teamItems.value.any { it.id == id } } ?: classTeamId)
     }
 
     // =========================================================================================
@@ -617,7 +581,7 @@ class EventManualDialog(
                 setColorPickerDialogListener(object : ColorPickerDialogListener {
                     override fun onDialogDismissed(dialogId: Int) {}
                     override fun onColorSelected(dialogId: Int, color: Int) {
-                        customColor.value = color
+                        customColor.set(color)
                     }
                 })
             }
