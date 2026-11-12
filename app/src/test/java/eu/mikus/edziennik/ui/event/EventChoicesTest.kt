@@ -105,4 +105,43 @@ class EventChoicesTest {
         val choices = EventChoices().apply { type.set(4L); applyDefaults(defaults) }
         assertEquals(4L, choices.type.value)
     }
+
+    // ---- item 94: a default never overwrites a value the user set while the lists loaded ----
+
+    @Test fun `a team the user picked during the load survives the class-team default`() {
+        val choices = EventChoices().apply {
+            team.set(groupTeam)
+            applyDefaults(Defaults.of(classTeam, null, null, null))
+        }
+        assertEquals(groupTeam, choices.team.value)
+    }
+
+    @Test fun `a team the user picked during the load survives an Add-from-lesson dialog's lesson team`() {
+        val choices = EventChoices().apply {
+            team.set(groupTeam)
+            applyDefaults(Defaults.of(classTeam, null, lesson(teamId = 300L), null))
+        }
+        assertEquals(groupTeam, choices.team.value)
+    }
+
+    @Test fun `a colour the user picked during the load survives the edited event's colour`() {
+        val choices = EventChoices().apply { color.set(0xABCDEF); applyDefaults(defaults) }
+        assertEquals(0xABCDEF, choices.color.value)
+    }
+
+    @Test fun `a type picked during the load keeps its colour reset over the edited event's colour`() {
+        // onTypeSelect sets the type and resets the colour, so the swatch follows the picked type.
+        val choices = EventChoices().apply { type.set(4L); color.set(null); applyDefaults(defaults) }
+        assertEquals(4L to null, choices.type.value to choices.color.value)
+    }
+
+    @Test fun `no subject picked during the load is not refilled`() {
+        val choices = EventChoices().apply { subject.set(null); applyDefaults(defaults) }
+        assertEquals(null, choices.subject.value)
+    }
+
+    @Test fun `no teacher picked during the load is not refilled`() {
+        val choices = EventChoices().apply { teacher.set(null); applyDefaults(defaults) }
+        assertEquals(null, choices.teacher.value)
+    }
 }

@@ -27,11 +27,6 @@ class UserValue<T>(initial: T) {
     fun default(value: T) {
         if (!touched) state.value = value
     }
-
-    /** Writes [value] without marking it as the user's. */
-    internal fun overwrite(value: T) {
-        state.value = value
-    }
 }
 
 /**
@@ -47,15 +42,16 @@ class EventChoices {
     val color = UserValue<Int?>(null)
 
     /**
-     * The legacy sequence, unchanged: the team and the colour are overwritten whatever the user set
-     * while the lists loaded; the subject, teacher and type only fill an empty value.
+     * Offers each default to its value: it lands only where the user set nothing while the lists
+     * loaded. (Where they did, it was a team or colour that used to be overwritten, or a "no subject"
+     * / "no teacher" that used to be refilled.)
      */
     fun applyDefaults(defaults: Defaults) {
-        team.overwrite(defaults.teamId)
-        if (subject.value == null) subject.overwrite(defaults.subjectId)
-        if (teacher.value == null) teacher.overwrite(defaults.teacherId)
-        if (type.value == null) type.overwrite(defaults.typeId)
-        color.overwrite(defaults.color)
+        team.default(defaults.teamId)
+        subject.default(defaults.subjectId)
+        teacher.default(defaults.teacherId)
+        type.default(defaults.typeId)
+        color.default(defaults.color)
     }
 
     /** What the form opens with, once its lists are loaded. */

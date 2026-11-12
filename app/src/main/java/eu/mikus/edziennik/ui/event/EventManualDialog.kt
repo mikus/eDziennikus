@@ -315,13 +315,14 @@ class EventManualDialog(
         selectDefaultDate(editingEvent?.date)
         selectDefaultDate(defaultLesson?.displayDate ?: defaultDate)
 
+        // The lists above were tappable while the later ones loaded: a default never overwrites a team,
+        // subject, teacher, type or colour the user set meanwhile.
         choices.applyDefaults(EventChoices.Defaults.of(classTeamId, editingEvent, defaultLesson, defaultType))
 
         // Time items belong to the chosen date; the field selects its opening time in them. The build
         // suspends and the user may choose a date meanwhile: then these rows, and the sync for this
-        // date's week, belong to a choice they already replaced. The subject, teacher and team
-        // defaults are applied above, before the build, so they cannot overwrite what that date
-        // choice's cascade applied; the type and colour ones, which no cascade touches, follow them.
+        // date's week, belong to a choice they already replaced. The defaults are applied above,
+        // before the build, so they cannot overwrite what that date choice's cascade applied.
         // With no date (Homework -> Add) the Date field stays empty, and the rows are today's.
         val opening = timeField.open(selectedDate.value ?: Date.getToday())
         val (timeRows, hasTimetable) = buildTimeItems(app, opening.date)
