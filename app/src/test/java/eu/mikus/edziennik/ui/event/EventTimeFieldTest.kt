@@ -404,6 +404,30 @@ class EventTimeFieldTest {
         assertNull(field.selectedId)
     }
 
+    // ---- pinned after the orchestrator's review: two lines the branch review's mutants missed ----
+
+    @Test fun `a next-lesson lesson re-keyed before its rows arrive is found by start and subject`() {
+        val field = opened(Opening.None, rows(english))
+        val rekeyed = lesson(50L, Time(8, 0, 0), "Maths", subjectId = 10L)
+        val chosen = rows(english, rekeyed)
+        assertTrue(field.checkedInstall(field.chooseDate(maths), chosen))
+
+        assertSame(rekeyed, field.selectedRow?.tag)
+        assertInvariants(field, chosen)
+    }
+
+    @Test fun `a next-lesson lesson a later sync removes leaves the time empty, not a custom row`() {
+        val field = opened(Opening.At(Time(8, 0, 0), preferSubjectId = 10L), rows(maths))
+        assertTrue(field.checkedInstall(field.chooseDate(physics), rows(maths, physics)))
+        assertSame(physics, field.selectedRow?.tag)
+        val rebuilt = rows(maths) // the 10:00 lesson is gone
+        assertTrue(field.sync(rebuilt))
+
+        assertNull(field.selectedId)
+        assertEquals(emptyList(), field.customRows)
+        assertEquals(rebuilt, field.items)
+    }
+
     // ---- resolved(): what Save stores ----
 
     @Test fun `resolved is none when nothing is selected`() {

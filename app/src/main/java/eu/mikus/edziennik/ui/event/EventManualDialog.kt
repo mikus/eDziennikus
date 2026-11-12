@@ -334,9 +334,9 @@ class EventManualDialog(
 
         // Time items belong to the chosen date; the field selects its opening time in them. The build
         // suspends and the user may choose a date meanwhile: then these rows, and the sync for this
-        // date's week, belong to a choice they already replaced. That is why every other default is
-        // applied above, before the build: none of them reads the time rows, and run after it they
-        // would refill what the date choice's cascade had just cleared.
+        // date's week, belong to a choice they already replaced. The subject, teacher and team
+        // defaults are applied above, before the build, so they cannot overwrite what that date
+        // choice's cascade applied; the type and colour ones, which no cascade touches, follow them.
         val initialDate = selectedDate.value ?: Date.getToday()
         val opening = timeField.ticket()
         val (timeRows, hasTimetable) = buildTimeItems(app, initialDate)
@@ -506,8 +506,8 @@ class EventManualDialog(
     }
 
     /** Select a concrete date, then run the legacy date cascade: auto-fill subject/teacher/team from
-     *  [lesson] (all-cleared if null) and reload the time list (sync if the timetable is missing),
-     *  unless another date is chosen before that reload is built. */
+     *  [lesson] (with null, subject and teacher are cleared and the team falls back to the class
+     *  team) and reload the time list (sync if missing), unless another date is chosen meanwhile. */
     private fun selectConcreteDate(date: Date, lesson: LessonFull?) {
         val app = activity.applicationContext as App
         setDateSelection(date)
@@ -676,8 +676,8 @@ class EventManualDialog(
         dismissWaitDialogs()
         val app = activity.applicationContext as App
         // Before loadInitial picks the date there is no list to re-find anything in, and it is about
-        // to build one for the real date: rebuilding today's here would leave a selection whose id is
-        // in no list, and the field blank. (Base survived that by keying rows on the time's value.)
+        // to build one for the real date: a build for today would race that one at the same
+        // generation, last install winning. (The old reason, a blank field, EventTimeField rules out.)
         val dateAtStart = selectedDate.value ?: return
         val ticket = timeField.ticket()
         launch {
