@@ -79,6 +79,11 @@ abstract class BaseDialog<I : Any>(
             .setOnDismissListener {
                 onDismiss()
                 onDismissListener?.invoke(TAG)
+                // Work this dialog started must not outlive it. Here, because every route to dismissal
+                // (buttons, back, a subclass's own dialog.dismiss()) reaches this listener. cancel(), not
+                // cancelChildren(): a callback that arrives later (an activity-scoped observer, say) must
+                // not be able to launch on this scope either.
+                job.cancel()
             }
             .create()
 
