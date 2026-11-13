@@ -44,9 +44,29 @@ class ProfileRemoveDialog(
     override fun getPositiveButtonText() = R.string.remove
     override fun getNeutralButtonText() = R.string.cancel
 
+    /**
+     * Whether Remove has been tapped. From that moment neither button may dismiss this dialog.
+     *
+     * The removal cannot be called off: it runs in a `withContext` block with no suspension point of
+     * its own, so once it starts it finishes. Dismissing cancels this dialog's scope
+     * ([BaseDialog.show]), which would abandon the removal at its resume — the profile and every row
+     * it owns deleted, and then no [reloadTarget][MainActivity.reloadTarget], no toast and no
+     * [onRemove], so the screen keeps rendering the deleted profile and the caller is never told. The
+     * wipe is 24 table clears under no transaction, so a diary with any history leaves the dialog
+     * sitting there long enough to invite a second tap. Back press and outside taps are already
+     * refused by [isCancelable]; these two buttons were the routes left.
+     */
+    private var removing = false
+
     override suspend fun onShow() = Unit
 
+    override suspend fun onNeutralClick() = !removing
+
     override suspend fun onPositiveClick(): Boolean {
+        if (removing)
+            return NO_DISMISS
+        removing = true
+
         withContext(Dispatchers.Default) {
             if (removeProfileData(app.db, app.config, profileId, keepProfile) && App.profileId == profileId)
                 app.profileLoadLast { }
