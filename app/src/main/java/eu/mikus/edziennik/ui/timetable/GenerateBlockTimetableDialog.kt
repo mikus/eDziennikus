@@ -137,7 +137,10 @@ class GenerateBlockTimetableDialog(
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskFinishedEvent(event: ApiTaskFinishedEvent) {
-        if (event.profileId == App.profileId) {
+        // Only the sync this dialog is waiting for. Any task that finishes for the profile posts
+        // this event, including the periodic and launch syncs; before this dialog has enqueued one,
+        // enqueuedWeekStart/End are still today..today, which generateBlockTimetable cannot index.
+        if (event.profileId == App.profileId && enqueuedWeekDialog?.isShowing == true) {
             enqueuedWeekDialog?.dismiss()
             generateBlockTimetable(enqueuedWeekStart, enqueuedWeekEnd)
         }

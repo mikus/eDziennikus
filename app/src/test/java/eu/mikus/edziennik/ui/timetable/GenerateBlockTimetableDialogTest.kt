@@ -18,10 +18,12 @@ import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.data.db.enums.LoginType
 import eu.mikus.edziennik.data.db.full.LessonFull
+import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.models.Week
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Job
 import org.greenrobot.eventbus.EventBus
 import org.junit.After
@@ -211,6 +213,79 @@ class GenerateBlockTimetableDialogTest {
         assertFalse("a wait dialog outlived the dialog", showing(R.string.please_wait))
     }
 
+    @Test
+    fun `a sync this dialog did not start does not start a generation`() {
+        val (dlg, main) = open()
+        readRelease.countDown()
+
+        // The periodic sync, the launch sync or the Timetable screen's own refresh finishing.
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+
+        verify(exactly = 0) { dao.getBetweenDatesNow(any(), any()) }
+        assertFalse("an unrelated sync showed a wait dialog", everShown(R.string.please_wait))
+        assertFalse("an unrelated sync started another sync", syncStarted())
+        assertTrue("an unrelated sync closed the dialog", main.isShowing)
+    }
+
+    @Test
+    fun `a sync this dialog did not start, on a day with a lesson, neither crashes nor generates`() {
+        lessons = listOf(lesson(on = Date.getToday()))
+        val (dlg, main) = open()
+        readRelease.countDown()
+        val uncaught = mutableListOf<Throwable>()
+        val thread = Thread.currentThread()
+        val previous = thread.uncaughtExceptionHandler
+        thread.setUncaughtExceptionHandler { _, e -> uncaught += e }
+        try {
+            dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+            awaitDone(dlg)
+        } finally {
+            thread.uncaughtExceptionHandler = previous
+        }
+
+        assertEquals("an unrelated sync threw", emptyList<Throwable>(), uncaught)
+        verify(exactly = 0) { dao.getBetweenDatesNow(any(), any()) }
+        assertFalse("an unrelated sync generated an image", everShown(R.string.timetable_generate_progress_title))
+        assertTrue("an unrelated sync closed the dialog", main.isShowing)
+    }
+
+    @Test
+    fun `the dialog's own sync finishing regenerates the week it was waiting for`() {
+        val (dlg, main) = open()
+        readRelease.countDown()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        lessons = listOf(lesson())
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+
+        assertFalse("the wait dialog is still showing", showing(R.string.please_wait))
+        assertTrue("the synced week was not generated", showing(R.string.timetable_generate_success_title))
+    }
+
+    @Test
+    fun `once its own sync has been handled, a later sync does not generate again`() {
+        val (dlg, main) = open()
+        readRelease.countDown()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        // Its own sync finishes and the week is still empty: the wait dialog closes, the user is back.
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+        assertFalse("the wait dialog is still showing", showing(R.string.please_wait))
+
+        // Some other sync later finishes, after lessons for that week have arrived.
+        lessons = listOf(lesson())
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+
+        assertFalse("a later sync generated an image", everShown(R.string.timetable_generate_progress_title))
+        assertTrue("a later sync closed the dialog", main.isShowing)
+    }
+
     private fun open(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
         lateinit var dlg: GenerateBlockTimetableDialog
         dlg = GenerateBlockTimetableDialog(activity, onDismissListener = {
@@ -267,9 +342,9 @@ class GenerateBlockTimetableDialogTest {
 
     private fun syncStarted() = shadowOf(activity.application).nextStartedService != null
 
-    private fun lesson() = LessonFull(PROFILE_ID, 1).apply {
+    private fun lesson(on: Date = Week.getWeekStart()) = LessonFull(PROFILE_ID, 1).apply {
         type = Lesson.TYPE_NORMAL
-        date = Week.getWeekStart()
+        date = on
         startTime = Time(8, 0, 0)
         endTime = Time(8, 45, 0)
         subjectName = "Matematyka"
