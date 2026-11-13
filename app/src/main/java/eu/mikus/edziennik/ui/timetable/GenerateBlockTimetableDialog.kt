@@ -106,6 +106,10 @@ class GenerateBlockTimetableDialog(
                 .setOnDismissListener {
                     onDismissListener?.invoke(TAG)
                     EventBus.getDefault().unregister(this@GenerateBlockTimetableDialog)
+                    // The handlers just unregistered were the wait dialog's only way out. One can
+                    // still be showing: a read that resumed before a posted Cancel click ran saw
+                    // this dialog up, so the guard in generateBlockTimetable let it through.
+                    enqueuedWeekDialog?.dismiss()
                 }
                 .show()
 
@@ -159,6 +163,12 @@ class GenerateBlockTimetableDialog(
         val allLessons = withContext(Dispatchers.Default) {
             app.db.timetableDao().getBetweenDatesNow(weekStart, weekEnd)
         }
+        // Dismissed while the read ran: stop before the wait dialog, whose dismissers the dismiss
+        // listener has unregistered, and before any generation the user walked away from.
+        // isShowing, not a flag set in that listener: the listener is a posted message, so a
+        // resume queued ahead of it would still see the flag unset. The job is deliberately not
+        // cancelled on dismissal: the success path below dismisses this dialog itself.
+        if (!dialog.isShowing) return@launch
         val lessonRanges = mutableMapOf<Int, Int>()
 
         var maxWeekDay = 5
