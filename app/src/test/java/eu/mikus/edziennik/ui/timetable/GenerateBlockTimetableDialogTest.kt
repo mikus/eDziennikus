@@ -25,6 +25,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Job
 import org.greenrobot.eventbus.EventBus
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -43,11 +44,18 @@ import java.util.concurrent.TimeUnit.SECONDS
  * Pins that this dialog's work does not outlive it.
  *
  * Choosing a week whose lessons are not downloaded makes [GenerateBlockTimetableDialog] show an
- * uncancelable "please wait" dialog and enqueue a sync. That wait dialog's only dismissers are the
+ * uncancelable "please wait" dialog and enqueue a sync. That wait dialog's only dismissers were the
  * dialog's EventBus handlers, which its dismiss listener unregisters. So a generation that resumed
  * from its Room read after the user had dismissed the dialog left a wait dialog that nothing could
  * close (item 99). The class is not a `BaseDialog`, so the base-class cancel of item 93 does not
- * reach it.
+ * reach it. The fix stops a generation after the read when the dialog is gone, and has the dismiss
+ * listener dismiss a wait dialog that is already up.
+ *
+ * Tests 6 and 7 need the read's resume to be queued on the main looper *before* the dismissal. The
+ * real `App` boots here and its own background work can post to the main looper too, so they wait
+ * for the read's `withContext` to complete rather than for any message, and they assert that the
+ * generation had finished by the time the dismiss listener ran: a run in the wrong order fails
+ * instead of passing without exercising the race.
  *
  * The read is held on a latch so a dismissal can land deterministically while it is in flight: the
  * timetable DAO is a mock whose `getBetweenDatesNow` blocks until the test releases it. `App.db` and
@@ -65,6 +73,8 @@ class GenerateBlockTimetableDialogTest {
     private val readEntered = CountDownLatch(1)
     private val readRelease = CountDownLatch(1)
     private var lessons: List<LessonFull> = emptyList()
+    /** Whether the generation had finished when the dismiss listener ran; null until it runs. */
+    private var launchDoneAtDismiss: Boolean? = null
 
     private val dbField = App::class.java.getDeclaredField("db").apply { isAccessible = true }
     private val profileField = App::class.java.getDeclaredField("profile").apply { isAccessible = true }
@@ -171,12 +181,13 @@ class GenerateBlockTimetableDialogTest {
         val (dlg, main) = open()
         holdRead(main)
         readRelease.countDown()
-        awaitResumeQueued()
+        awaitResumeQueued(dlg)
 
         // Back's route: dismiss() runs at once and posts the dismiss listener behind the queued resume.
         main.dismiss()
         awaitDone(dlg)
 
+        assertEquals("the resume did not run before the dismiss listener", true, launchDoneAtDismiss)
         assertFalse("a wait dialog showed after the dialog was dismissed", everShown(R.string.please_wait))
         assertFalse("a sync started after the dialog was dismissed", syncStarted())
     }
@@ -186,7 +197,7 @@ class GenerateBlockTimetableDialogTest {
         val (dlg, main) = open()
         holdRead(main)
         readRelease.countDown()
-        awaitResumeQueued()
+        awaitResumeQueued(dlg)
 
         // AlertController posts the click, so the resume runs first and shows the wait dialog while
         // this dialog is still up; Cancel's dismiss() then unregisters the wait dialog's dismissers.
@@ -194,12 +205,17 @@ class GenerateBlockTimetableDialogTest {
         awaitDone(dlg)
         idle()
 
+        assertEquals("the resume did not run before the dismiss listener", true, launchDoneAtDismiss)
+        assertTrue("the race did not run: no wait dialog showed before Cancel", everShown(R.string.please_wait))
         assertFalse("the dialog is still showing", main.isShowing)
         assertFalse("a wait dialog outlived the dialog", showing(R.string.please_wait))
     }
 
     private fun open(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
-        val dlg = GenerateBlockTimetableDialog(activity)
+        lateinit var dlg: GenerateBlockTimetableDialog
+        dlg = GenerateBlockTimetableDialog(activity, onDismissListener = {
+            launchDoneAtDismiss = dlg.coroutineContext[Job]!!.children.none()
+        })
         idle()
         val main = ShadowDialog.getLatestDialog() as? AlertDialog
         assertTrue("the dialog never showed", main?.isShowing == true)
@@ -223,13 +239,21 @@ class GenerateBlockTimetableDialogTest {
         fail("the generation never finished")
     }
 
-    private fun awaitResumeQueued() {
-        val looper = shadowOf(Looper.getMainLooper())
+    /**
+     * Returns once the read's `withContext` coroutine has completed, i.e. once its resume is posted to
+     * the main looper, without running it. Not "the looper has a message": the real `App` posts too.
+     */
+    private fun awaitResumeQueued(dlg: GenerateBlockTimetableDialog) {
+        val generation = dlg.coroutineContext[Job]!!.children.single()
         repeat(1000) {
-            if (!looper.isIdle) return
+            if (generation.children.none()) {
+                Thread.sleep(50) // the resume is dispatched just after the child completes
+                assertFalse("the read's resume was not queued", shadowOf(Looper.getMainLooper()).isIdle)
+                return
+            }
             Thread.sleep(5)
         }
-        fail("the read's resume was never queued on the main looper")
+        fail("the read never completed")
     }
 
     private fun titleOf(dialog: Dialog) =
