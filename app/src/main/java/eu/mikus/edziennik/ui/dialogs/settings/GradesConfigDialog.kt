@@ -50,7 +50,7 @@ import eu.mikus.edziennik.utils.managers.GradesManager.Companion.YEAR_ALL_GRADES
 
 /**
  * Grades configuration dialog, now a [ComposeDialog] launcher. Keeps the exact `.show()` + ctor
- * contract of the legacy `ConfigDialog<DialogConfigGradesBinding>` so all four callers are untouched.
+ * contract of its former ViewBinding version so all four callers are untouched.
  * Every control writes its change straight back to config (live), so [onDismiss] only needs to
  * trigger the target reload — mirroring the legacy load-on-show / save-on-dismiss end state.
  */
@@ -71,7 +71,7 @@ class GradesConfigDialog(
     }
 
     override fun onDismiss() {
-        // config is written live by the controls; only the reload is needed on dismiss (mirrors ConfigDialog)
+        // config is written live by the controls; only the reload is needed on dismiss
         if (reloadOnDismiss && activity is MainActivity) activity.reloadTarget()
     }
 }
