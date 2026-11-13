@@ -137,13 +137,19 @@ class GenerateBlockTimetableDialog(
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskFinishedEvent(event: ApiTaskFinishedEvent) {
-        // Only the sync this dialog is waiting for. Any task that finishes for the profile posts
-        // this event, including the periodic and launch syncs; before this dialog has enqueued one,
-        // enqueuedWeekStart/End are still today..today, which generateBlockTimetable cannot index.
-        if (event.profileId == App.profileId && enqueuedWeekDialog?.isShowing == true) {
-            enqueuedWeekDialog?.dismiss()
+        // Only while this dialog is waiting for a sync it enqueued. Any task that finishes for the
+        // profile posts this event, including the periodic and launch syncs; before this dialog has
+        // enqueued one, enqueuedWeekStart/End are still today..today, which generateBlockTimetable
+        // cannot index.
+        //
+        // The wait is NOT ended here. The event carries no task identity, so this may well be some
+        // other task finishing while the dialog's own sync is still queued behind it; closing the
+        // wait on it re-read a week that was still empty, returned silently below, and left
+        // isShowing false, so the dialog's own sync was then ignored and the image never made. The
+        // wait ends where it is actually over: a rebuild that finds the week (below), the queue
+        // draining (onApiTaskAllFinishedEvent), an error, or the dialog being dismissed.
+        if (event.profileId == App.profileId && enqueuedWeekDialog?.isShowing == true)
             generateBlockTimetable(enqueuedWeekStart, enqueuedWeekEnd)
-        }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)

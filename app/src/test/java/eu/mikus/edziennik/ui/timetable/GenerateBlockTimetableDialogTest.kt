@@ -6,11 +6,13 @@ package eu.mikus.edziennik.ui.timetable
 import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Looper
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskFinishedEvent
 import eu.mikus.edziennik.data.db.AppDb
 import eu.mikus.edziennik.data.db.dao.TimetableDao
@@ -267,23 +269,74 @@ class GenerateBlockTimetableDialogTest {
     }
 
     @Test
-    fun `once its own sync has been handled, a later sync does not generate again`() {
+    fun `a sync that does not fill the week keeps the dialog waiting for one that does`() {
         val (dlg, main) = open()
         readRelease.countDown()
         main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         awaitDone(dlg)
-        // Its own sync finishes and the week is still empty: the wait dialog closes, the user is back.
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        // Another task for this profile finishes first. The dialog's own sync is queued behind
+        // whatever was already running, and ApiTaskFinishedEvent carries no task identity, so this
+        // cannot be told apart from the dialog's own. The week is still empty.
         dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
         awaitDone(dlg)
-        assertFalse("the wait dialog is still showing", showing(R.string.please_wait))
 
-        // Some other sync later finishes, after lessons for that week have arrived.
+        assertTrue("an unrelated sync ended the wait", showing(R.string.please_wait))
+
+        // Now the week the user asked for arrives.
+        lessons = listOf(lesson())
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+
+        assertFalse("the wait dialog outlived the week arriving", showing(R.string.please_wait))
+        assertTrue(
+            "the week the user asked for was never generated",
+            showing(R.string.timetable_generate_success_title),
+        )
+    }
+
+    @Test
+    fun `when the queue drains with the week still empty, the wait ends and later syncs do not generate`() {
+        val (dlg, main) = open()
+        readRelease.countDown()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        // Nothing is left to wait for: the week simply has no lessons to download.
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        idle()
+        assertFalse("the wait dialog outlived the queue", showing(R.string.please_wait))
+
+        // The wait is over, so a later sync must not start generating on its own.
         lessons = listOf(lesson())
         dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
         awaitDone(dlg)
 
         assertFalse("a later sync generated an image", everShown(R.string.timetable_generate_progress_title))
         assertTrue("a later sync closed the dialog", main.isShowing)
+    }
+
+    @Test
+    fun `the regeneration reads the week that was waited for, not the current one`() {
+        val (dlg, main) = open()
+        readRelease.countDown()
+        // Next week, so "the week waited for" and "the current week" are different reads.
+        main.findViewById<RadioGroup>(R.id.weekSelectionRadioGroup)!!.check(R.id.withChangesNextWeekRadio)
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        val nextStart = Week.getWeekEnd().clone().stepForward(0, 0, 1)
+        lessons = listOf(lesson(on = nextStart))
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+
+        verify { dao.getBetweenDatesNow(match { it.stringY_m_d == nextStart.stringY_m_d }, any()) }
+        verify(exactly = 0) {
+            dao.getBetweenDatesNow(match { it.stringY_m_d == Week.getWeekStart().stringY_m_d }, any())
+        }
     }
 
     private fun open(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
