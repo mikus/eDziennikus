@@ -116,7 +116,14 @@ class EventDetailsDialog(
 
     private fun setDone(ev: EventFull, done: Boolean) {
         ev.isDone = done
-        launch(Dispatchers.Default) { app.db.eventDao().replace(ev) }
+        // Dispatch on Main and move to Default inside, as removeEvent does above, rather than
+        // launching straight onto Default. Dismissing cancels this dialog's scope (BaseDialog.show),
+        // and a launch is only a dispatch: a coroutine cancelled before its body starts never runs it
+        // at all. A Default worker picks this up independently of the main thread, so a dismissal
+        // could get there first and leave ev.isDone changed in memory with nothing written. Posted to
+        // the main looper it is ordered ahead of the input event any dismissal would arrive on, and
+        // the write itself has no suspension point, so once begun it finishes.
+        launch { withContext(Dispatchers.Default) { app.db.eventDao().replace(ev) } }
     }
 
     private fun editEvent(ev: EventFull) {
