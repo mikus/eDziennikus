@@ -1098,6 +1098,7 @@
     <string name="timetable_generate_progress_text">This may take few seconds…</string>
     <string name="timetable_generate_progress_title">Generating timetable</string>
     <string name="timetable_generate_range">Range of the timetable</string>
+    <string name="timetable_generate_save_failed">Could not save the timetable</string>
     <string name="timetable_generate_selected_week">For selected week</string>
     <string name="timetable_generate_show_profile_name">Show profile name</string>
     <string name="timetable_generate_show_teachers_names">Show names of teachers</string>

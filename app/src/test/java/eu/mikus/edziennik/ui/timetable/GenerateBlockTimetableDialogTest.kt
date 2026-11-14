@@ -5,9 +5,16 @@ package eu.mikus.edziennik.ui.timetable
 
 import android.app.Dialog
 import android.content.ComponentName
+import android.content.ContentProvider
+import android.content.ContentValues
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.pm.ProviderInfo
+import android.content.res.AssetFileDescriptor
+import android.database.Cursor
+import android.net.Uri
 import android.os.Looper
+import android.provider.MediaStore
 import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -45,7 +52,11 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowContentResolver
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowToast
+import java.io.IOException
+import java.io.OutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 
@@ -81,6 +92,11 @@ import java.util.concurrent.TimeUnit.SECONDS
  *
  * A sync error closes the dialog only while it is waiting for its own sync, and only when the error
  * is this profile's or has no profile, as a refused service start has (item 103).
+ *
+ * A save reports success only when the image was written; any failure after the MediaStore row was
+ * inserted deletes that row (item 104). With no provider registered, `ShadowContentResolver.insert`
+ * returns `<uri>/<++counter>`, so [insertedUri] sets the counter one below the id it expects, and the
+ * output-stream supplier is keyed on that exact uri.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -484,6 +500,129 @@ class GenerateBlockTimetableDialogTest {
         assertFalse("the dialog outlived the refused start", main.isShowing)
     }
 
+    @Test
+    fun `a save whose insert fails shows the failure toast and no success dialog`() {
+        registerMediaProvider(inserts = null)
+
+        save()
+
+        assertSaveFailed()
+        assertEquals("a delete ran with no row inserted", emptyList<Uri>(), shadowOf(resolver).deletedUris)
+    }
+
+    @Test
+    fun `a save whose image cannot be written deletes the row and shows the failure toast`() {
+        val uri = insertedUri()
+        // compress does not throw on a failing stream; it returns false.
+        shadowOf(resolver).registerOutputStreamSupplier(uri) {
+            object : OutputStream() {
+                override fun write(b: Int) = throw IOException("write failed")
+            }
+        }
+
+        save()
+
+        assertSaveFailed()
+        assertEquals("the unwritten row was not deleted", listOf(uri), shadowOf(resolver).deletedUris)
+    }
+
+    @Test
+    fun `a save whose stream fails to close deletes the row and shows the failure toast`() {
+        val uri = insertedUri()
+        shadowOf(resolver).registerOutputStreamSupplier(uri) {
+            object : OutputStream() {
+                override fun write(b: Int) = Unit
+                override fun close() = throw IOException("close failed")
+            }
+        }
+
+        save()
+
+        assertSaveFailed()
+        assertEquals("the unwritten row was not deleted", listOf(uri), shadowOf(resolver).deletedUris)
+    }
+
+    @Test
+    fun `a save whose stream cannot be opened deletes the row and shows the failure toast`() {
+        val uri = insertedUri()
+        // The 1-arg openOutputStream turns FileNotFoundException and SecurityException into a dummy
+        // sink, so the open failure has to be another exception to reach the code.
+        shadowOf(resolver).registerOutputStreamSupplier(uri) { throw IllegalStateException("open failed") }
+
+        save()
+
+        assertSaveFailed()
+        assertEquals("the unopened row was not deleted", listOf(uri), shadowOf(resolver).deletedUris)
+    }
+
+    @Test
+    fun `a save with no output stream deletes the row and shows the failure toast`() {
+        val uri = Uri.parse("${MediaStore.Images.Media.EXTERNAL_CONTENT_URI}/$INSERT_ID")
+        // openAssetFile returning null makes the real ContentResolver.openOutputStream return null.
+        registerMediaProvider(inserts = uri)
+        assertEquals("the provider route did not yield a null stream", null, resolver.openOutputStream(uri))
+
+        save()
+
+        assertSaveFailed()
+        assertTrue("the unwritten row was not deleted", uri in shadowOf(resolver).deletedUris)
+    }
+
+    @Test
+    fun `a successful save shows the success dialog, no failure toast, and deletes nothing`() {
+        save()
+
+        assertTrue("the Share/Open dialog never showed", showing(R.string.timetable_generate_success_title))
+        assertFalse("the progress dialog is still showing", showing(R.string.timetable_generate_progress_title))
+        assertEquals("a successful save showed a toast", null, ShadowToast.getTextOfLatestToast())
+        assertEquals("a successful save deleted a row", emptyList<Uri>(), shadowOf(resolver).deletedUris)
+    }
+
+    /** Answers `insert` with [inserts], every stream open with null, and every delete with 1. */
+    private class MediaProvider(private val inserts: Uri?) : ContentProvider() {
+        override fun onCreate() = true
+        override fun query(uri: Uri, projection: Array<String>?, selection: String?, selectionArgs: Array<String>?, sortOrder: String?): Cursor? = null
+        override fun getType(uri: Uri): String? = null
+        override fun insert(uri: Uri, values: ContentValues?): Uri? = inserts
+        override fun delete(uri: Uri, selection: String?, selectionArgs: Array<String>?) = 1
+        override fun update(uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<String>?) = 0
+        override fun openAssetFile(uri: Uri, mode: String): AssetFileDescriptor? = null
+    }
+
+    private val resolver get() = activity.applicationContext.contentResolver
+
+    /** Routes the save's `insert`, `openOutputStream` and `delete` to a [MediaProvider]. */
+    private fun registerMediaProvider(inserts: Uri?) {
+        val provider = MediaProvider(inserts)
+        // Attached, or the real resolver's stream open dereferences a null context.
+        provider.attachInfo(activity.application, ProviderInfo().apply { authority = "media"; exported = true })
+        ShadowContentResolver.registerProviderInternal("media", provider)
+    }
+
+    /** Makes the next unprovided `insert` return the uri this returns; the shadow pre-increments. */
+    private fun insertedUri(): Uri {
+        shadowOf(resolver).setNextDatabaseIdForInserts(INSERT_ID - 1)
+        return Uri.parse("${MediaStore.Images.Media.EXTERNAL_CONTENT_URI}/$INSERT_ID")
+    }
+
+    /** Opens the dialog on a week with a lesson, taps Save and waits for the generation to finish. */
+    private fun save() {
+        lessons = listOf(lesson())
+        val (dlg, main) = open()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+    }
+
+    private fun assertSaveFailed() {
+        assertFalse("a failed save showed the success dialog", showing(R.string.timetable_generate_success_title))
+        assertFalse("the progress dialog is still showing", showing(R.string.timetable_generate_progress_title))
+        assertEquals(
+            "a failed save showed no failure toast",
+            activity.getString(R.string.timetable_generate_save_failed),
+            ShadowToast.getTextOfLatestToast(),
+        )
+    }
+
     /** Refuses a foreground-service start, as Android 12+ does from a background process. */
     class RefusingActivity : AppCompatActivity() {
         override fun startForegroundService(service: Intent?): ComponentName? =
@@ -573,5 +712,6 @@ class GenerateBlockTimetableDialogTest {
 
     private companion object {
         const val PROFILE_ID = 9299
+        const val INSERT_ID = 4321
     }
 }

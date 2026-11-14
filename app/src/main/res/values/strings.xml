@@ -1190,6 +1190,7 @@
     <string name="timetable_generate_progress_text">Może to potrwać kilkanaście sekund…</string>
     <string name="timetable_generate_progress_title">Generowanie planu lekcji</string>
     <string name="timetable_generate_range">Zakres generowanego planu</string>
+    <string name="timetable_generate_save_failed">Nie udało się zapisać planu lekcji</string>
     <string name="timetable_generate_selected_week">Na wybrany tydzień</string>
     <string name="timetable_generate_show_profile_name">Pokaż nazwę profilu</string>
     <string name="timetable_generate_show_teachers_names">Pokaż imiona i nazwiska nauczycieli</string>

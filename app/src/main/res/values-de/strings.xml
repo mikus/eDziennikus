@@ -1096,6 +1096,7 @@
     <string name="timetable_generate_progress_text">Dies kann einige Sekunden dauern…</string>
     <string name="timetable_generate_progress_title">Stunden erstellen</string>
     <string name="timetable_generate_range">Der Umfang des generierten Plans</string>
+    <string name="timetable_generate_save_failed">Der Stundenplan konnte nicht gespeichert werden</string>
     <string name="timetable_generate_selected_week">Für ausgewählte Woche</string>
     <string name="timetable_generate_show_profile_name">Profilnamen anzeigen</string>
     <string name="timetable_generate_show_teachers_names">Namen von Lehrern anzeigen</string>

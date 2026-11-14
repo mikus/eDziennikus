@@ -8,6 +8,7 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.*
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -16,6 +17,7 @@ import android.view.View
 import android.view.View.MeasureSpec
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
@@ -36,6 +38,7 @@ import eu.mikus.edziennik.data.db.full.LessonFull
 import eu.mikus.edziennik.databinding.DialogGenerateBlockTimetableBinding
 import eu.mikus.edziennik.ext.*
 import eu.mikus.edziennik.utils.PublicFolder
+import eu.mikus.edziennik.utils.Utils
 import eu.mikus.edziennik.utils.models.Date
 import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.models.Week
@@ -424,30 +427,11 @@ class GenerateBlockTimetableDialog(
             val today = Date.getToday().stringY_m_d
             val now = Time.getNow().stringH_M_S
             val filename = "plan_lekcji_${app.profile.name}_${today}_${now}.png"
-            val resolver: ContentResolver = activity.applicationContext.contentResolver
-            val values = ContentValues()
-            values.put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                values.put(MediaStore.MediaColumns.RELATIVE_PATH, PublicFolder.relativePath(Environment.DIRECTORY_PICTURES))
-            } else {
-                val picturesDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), PublicFolder.NAME)
-                picturesDirectory.mkdirs()
-                values.put(MediaStore.MediaColumns.DATA, File(picturesDirectory, filename).path)
-            }
-
-            try {
-                val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return@withContext null
-                resolver.openOutputStream(uri).use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it ?: return@use)
-                }
-                uri
-            } catch (e: Exception) {
-                Log.e("SAVE_IMAGE", e.message, e)
-                return@withContext null
-            }
-
+            savePng(bitmap, filename)
+        } ?: run {
+            progressDialog.dismiss()
+            Toast.makeText(activity, R.string.timetable_generate_save_failed, Toast.LENGTH_LONG).show()
+            return@launch
         }
 
         progressDialog.dismiss()
@@ -473,4 +457,48 @@ class GenerateBlockTimetableDialog(
                 .setNeutralButton(R.string.do_nothing) { dialog, _ -> dialog.dismiss() }
                 .show()
     }}
+
+    /**
+     * Saves [bitmap] as a PNG to MediaStore and returns its uri, or null unless the row was inserted,
+     * a stream opened, the image written and the stream closed. Any other outcome after the insert
+     * deletes the row, so no empty image is left behind. `compress` reports a failing stream by
+     * returning false, not by throwing.
+     */
+    private fun savePng(bitmap: Bitmap, filename: String): Uri? {
+        val resolver: ContentResolver = activity.applicationContext.contentResolver
+        val values = ContentValues()
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, PublicFolder.relativePath(Environment.DIRECTORY_PICTURES))
+        } else {
+            val picturesDirectory = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), PublicFolder.NAME)
+            picturesDirectory.mkdirs()
+            values.put(MediaStore.MediaColumns.DATA, File(picturesDirectory, filename).path)
+        }
+
+        var uri: Uri? = null
+        var written = false
+        try {
+            uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            if (uri != null) {
+                written = resolver.openOutputStream(uri)?.use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                } ?: false
+            }
+        } catch (e: Exception) {
+            Log.e("SAVE_IMAGE", e.message, e)
+        } finally {
+            // The one cleanup point: every exit after a successful insert without a written image.
+            if (!written && uri != null) {
+                try {
+                    resolver.delete(uri, null, null)
+                } catch (e: Exception) {
+                    Utils.d(TAG, "Could not delete the unwritten image $uri: $e")
+                }
+            }
+        }
+        return if (written) uri else null
+    }
 }
