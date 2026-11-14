@@ -12,7 +12,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
 import android.view.View
 import android.view.View.MeasureSpec
 import android.widget.LinearLayout
@@ -482,13 +481,19 @@ class GenerateBlockTimetableDialog(
         var written = false
         try {
             uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-            if (uri != null) {
-                written = resolver.openOutputStream(uri)?.use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-                } ?: false
+            if (uri == null) {
+                Utils.d(TAG, "Saving $filename failed: the MediaStore insert returned null")
+            } else {
+                val stream = resolver.openOutputStream(uri)
+                if (stream == null) {
+                    Utils.d(TAG, "Saving $filename failed: no output stream for $uri")
+                } else {
+                    written = stream.use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                    if (!written) Utils.d(TAG, "Saving $filename failed: compress returned false")
+                }
             }
         } catch (e: Exception) {
-            Log.e("SAVE_IMAGE", e.message, e)
+            Utils.d(TAG, "Saving $filename failed: ${e.stackTraceToString()}")
         } finally {
             // The one cleanup point: every exit after a successful insert without a written image.
             if (!written && uri != null) {

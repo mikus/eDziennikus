@@ -172,12 +172,14 @@ class GenerateBlockTimetableDialogTest {
     }
 
     @Test
-    fun `a generation started after the dialog was dismissed shows no wait dialog`() {
+    fun `a sync finishing after the dialog was dismissed starts nothing`() {
         val (dlg, main) = open()
         main.dismiss()
         idle()
 
-        // An event racing the posted unregister, or the date picker, which outlives this dialog.
+        // Pins only that a Finished event with no wait set starts no read, wait or sync. The late
+        // date-picker route goes through the post-read `!dialog.isShowing` guard, which `dismissed
+        // during the read of an empty week, no wait dialog shows and no sync starts` pins.
         dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
         awaitDone(dlg)
 
