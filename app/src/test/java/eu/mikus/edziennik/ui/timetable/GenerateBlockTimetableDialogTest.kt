@@ -4,7 +4,9 @@
 package eu.mikus.edziennik.ui.timetable
 
 import android.app.Dialog
+import android.content.ComponentName
 import android.content.DialogInterface
+import android.content.Intent
 import android.os.Looper
 import android.widget.RadioGroup
 import android.widget.TextView
@@ -14,7 +16,9 @@ import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
 import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
+import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskFinishedEvent
+import eu.mikus.edziennik.data.api.models.ApiError
 import eu.mikus.edziennik.data.db.AppDb
 import eu.mikus.edziennik.data.db.dao.TimetableDao
 import eu.mikus.edziennik.data.db.entity.Lesson
@@ -74,6 +78,9 @@ import java.util.concurrent.TimeUnit.SECONDS
  * The dialog waits for its own sync in one state, set when it starts a wait and cleared when the wait
  * ends (item 101). Once a wait has ended, a later empty week must start a new one; a rebuild after a
  * sync must never start one, even when its read outlives the wait it was rebuilding for.
+ *
+ * A sync error closes the dialog only while it is waiting for its own sync, and only when the error
+ * is this profile's or has no profile, as a refused service start has (item 103).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -424,6 +431,65 @@ class GenerateBlockTimetableDialogTest {
         assertTrue("the regeneration closed the dialog", main.isShowing)
     }
 
+    @Test
+    fun `another profile's sync error while waiting leaves both dialogs up`() {
+        val (dlg, main) = open()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        dlg.onApiTaskErrorEvent(error(PROFILE_ID + 1))
+        idle()
+
+        assertTrue("another profile's error ended the wait", showing(R.string.please_wait))
+        assertTrue("another profile's error closed the dialog", main.isShowing)
+    }
+
+    @Test
+    fun `a sync error while the dialog is not waiting leaves it up`() {
+        val (dlg, main) = open()
+
+        // A background sync of this profile failing while the user is still choosing the options.
+        dlg.onApiTaskErrorEvent(error(PROFILE_ID))
+        idle()
+
+        assertTrue("an error the dialog was not waiting for closed it", main.isShowing)
+    }
+
+    @Test
+    fun `this profile's sync error while waiting closes both dialogs`() {
+        val (dlg, main) = open()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        dlg.onApiTaskErrorEvent(error(PROFILE_ID))
+        idle()
+
+        assertFalse("the wait dialog outlived the error", showing(R.string.please_wait))
+        assertFalse("the dialog outlived the error", main.isShowing)
+    }
+
+    @Test
+    fun `a refused sync start ends the wait it began`() {
+        // The real IApiTask.enqueue catches the refusal and posts an error with no profile, inline.
+        activity = Robolectric.buildActivity(RefusingActivity::class.java).setup().get()
+        val (dlg, main) = open()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        idle()
+
+        assertTrue("the empty week never showed the wait dialog", everShown(R.string.please_wait))
+        assertFalse("the wait dialog outlived the refused start", showing(R.string.please_wait))
+        assertFalse("the dialog outlived the refused start", main.isShowing)
+    }
+
+    /** Refuses a foreground-service start, as Android 12+ does from a background process. */
+    class RefusingActivity : AppCompatActivity() {
+        override fun startForegroundService(service: Intent?): ComponentName? =
+            throw IllegalStateException("refused")
+    }
+
     private fun open(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
         lateinit var dlg: GenerateBlockTimetableDialog
         dlg = GenerateBlockTimetableDialog(activity, onDismissListener = {
@@ -489,6 +555,9 @@ class GenerateBlockTimetableDialogTest {
 
     private fun showing(titleRes: Int) =
         ShadowDialog.getShownDialogs().any { it.isShowing && titleOf(it) == activity.getString(titleRes) }
+
+    private fun error(profileId: Int?) =
+        ApiTaskErrorEvent(ApiError("test", 1).apply { this.profileId = profileId })
 
     private fun syncStarted() = shadowOf(activity.application).nextStartedService != null
 
