@@ -74,9 +74,11 @@ class GenerateBlockTimetableDialog(
     private var showTeachersNames: Boolean = true
     private var noColors: Boolean = false
 
-    private var enqueuedWeekDialog: AlertDialog? = null
-    private var enqueuedWeekStart = Date.getToday()
-    private var enqueuedWeekEnd = Date.getToday()
+    /** A sync this dialog enqueued for a week it found empty, and the dialog shown meanwhile. */
+    private class Waiting(val weekStart: Date, val weekEnd: Date, val dialog: AlertDialog)
+
+    /** Non-null exactly while this dialog is waiting for its own sync; see [startWait], [endWait]. */
+    private var waiting: Waiting? = null
 
     init { run {
         if (activity.isFinishing)
@@ -106,17 +108,18 @@ class GenerateBlockTimetableDialog(
                 .setOnDismissListener {
                     onDismissListener?.invoke(TAG)
                     EventBus.getDefault().unregister(this@GenerateBlockTimetableDialog)
-                    // The handlers just unregistered were the wait dialog's only way out. One can
-                    // still be showing: a read that resumed before a posted Cancel click ran saw
-                    // this dialog up, so the guard in generateBlockTimetable let it through.
-                    enqueuedWeekDialog?.dismiss()
+                    // The handlers just unregistered were the only other way the wait could end.
+                    // One can still be on: a read that resumed before a posted Cancel click ran saw
+                    // this dialog up, so the guard in generateBlockTimetable let it through. A
+                    // rebuild that finds the week also ends the wait here, as it dismisses this dialog.
+                    endWait()
                 }
                 .show()
 
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.onClick {
             when (b.weekSelectionRadioGroup.checkedRadioButtonId) {
-                R.id.withChangesCurrentWeekRadio -> generateBlockTimetable(weekCurrentStart, weekCurrentEnd)
-                R.id.withChangesNextWeekRadio -> generateBlockTimetable(weekNextStart, weekNextEnd)
+                R.id.withChangesCurrentWeekRadio -> generateBlockTimetable(weekCurrentStart, weekCurrentEnd, mayStartWait = true)
+                R.id.withChangesNextWeekRadio -> generateBlockTimetable(weekNextStart, weekNextEnd, mayStartWait = true)
                 R.id.forSelectedWeekRadio -> selectDate()
             }
         }
@@ -129,7 +132,7 @@ class GenerateBlockTimetableDialog(
             .apply {
                 addOnPositiveButtonClickListener { millis ->
                     val dateSelected = Date.fromMillisUtc(millis)
-                    generateBlockTimetable(dateSelected.weekStart, dateSelected.weekEnd)
+                    generateBlockTimetable(dateSelected.weekStart, dateSelected.weekEnd, mayStartWait = true)
                 }
             }
             .show(activity.supportFragmentManager, TAG)
@@ -137,33 +140,69 @@ class GenerateBlockTimetableDialog(
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskFinishedEvent(event: ApiTaskFinishedEvent) {
-        // Only while this dialog is waiting for a sync it enqueued. Any task that finishes for the
-        // profile posts this event, including the periodic and launch syncs; before this dialog has
-        // enqueued one, enqueuedWeekStart/End are still today..today, which generateBlockTimetable
-        // cannot index.
+        // Only while this dialog is waiting for a sync it enqueued: any task that finishes for the
+        // profile posts this event, including the periodic and launch syncs, and with no wait there
+        // is no week to rebuild.
         //
         // The wait is NOT ended here. The event carries no task identity, so this may well be some
-        // other task finishing while the dialog's own sync is still queued behind it; closing the
-        // wait on it re-read a week that was still empty, returned silently below, and left
-        // isShowing false, so the dialog's own sync was then ignored and the image never made. The
-        // wait ends where it is actually over: a rebuild that finds the week (below), the queue
+        // other task finishing while the dialog's own sync is still queued behind it; ending the
+        // wait on it re-read a week that was still empty and returned silently below, so the
+        // dialog's own sync was then ignored and the image never made. The wait ends where it is
+        // actually over: a rebuild that finds the week (it dismisses this dialog), the queue
         // draining (onApiTaskAllFinishedEvent), an error, or the dialog being dismissed.
-        if (event.profileId == App.profileId && enqueuedWeekDialog?.isShowing == true)
-            generateBlockTimetable(enqueuedWeekStart, enqueuedWeekEnd)
+        //
+        // The rebuild may not start a wait of its own: its read can outlive this wait, and a new
+        // sync for a week that has no lessons would only finish into another empty read.
+        val current = waiting ?: return
+        if (event.profileId == App.profileId)
+            generateBlockTimetable(current.weekStart, current.weekEnd, mayStartWait = false)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskAllFinishedEvent(event: ApiTaskAllFinishedEvent) {
-        enqueuedWeekDialog?.dismiss()
+        endWait()
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskErrorEvent(event: ApiTaskErrorEvent) {
         dialog.dismiss()
-        enqueuedWeekDialog?.dismiss()
+        endWait()
     }
 
-    private fun generateBlockTimetable(weekStart: Date, weekEnd: Date) { launch {
+    /**
+     * The only creator of a [Waiting]. The enqueue is deliberately the last statement: a refused
+     * service start is reported by [EdziennikTask.enqueue] as an [ApiTaskErrorEvent] delivered
+     * inline, so the wait must already be set for that error to end it, and it may be over by the
+     * time `enqueue` returns.
+     */
+    private fun startWait(weekStart: Date, weekEnd: Date) {
+        val waitDialog = MaterialAlertDialogBuilder(activity)
+                .setTitle(R.string.please_wait)
+                .setMessage(R.string.timetable_syncing_text)
+                .setCancelable(false)
+                .show()
+        val started = Waiting(weekStart, weekEnd, waitDialog)
+        waiting = started
+
+        EdziennikTask.syncProfile(
+                profileId = App.profileId,
+                featureTypes = setOf(FeatureType.TIMETABLE),
+                arguments = JsonObject(
+                        "weekStart" to started.weekStart.stringY_m_d
+                )
+        ).enqueue(activity)
+    }
+
+    private fun endWait() {
+        waiting?.dialog?.dismiss()
+        waiting = null
+    }
+
+    /**
+     * [mayStartWait] is fixed by the caller before the launch, never derived from [waiting] after
+     * the read: the user's Save and the date picker pass true, the rebuild after a sync passes false.
+     */
+    private fun generateBlockTimetable(weekStart: Date, weekEnd: Date, mayStartWait: Boolean) { launch {
         val weekDays = mutableListOf<MutableList<Lesson>>()
         for (i in weekStart.weekDay..weekEnd.weekDay) {
             weekDays.add(mutableListOf())
@@ -207,25 +246,9 @@ class GenerateBlockTimetableDialog(
         }
 
         if (lessons.isEmpty()) {
-            if (enqueuedWeekDialog != null) {
-                return@launch
-            }
-            enqueuedWeekDialog = MaterialAlertDialogBuilder(activity)
-                    .setTitle(R.string.please_wait)
-                    .setMessage(R.string.timetable_syncing_text)
-                    .setCancelable(false)
-                    .show()
-
-            enqueuedWeekStart = weekStart
-            enqueuedWeekEnd = weekEnd
-
-            EdziennikTask.syncProfile(
-                    profileId = App.profileId,
-                    featureTypes = setOf(FeatureType.TIMETABLE),
-                    arguments = JsonObject(
-                            "weekStart" to weekStart.stringY_m_d
-                    )
-            ).enqueue(activity)
+            // A second Save overlapping a wait (a double tap) keeps waiting and enqueues nothing.
+            if (mayStartWait && waiting == null)
+                startWait(weekStart, weekEnd)
             return@launch
         }
 

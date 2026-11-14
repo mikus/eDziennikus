@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskFinishedEvent
 import eu.mikus.edziennik.data.db.AppDb
@@ -61,12 +62,18 @@ import java.util.concurrent.TimeUnit.SECONDS
  * generation had finished by the time the dismiss listener ran: a run in the wrong order fails
  * instead of passing without exercising the race.
  *
- * The read is held on a latch so a dismissal can land deterministically while it is in flight: the
- * timetable DAO is a mock whose `getBetweenDatesNow` blocks until the test releases it. `App.db` and
- * `App.profile` are `private set`, so they are swapped by reflection and restored afterwards.
+ * A read can be held on a gate so a dismissal can land deterministically while it is in flight: the
+ * timetable DAO is a mock whose `getBetweenDatesNow` returns at once, unless the test has armed the
+ * gate with [armRead], in which case it blocks until the test releases it. The gate can be re-armed
+ * for a later read. `App.db` and `App.profile` are `private set`, so they are swapped by reflection
+ * and restored afterwards.
  *
  * Test 4 is a characterisation of the success path, which dismisses its own dialog half way through
  * the launch. It is what turns red if the dialog's coroutine `Job` is cancelled on dismissal.
+ *
+ * The dialog waits for its own sync in one state, set when it starts a wait and cleared when the wait
+ * ends (item 101). Once a wait has ended, a later empty week must start a new one; a rebuild after a
+ * sync must never start one, even when its read outlives the wait it was rebuilding for.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -74,8 +81,10 @@ class GenerateBlockTimetableDialogTest {
 
     private lateinit var activity: AppCompatActivity
     private val dao = mockk<TimetableDao>()
-    private val readEntered = CountDownLatch(1)
-    private val readRelease = CountDownLatch(1)
+    /** Counted down when a read enters the DAO while [gate] is armed; replaced on each [armRead]. */
+    @Volatile private var readEntered = CountDownLatch(1)
+    /** While non-null and not yet released, a read blocks on it. */
+    @Volatile private var gate: CountDownLatch? = null
     private var lessons: List<LessonFull> = emptyList()
     /** Whether the generation had finished when the dismiss listener ran; null until it runs. */
     private var launchDoneAtDismiss: Boolean? = null
@@ -92,8 +101,10 @@ class GenerateBlockTimetableDialogTest {
         savedProfile = profileField.get(null)
         profileField.set(null, Profile(PROFILE_ID, PROFILE_ID, LoginType.DEMO, name = "Test"))
         every { dao.getBetweenDatesNow(any(), any()) } answers {
-            readEntered.countDown()
-            check(readRelease.await(5, SECONDS)) { "the read was never released" }
+            gate?.let { armed ->
+                readEntered.countDown()
+                check(armed.await(5, SECONDS)) { "the read was never released" }
+            }
             lessons
         }
         dbField.set(null, mockk<AppDb>(relaxed = true) { every { timetableDao() } returns dao })
@@ -103,7 +114,7 @@ class GenerateBlockTimetableDialogTest {
 
     @After
     fun tearDown() {
-        readRelease.countDown()
+        release()
         ShadowDialog.getShownDialogs().forEach { it.dismiss() }
         idle()
         EventBus.getDefault().removeAllStickyEvents()
@@ -118,7 +129,7 @@ class GenerateBlockTimetableDialogTest {
 
         main.dismiss()
         idle()
-        readRelease.countDown()
+        release()
         awaitDone(dlg)
 
         assertFalse("a wait dialog showed after the dialog was dismissed", everShown(R.string.please_wait))
@@ -130,7 +141,7 @@ class GenerateBlockTimetableDialogTest {
         val (dlg, main) = open()
         holdRead(main)
 
-        readRelease.countDown()
+        release()
         awaitDone(dlg)
 
         assertTrue("an empty week no longer shows the wait dialog", showing(R.string.please_wait))
@@ -140,7 +151,6 @@ class GenerateBlockTimetableDialogTest {
     @Test
     fun `a generation started after the dialog was dismissed shows no wait dialog`() {
         val (dlg, main) = open()
-        readRelease.countDown()
         main.dismiss()
         idle()
 
@@ -158,7 +168,7 @@ class GenerateBlockTimetableDialogTest {
         val (dlg, main) = open()
         holdRead(main)
 
-        readRelease.countDown()
+        release()
         awaitDone(dlg)
 
         assertFalse("the progress dialog is still showing", showing(R.string.timetable_generate_progress_title))
@@ -173,7 +183,7 @@ class GenerateBlockTimetableDialogTest {
 
         main.dismiss()
         idle()
-        readRelease.countDown()
+        release()
         awaitDone(dlg)
 
         assertFalse("generation started after the dialog was dismissed", everShown(R.string.timetable_generate_progress_title))
@@ -184,7 +194,7 @@ class GenerateBlockTimetableDialogTest {
     fun `dismissed while the read's resume is already queued, no wait dialog shows and no sync starts`() {
         val (dlg, main) = open()
         holdRead(main)
-        readRelease.countDown()
+        release()
         awaitResumeQueued(dlg)
 
         // Back's route: dismiss() runs at once and posts the dismiss listener behind the queued resume.
@@ -200,7 +210,7 @@ class GenerateBlockTimetableDialogTest {
     fun `Cancel tapped while the read's resume is already queued leaves no wait dialog behind`() {
         val (dlg, main) = open()
         holdRead(main)
-        readRelease.countDown()
+        release()
         awaitResumeQueued(dlg)
 
         // AlertController posts the click, so the resume runs first and shows the wait dialog while
@@ -218,7 +228,6 @@ class GenerateBlockTimetableDialogTest {
     @Test
     fun `a sync this dialog did not start does not start a generation`() {
         val (dlg, main) = open()
-        readRelease.countDown()
 
         // The periodic sync, the launch sync or the Timetable screen's own refresh finishing.
         dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
@@ -234,7 +243,6 @@ class GenerateBlockTimetableDialogTest {
     fun `a sync this dialog did not start, on a day with a lesson, neither crashes nor generates`() {
         lessons = listOf(lesson(on = Date.getToday()))
         val (dlg, main) = open()
-        readRelease.countDown()
         val uncaught = mutableListOf<Throwable>()
         val thread = Thread.currentThread()
         val previous = thread.uncaughtExceptionHandler
@@ -255,7 +263,6 @@ class GenerateBlockTimetableDialogTest {
     @Test
     fun `the dialog's own sync finishing regenerates the week it was waiting for`() {
         val (dlg, main) = open()
-        readRelease.countDown()
         main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         awaitDone(dlg)
         assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
@@ -271,7 +278,6 @@ class GenerateBlockTimetableDialogTest {
     @Test
     fun `a sync that does not fill the week keeps the dialog waiting for one that does`() {
         val (dlg, main) = open()
-        readRelease.countDown()
         main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         awaitDone(dlg)
         assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
@@ -299,7 +305,6 @@ class GenerateBlockTimetableDialogTest {
     @Test
     fun `when the queue drains with the week still empty, the wait ends and later syncs do not generate`() {
         val (dlg, main) = open()
-        readRelease.countDown()
         main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         awaitDone(dlg)
         assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
@@ -321,7 +326,6 @@ class GenerateBlockTimetableDialogTest {
     @Test
     fun `the regeneration reads the week that was waited for, not the current one`() {
         val (dlg, main) = open()
-        readRelease.countDown()
         // Next week, so "the week waited for" and "the current week" are different reads.
         main.findViewById<RadioGroup>(R.id.weekSelectionRadioGroup)!!.check(R.id.withChangesNextWeekRadio)
         main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
@@ -351,6 +355,75 @@ class GenerateBlockTimetableDialogTest {
         )
     }
 
+    @Test
+    fun `after the queue drains, a later empty week waits and syncs that week again`() {
+        val (dlg, main) = open()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        idle()
+        assertFalse("the wait dialog outlived the queue", showing(R.string.please_wait))
+        assertTrue("the queue draining closed the dialog", main.isShowing)
+        shadowOf(activity.application).clearStartedServices()
+        EventBus.getDefault().removeStickyEvent(EdziennikTask::class.java)
+
+        // A second empty week, after the first wait is over.
+        main.findViewById<RadioGroup>(R.id.weekSelectionRadioGroup)!!.check(R.id.withChangesNextWeekRadio)
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+
+        assertTrue("a later empty week did not show the wait dialog", showing(R.string.please_wait))
+        assertTrue("a later empty week did not start a sync", syncStarted())
+        val task = EventBus.getDefault().getStickyEvent(EdziennikTask::class.java)
+        assertTrue("no sync task was enqueued", task != null)
+        val nextStart = Week.getWeekEnd().clone().stepForward(0, 0, 1)
+        assertEquals(
+            "the sync was not for the week now waited for",
+            nextStart.stringY_m_d,
+            (task!!.request as EdziennikTask.SyncProfileRequest).arguments!!.get("weekStart").asString,
+        )
+
+        // Save again while that wait is on: keep waiting, enqueue nothing.
+        shadowOf(activity.application).clearStartedServices()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+
+        assertFalse("a second Save during the wait started another sync", syncStarted())
+        assertEquals(
+            "a second Save during the wait did not leave exactly one wait dialog",
+            1,
+            ShadowDialog.getShownDialogs().count { it.isShowing && titleOf(it) == activity.getString(R.string.please_wait) },
+        )
+    }
+
+    @Test
+    fun `a regeneration whose read outlives the wait never starts another sync`() {
+        val (dlg, main) = open()
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+
+        armRead()
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        idle()
+        assertTrue("the regeneration's read never started", readEntered.await(5, SECONDS))
+
+        // The queue drains while the regeneration is still reading the (still empty) week.
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        idle()
+        assertFalse("the wait dialog outlived the queue", showing(R.string.please_wait))
+        shadowOf(activity.application).clearStartedServices()
+
+        release()
+        awaitDone(dlg)
+
+        assertFalse("the regeneration showed another wait dialog", showing(R.string.please_wait))
+        assertFalse("the regeneration started another sync", syncStarted())
+        assertTrue("the regeneration closed the dialog", main.isShowing)
+    }
+
     private fun open(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
         lateinit var dlg: GenerateBlockTimetableDialog
         dlg = GenerateBlockTimetableDialog(activity, onDismissListener = {
@@ -364,9 +437,21 @@ class GenerateBlockTimetableDialogTest {
 
     /** Taps Save (the current week is preselected) and returns once the read is blocked in the DAO. */
     private fun holdRead(main: AlertDialog) {
+        armRead()
         main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
         idle()
         assertTrue("the read never started", readEntered.await(5, SECONDS))
+    }
+
+    /** Makes the next read block in the DAO until [release]; [readEntered] counts down when it does. */
+    private fun armRead() {
+        readEntered = CountDownLatch(1)
+        gate = CountDownLatch(1)
+    }
+
+    /** Lets a read held by [armRead] return. */
+    private fun release() {
+        gate?.countDown()
     }
 
     private fun awaitDone(dlg: GenerateBlockTimetableDialog) {
