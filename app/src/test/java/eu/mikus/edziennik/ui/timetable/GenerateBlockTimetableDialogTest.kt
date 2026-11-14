@@ -339,6 +339,18 @@ class GenerateBlockTimetableDialogTest {
         }
     }
 
+    @Test
+    fun `the next-week radio shows next week's start and end dates`() {
+        val (_, main) = open()
+        val nextStart = Week.getWeekEnd().clone().stepForward(0, 0, 1)
+        val nextEnd = nextStart.clone().stepForward(0, 0, 6)
+
+        assertEquals(
+            activity.getString(R.string.timetable_generate_next_week_format, nextStart.formattedStringShort, nextEnd.formattedStringShort),
+            main.findViewById<TextView>(R.id.withChangesNextWeekRadio)!!.text.toString(),
+        )
+    }
+
     private fun open(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
         lateinit var dlg: GenerateBlockTimetableDialog
         dlg = GenerateBlockTimetableDialog(activity, onDismissListener = {
