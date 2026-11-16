@@ -276,7 +276,7 @@ class GenerateBlockTimetableDialog(
 
         dialog.dismiss()
 
-        val uri = withContext(Dispatchers.Default) {
+        val uri = withContext(Dispatchers.Default) { nullIfDrawingFails {
 
             val diff = Time.diff(maxTime, minTime)
 
@@ -427,7 +427,7 @@ class GenerateBlockTimetableDialog(
             val now = Time.getNow().stringH_M_S
             val filename = "plan_lekcji_${app.profile.name}_${today}_${now}.png"
             savePng(bitmap, filename)
-        } ?: run {
+        }} ?: run {
             progressDialog.dismiss()
             Toast.makeText(activity, R.string.timetable_generate_save_failed, Toast.LENGTH_LONG).show()
             return@launch
@@ -456,6 +456,25 @@ class GenerateBlockTimetableDialog(
                 .setNeutralButton(R.string.do_nothing) { dialog, _ -> dialog.dismiss() }
                 .show()
     }}
+
+    /**
+     * Runs [draw], the drawing and the save, and turns a failure into null, which the caller reports
+     * as "could not save". [OutOfMemoryError] is caught as well as [Exception]: the image's bitmap
+     * is the realistic failure, and it is this block's own allocation, unreachable once it unwinds,
+     * so carrying on is normally safe. The cost is that a heap exhausted for another reason fails
+     * later elsewhere, with this persisted line as the clue. Every other [Error] means a broken build
+     * or VM, not a big image, and still crashes. No CancellationException can arise: [draw] has no
+     * suspension point, and the job is never cancelled.
+     */
+    private inline fun nullIfDrawingFails(draw: () -> Uri?): Uri? = try {
+        draw()
+    } catch (e: Exception) {
+        Utils.d(TAG, "Generating the timetable image failed: ${e.stackTraceToString()}")
+        null
+    } catch (e: OutOfMemoryError) {
+        Utils.d(TAG, "Generating the timetable image ran out of memory: ${e.stackTraceToString()}")
+        null
+    }
 
     /**
      * Saves [bitmap] as a PNG to MediaStore and returns its uri, or null unless the row was inserted,

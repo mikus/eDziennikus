@@ -12,6 +12,7 @@ import android.content.Intent
 import android.content.pm.ProviderInfo
 import android.content.res.AssetFileDescriptor
 import android.database.Cursor
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Looper
 import android.provider.MediaStore
@@ -37,6 +38,8 @@ import eu.mikus.edziennik.utils.models.Time
 import eu.mikus.edziennik.utils.models.Week
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.Job
 import org.greenrobot.eventbus.EventBus
@@ -141,6 +144,7 @@ class GenerateBlockTimetableDialogTest {
         ShadowDialog.getShownDialogs().forEach { it.dismiss() }
         idle()
         EventBus.getDefault().removeAllStickyEvents()
+        unmockkStatic(Bitmap::class)
         dbField.set(null, savedDb)
         profileField.set(null, savedProfile)
     }
@@ -589,6 +593,44 @@ class GenerateBlockTimetableDialogTest {
         assertEquals("a successful save deleted a row", emptyList<Uri>(), shadowOf(resolver).deletedUris)
     }
 
+    @Test
+    fun `a drawing exception reports the failure and leaves no dialog behind`() {
+        val uncaught = drawingThrows(IllegalStateException("draw"))
+
+        assertEquals("the drawing failure escaped the coroutine", emptyList<Throwable>(), uncaught)
+        verify(exactly = 1) { Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888) }
+        assertSaveFailed()
+    }
+
+    @Test
+    fun `running out of memory while drawing reports the failure and leaves no dialog behind`() {
+        val uncaught = drawingThrows(OutOfMemoryError("draw"))
+
+        assertEquals("the out-of-memory error escaped the coroutine", emptyList<Throwable>(), uncaught)
+        verify(exactly = 1) { Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888) }
+        assertSaveFailed()
+    }
+
+    /**
+     * Makes the image's own bitmap allocation throw [t], saves a one-lesson week, and returns what
+     * reached the main thread's uncaught handler. Only the call with exactly the image's dimensions is
+     * stubbed, so a view's drawing cache still gets a real bitmap.
+     */
+    private fun drawingThrows(t: Throwable): List<Throwable> {
+        mockkStatic(Bitmap::class)
+        every { Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888) } throws t
+        val uncaught = mutableListOf<Throwable>()
+        val thread = Thread.currentThread()
+        val previous = thread.uncaughtExceptionHandler
+        thread.setUncaughtExceptionHandler { _, e -> uncaught += e }
+        try {
+            save()
+        } finally {
+            thread.uncaughtExceptionHandler = previous
+        }
+        return uncaught
+    }
+
     /** Answers `insert` with [inserts], every stream open with null, and every delete with 1. */
     private class MediaProvider(private val inserts: Uri?) : ContentProvider() {
         override fun onCreate() = true
@@ -724,5 +766,9 @@ class GenerateBlockTimetableDialogTest {
     private companion object {
         const val PROFILE_ID = 9299
         const val INSERT_ID = 4321
+        /** The image for [lesson]'s 8:00-8:45 week: 70 + 5 * (285 + 15) - 15, plus the 20 px margin. */
+        const val IMAGE_WIDTH = 1575
+        /** 60 + 45 min * 3 + 40, plus the 30 px margin; no profile name. */
+        const val IMAGE_HEIGHT = 265
     }
 }
