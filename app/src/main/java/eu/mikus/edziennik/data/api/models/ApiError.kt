@@ -53,6 +53,20 @@ class ApiError(val tag: String, var errorCode: Int) {
         return this
     }
 
+    /**
+     * Whether this error may be the failure of a task enqueued for [profileId].
+     *
+     * [ApiService][eu.mikus.edziennik.data.api.ApiService]'s `onError` stamps every error of a running
+     * task with that task's profile. A stamp of -1 (SzkolnyTask or ErrorReportTask failing, or an
+     * error arriving after its task was cleared) never matches a real profile. An error with no stamp
+     * was not attributed to any task, so it may be anyone's: today the only one is
+     * [IApiTask.enqueue][eu.mikus.edziennik.data.api.task.IApiTask.enqueue]'s
+     * `ERROR_SERVICE_START_REFUSED`, posted inline when the service start is refused. A caller that
+     * waits on a task it enqueued that way must count it, or nothing ends its wait.
+     */
+    fun mayBelongTo(profileId: Int): Boolean =
+        this.profileId == null || this.profileId == profileId
+
     fun setCritical(isCritical: Boolean): ApiError {
         this.isCritical = isCritical
         return this

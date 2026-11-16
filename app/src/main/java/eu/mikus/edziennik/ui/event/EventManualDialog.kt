@@ -660,14 +660,11 @@ class EventManualDialog(
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskErrorEvent(event: ApiTaskErrorEvent) {
         // Only an error that can be the failure of the sync syncTimetable enqueued, which is for this
-        // dialog's profileId (not App.profileId: the dialog can edit another profile's event).
-        // ApiService.onError stamps every error with its task's profile; -1 (a failing SzkolnyTask or
-        // ErrorReportTask, or a late error) counts as foreign. The only error posted with no profile
-        // is IApiTask.enqueue's ERROR_SERVICE_START_REFUSED, which can be this dialog's own: it is
-        // delivered inline from syncTimetable's enqueue, after the wait is set. No waiting gate:
-        // with no wait, dismissWaitDialogs does nothing.
-        val p = event.error.profileId
-        if (p != null && p != profileId) return
+        // dialog's profileId (not App.profileId: the dialog can edit another profile's event). An
+        // unstamped error can be this dialog's own: a refused service start is delivered inline from
+        // syncTimetable's enqueue, after the wait is set. No waiting gate: with no wait,
+        // dismissWaitDialogs does nothing.
+        if (!event.error.mayBelongTo(profileId)) return
         dismissWaitDialogs()
     }
 

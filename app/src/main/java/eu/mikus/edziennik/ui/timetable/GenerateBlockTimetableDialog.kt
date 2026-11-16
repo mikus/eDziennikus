@@ -187,14 +187,11 @@ class GenerateBlockTimetableDialog(
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskErrorEvent(event: ApiTaskErrorEvent) {
         // Only an error that can be this dialog's own sync's: with no wait, nothing this dialog
-        // started can fail. The only error posted without a profile is IApiTask.enqueue's synchronous
-        // ERROR_SERVICE_START_REFUSED, which can be this dialog's own, delivered inline from inside
-        // startWait's enqueue. Every other error is stamped with its task's profile by
-        // ApiService.onError, and -1 (a failing SzkolnyTask, or a late error) counts as foreign.
-        // Keyed on the null, not on the error code, so a future unstamped error still ends the wait.
+        // started can fail. Its sync is enqueued for App.profileId; an unstamped error can be its own,
+        // a refused service start delivered inline from inside startWait's enqueue. Keyed on the
+        // null, not on the error code, so a future unstamped error still ends the wait.
         if (waiting == null) return
-        val p = event.error.profileId
-        if (p != null && p != App.profileId) return
+        if (!event.error.mayBelongTo(App.profileId)) return
         dialog.dismiss()
         endWait()
     }
