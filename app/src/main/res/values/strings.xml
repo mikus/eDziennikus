@@ -1185,6 +1185,7 @@
     <string name="timetable_generate_for_printout">Do wydruku (bez zmian, oszczędza kolory)</string>
     <string name="timetable_generate_include_profile_name">Wyświetl nazwę profilu ucznia</string>
     <string name="timetable_generate_next_week_format">Ze zmianami na następny tydzień (%s do %s)</string>
+    <string name="timetable_generate_no_lessons">W wybranym tygodniu nie ma żadnych lekcji</string>
     <string name="timetable_generate_no_changes">Bez zmian lekcji</string>
     <string name="timetable_generate_no_colors">Do wydruku (oszczędza kolory)</string>
     <string name="timetable_generate_progress_text">Może to potrwać kilkanaście sekund…</string>

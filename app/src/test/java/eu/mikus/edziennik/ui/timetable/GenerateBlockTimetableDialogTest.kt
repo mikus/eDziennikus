@@ -100,6 +100,16 @@ import java.util.concurrent.TimeUnit.SECONDS
  * inserted deletes that row (item 104). With no provider registered, `ShadowContentResolver.insert`
  * returns `<uri>/<++counter>`, so [insertedUri] sets the counter one below the id it expects, and the
  * output-stream supplier is keyed on that exact uri.
+ *
+ * A failure while drawing the image, an `OutOfMemoryError` included, is reported like a failed save
+ * rather than crashing (item 111); the image's own `Bitmap.createBitmap` is stubbed to throw.
+ *
+ * A week that is still empty after the dialog's own sync is reported as having no lessons, but only
+ * once that sync is provably over (item 107): its task was started by the service (a `taskId` other
+ * than 0, set here by hand, as no service runs), a Finished for the profile came after that, and
+ * then the queue drained. Nothing else may say it: a Finished can be another task's, and a drain can
+ * follow a task that never ran or was cut off. Tests that never start the task therefore see the
+ * old, silent drain.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -609,6 +619,139 @@ class GenerateBlockTimetableDialogTest {
         assertEquals("the out-of-memory error escaped the coroutine", emptyList<Throwable>(), uncaught)
         verify(exactly = 1) { Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888) }
         assertSaveFailed()
+    }
+
+    @Test
+    fun `when its own sync has finished and the queue drains on an empty week, it says the week has no lessons`() {
+        val (dlg, main) = saveEmptyNextWeek()
+        ownTaskStarted()
+
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+        assertTrue("its own sync finishing ended the wait before the queue drained", showing(R.string.please_wait))
+        assertEquals("a Finished alone said something", null, ShadowToast.getTextOfLatestToast())
+
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        awaitDone(dlg)
+
+        assertFalse("the wait dialog outlived the queue", showing(R.string.please_wait))
+        assertTrue("the drain closed the dialog", main.isShowing)
+        assertEquals(
+            "the empty week was not reported",
+            activity.getString(R.string.timetable_generate_no_lessons),
+            ShadowToast.getTextOfLatestToast(),
+        )
+        // The Save, the rebuild after its own sync, and one read after the drain.
+        verifyNextWeekReads(3)
+        assertFalse("an empty week generated an image", everShown(R.string.timetable_generate_progress_title))
+    }
+
+    @Test
+    fun `a queue that drains before its own sync started says nothing`() {
+        val (dlg, main) = saveEmptyNextWeek()
+
+        // Another task's Finished, then a drain: the dialog's task was dropped before it ran, as a
+        // task posted into a closing service is.
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        awaitDone(dlg)
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        awaitDone(dlg)
+
+        assertEquals("a drain with its own sync never run said something", null, ShadowToast.getTextOfLatestToast())
+        assertFalse("the wait dialog outlived the queue", showing(R.string.please_wait))
+        assertTrue("the drain closed the dialog", main.isShowing)
+        verifyNextWeekReads(2)
+    }
+
+    @Test
+    fun `a queue that drains after its own sync started but never finished says nothing`() {
+        val (dlg, main) = saveEmptyNextWeek()
+        // Started, then cancelled or killed: no Finished for this profile follows.
+        ownTaskStarted()
+
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        awaitDone(dlg)
+
+        assertEquals("a drain after a cut-off sync said something", null, ShadowToast.getTextOfLatestToast())
+        assertFalse("the wait dialog outlived the queue", showing(R.string.please_wait))
+        assertTrue("the drain closed the dialog", main.isShowing)
+        verifyNextWeekReads(1)
+    }
+
+    @Test
+    fun `a rebuild that resumes after an unproven drain says nothing`() {
+        val (dlg, main) = saveEmptyNextWeek()
+        shadowOf(activity.application).clearStartedServices()
+
+        armRead()
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        idle()
+        assertTrue("the rebuild's read never started", readEntered.await(5, SECONDS))
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        idle()
+        release()
+        awaitDone(dlg)
+
+        assertEquals("a rebuild after an unproven drain said something", null, ShadowToast.getTextOfLatestToast())
+        assertFalse("the rebuild showed another wait dialog", showing(R.string.please_wait))
+        assertFalse("the rebuild started another sync", syncStarted())
+        assertTrue("the rebuild closed the dialog", main.isShowing)
+        verifyNextWeekReads(2)
+    }
+
+    @Test
+    fun `a week that arrives before the queue drains is generated once and says nothing`() {
+        val (dlg, _) = saveEmptyNextWeek()
+        ownTaskStarted()
+
+        // Its own sync's rebuild is still reading when the queue drains, so both reads see the week.
+        armRead()
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
+        idle()
+        assertTrue("the rebuild's read never started", readEntered.await(5, SECONDS))
+        lessons = listOf(lesson(on = nextWeekStart()))
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        idle()
+        release()
+        awaitDone(dlg)
+
+        assertEquals(
+            "the week was not generated exactly once",
+            1,
+            ShadowDialog.getShownDialogs().count { titleOf(it) == activity.getString(R.string.timetable_generate_success_title) },
+        )
+        assertEquals("a filled week said something", null, ShadowToast.getTextOfLatestToast())
+        verifyNextWeekReads(3)
+    }
+
+    /** Opens the dialog, saves next week while it is empty, and returns once the wait is up. */
+    private fun saveEmptyNextWeek(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
+        val (dlg, main) = open()
+        main.findViewById<RadioGroup>(R.id.weekSelectionRadioGroup)!!.check(R.id.withChangesNextWeekRadio)
+        main.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        awaitDone(dlg)
+        assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
+        return dlg to main
+    }
+
+    /** Does what `ApiService.runTask` does to the dialog's own task when it starts running it. */
+    private fun ownTaskStarted() {
+        EventBus.getDefault().getStickyEvent(EdziennikTask::class.java)!!.taskId = 1
+    }
+
+    private fun nextWeekStart(): Date = Week.getWeekEnd().clone().stepForward(0, 0, 1)
+
+    /** Exactly [n] reads, every one of them spanning the whole of next week. */
+    private fun verifyNextWeekReads(n: Int) {
+        val start = nextWeekStart()
+        val end = start.clone().stepForward(0, 0, 6)
+        verify(exactly = n) {
+            dao.getBetweenDatesNow(
+                match { it.stringY_m_d == start.stringY_m_d },
+                match { it.stringY_m_d == end.stringY_m_d },
+            )
+        }
+        verify(exactly = n) { dao.getBetweenDatesNow(any(), any()) }
     }
 
     /**

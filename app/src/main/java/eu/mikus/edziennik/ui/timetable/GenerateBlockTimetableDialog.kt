@@ -31,6 +31,7 @@ import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskFinishedEvent
+import eu.mikus.edziennik.data.api.task.IApiTask
 import eu.mikus.edziennik.data.db.entity.Lesson
 import eu.mikus.edziennik.data.db.enums.FeatureType
 import eu.mikus.edziennik.data.db.full.LessonFull
@@ -77,7 +78,24 @@ class GenerateBlockTimetableDialog(
     private var noColors: Boolean = false
 
     /** A sync this dialog enqueued for a week it found empty, and the dialog shown meanwhile. */
-    private class Waiting(val weekStart: Date, val weekEnd: Date, val dialog: AlertDialog)
+    private class Waiting(val weekStart: Date, val weekEnd: Date, val dialog: AlertDialog, val task: IApiTask) {
+        /**
+         * Whether a Finished for this profile arrived after the service started [task]. Its own
+         * completion posts one; a task dropped unrun, cancelled or killed posts none. See
+         * [onApiTaskAllFinishedEvent].
+         */
+        var ownSyncFinished = false
+    }
+
+    /** What a generation does when the week turns out to have no lessons; fixed by its caller. */
+    private enum class IfEmpty {
+        /** The user's Save or the date picker: sync the week and wait for it. */
+        START_WAIT,
+        /** The rebuild after a Finished: that may not have been this dialog's sync, so keep waiting. */
+        KEEP_WAITING,
+        /** The read after a drain that followed this dialog's own sync: the week has no lessons. */
+        SAY_NO_LESSONS,
+    }
 
     /** Non-null exactly while this dialog is waiting for its own sync; see [startWait], [endWait]. */
     private var waiting: Waiting? = null
@@ -120,8 +138,8 @@ class GenerateBlockTimetableDialog(
 
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.onClick {
             when (b.weekSelectionRadioGroup.checkedRadioButtonId) {
-                R.id.withChangesCurrentWeekRadio -> generateBlockTimetable(weekCurrentStart, weekCurrentEnd, mayStartWait = true)
-                R.id.withChangesNextWeekRadio -> generateBlockTimetable(weekNextStart, weekNextEnd, mayStartWait = true)
+                R.id.withChangesCurrentWeekRadio -> generateBlockTimetable(weekCurrentStart, weekCurrentEnd, IfEmpty.START_WAIT)
+                R.id.withChangesNextWeekRadio -> generateBlockTimetable(weekNextStart, weekNextEnd, IfEmpty.START_WAIT)
                 R.id.forSelectedWeekRadio -> selectDate()
             }
         }
@@ -134,7 +152,7 @@ class GenerateBlockTimetableDialog(
             .apply {
                 addOnPositiveButtonClickListener { millis ->
                     val dateSelected = Date.fromMillisUtc(millis)
-                    generateBlockTimetable(dateSelected.weekStart, dateSelected.weekEnd, mayStartWait = true)
+                    generateBlockTimetable(dateSelected.weekStart, dateSelected.weekEnd, IfEmpty.START_WAIT)
                 }
             }
             .show(activity.supportFragmentManager, TAG)
@@ -154,15 +172,31 @@ class GenerateBlockTimetableDialog(
         // draining (onApiTaskAllFinishedEvent), an error, or the dialog being dismissed.
         //
         // The rebuild may not start a wait of its own: its read can outlive this wait, and a new
-        // sync for a week that has no lessons would only finish into another empty read.
+        // sync for a week that has no lessons would only finish into another empty read. Nor may it
+        // say the week has no lessons, for the same reason the wait is not ended here.
+        //
+        // A Finished counts towards that proof only once the service has started this dialog's own
+        // task: ApiService.runTask gives a task its taskId (from 1) just before running it, and a
+        // task it drops is never given one.
         val current = waiting ?: return
-        if (event.profileId == App.profileId)
-            generateBlockTimetable(current.weekStart, current.weekEnd, mayStartWait = false)
+        if (event.profileId != App.profileId) return
+        if (current.task.taskId != 0)
+            current.ownSyncFinished = true
+        generateBlockTimetable(current.weekStart, current.weekEnd, IfEmpty.KEEP_WAITING)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskAllFinishedEvent(event: ApiTaskAllFinishedEvent) {
+        // A drain alone does not prove this dialog's sync ran: a task posted into a closing service
+        // is dropped unrun and a drain follows, and a cancelled or killed task also ends in one. A
+        // "no lessons" after either would be false, and the user would stop trying, so those end
+        // the wait silently. After a proven one the week is read afresh rather than trusting an
+        // earlier empty rebuild, which may have run before this dialog's sync wrote the week; if
+        // the read finds lessons, it generates the image.
+        val drained = waiting
         endWait()
+        if (drained?.ownSyncFinished == true)
+            generateBlockTimetable(drained.weekStart, drained.weekEnd, IfEmpty.SAY_NO_LESSONS)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -192,16 +226,16 @@ class GenerateBlockTimetableDialog(
                 .setMessage(R.string.timetable_syncing_text)
                 .setCancelable(false)
                 .show()
-        val started = Waiting(weekStart, weekEnd, waitDialog)
-        waiting = started
-
-        EdziennikTask.syncProfile(
+        val task = EdziennikTask.syncProfile(
                 profileId = App.profileId,
                 featureTypes = setOf(FeatureType.TIMETABLE),
                 arguments = JsonObject(
-                        "weekStart" to started.weekStart.stringY_m_d
+                        "weekStart" to weekStart.stringY_m_d
                 )
-        ).enqueue(activity)
+        )
+        waiting = Waiting(weekStart, weekEnd, waitDialog, task)
+
+        task.enqueue(activity)
     }
 
     private fun endWait() {
@@ -210,10 +244,10 @@ class GenerateBlockTimetableDialog(
     }
 
     /**
-     * [mayStartWait] is fixed by the caller before the launch, never derived from [waiting] after
-     * the read: the user's Save and the date picker pass true, the rebuild after a sync passes false.
+     * [ifEmpty] is fixed by the caller before the launch, never derived from [waiting] after the
+     * read: see [IfEmpty]. A week with lessons is generated whichever it is.
      */
-    private fun generateBlockTimetable(weekStart: Date, weekEnd: Date, mayStartWait: Boolean) { launch {
+    private fun generateBlockTimetable(weekStart: Date, weekEnd: Date, ifEmpty: IfEmpty) { launch {
         val weekDays = mutableListOf<MutableList<Lesson>>()
         for (i in weekStart.weekDay..weekEnd.weekDay) {
             weekDays.add(mutableListOf())
@@ -257,9 +291,13 @@ class GenerateBlockTimetableDialog(
         }
 
         if (lessons.isEmpty()) {
-            // A second Save overlapping a wait (a double tap) keeps waiting and enqueues nothing.
-            if (mayStartWait && waiting == null)
-                startWait(weekStart, weekEnd)
+            when (ifEmpty) {
+                // A second Save overlapping a wait (a double tap) keeps waiting and enqueues nothing.
+                IfEmpty.START_WAIT -> if (waiting == null) startWait(weekStart, weekEnd)
+                IfEmpty.KEEP_WAITING -> Unit
+                IfEmpty.SAY_NO_LESSONS ->
+                    Toast.makeText(activity, R.string.timetable_generate_no_lessons, Toast.LENGTH_LONG).show()
+            }
             return@launch
         }
 
