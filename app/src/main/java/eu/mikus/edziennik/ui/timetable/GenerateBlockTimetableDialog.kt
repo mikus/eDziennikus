@@ -481,6 +481,7 @@ class GenerateBlockTimetableDialog(
                     val intent = Intent(Intent.ACTION_SEND)
                     intent.setDataAndType(null, "image/*")
                     intent.putExtra(Intent.EXTRA_STREAM, uri)
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     activity.startActivity(Intent.createChooser(intent, activity.getString(R.string.share_intent)))
                 }
                 .setNegativeButton(R.string.open) { dialog, _ ->

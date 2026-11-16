@@ -724,6 +724,31 @@ class GenerateBlockTimetableDialogTest {
         verifyNextWeekReads(3)
     }
 
+    @Test
+    fun `Share grants the target read access to the saved image`() {
+        // Read as the dialog hands it over: the framework's start path would add the grant itself
+        // (Intent.migrateExtraStreamToClipData, unless implicitUriGrantsRestrictedForSendAction is
+        // on), and checking after it could not tell the dialog's flag from the platform's.
+        val recording = Robolectric.buildActivity(RecordingActivity::class.java).setup().get()
+        activity = recording
+        val uri = insertedUri()
+        save()
+        val success = ShadowDialog.getShownDialogs()
+            .single { it.isShowing && titleOf(it) == activity.getString(R.string.timetable_generate_success_title) }
+            as AlertDialog
+
+        success.getButton(DialogInterface.BUTTON_POSITIVE).performClick()
+        idle()
+
+        assertEquals("Share did not open a chooser", Intent.ACTION_CHOOSER, recording.startedAction)
+        assertEquals("the chooser's target is not a send", Intent.ACTION_SEND, recording.targetAction)
+        assertEquals("the send does not carry the saved image", uri, recording.targetStream)
+        assertTrue(
+            "the send does not grant read access to the image",
+            recording.targetFlags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0,
+        )
+    }
+
     /** Opens the dialog, saves next week while it is empty, and returns once the wait is up. */
     private fun saveEmptyNextWeek(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
         val (dlg, main) = open()
@@ -823,6 +848,26 @@ class GenerateBlockTimetableDialogTest {
     class RefusingActivity : AppCompatActivity() {
         override fun startForegroundService(service: Intent?): ComponentName? =
             throw IllegalStateException("refused")
+    }
+
+    /**
+     * Records the chooser it is asked to start, and its target's action, stream and flags, at the
+     * moment of the call: the framework's start path mutates the target in place. Starts nothing.
+     */
+    class RecordingActivity : AppCompatActivity() {
+        var startedAction: String? = null
+        var targetAction: String? = null
+        var targetStream: Uri? = null
+        var targetFlags = 0
+
+        @Suppress("DEPRECATION")
+        override fun startActivity(intent: Intent?) {
+            startedAction = intent?.action
+            val target = intent?.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+            targetAction = target?.action
+            targetStream = target?.getParcelableExtra(Intent.EXTRA_STREAM)
+            targetFlags = target?.flags ?: 0
+        }
     }
 
     private fun open(): Pair<GenerateBlockTimetableDialog, AlertDialog> {
