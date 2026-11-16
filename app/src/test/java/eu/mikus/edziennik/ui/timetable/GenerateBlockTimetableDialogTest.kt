@@ -623,6 +623,18 @@ class GenerateBlockTimetableDialogTest {
     }
 
     @Test
+    fun `an Error other than running out of memory still escapes rather than reporting a failed save`() {
+        // Only OutOfMemoryError among Errors is caught: any other means a broken build or VM, and
+        // must not be turned into a "could not save" toast.
+        val uncaught = drawingThrows(StackOverflowError("draw"))
+
+        assertEquals("a StackOverflowError was caught", listOf("draw"), uncaught.map { it.message })
+        assertTrue("a StackOverflowError was caught", uncaught.single() is StackOverflowError)
+        verify(exactly = 1) { Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888) }
+        assertEquals("a StackOverflowError was reported as a failed save", null, ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
     fun `when the queue drains on a week downloaded with no lessons, it says the week has no lessons`() {
         val (dlg, main) = saveEmptyNextWeek()
         // What the sync wrote: a no-lessons marker for each day.

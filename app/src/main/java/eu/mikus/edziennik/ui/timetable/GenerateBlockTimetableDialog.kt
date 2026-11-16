@@ -491,8 +491,9 @@ class GenerateBlockTimetableDialog(
      * as "could not save". [OutOfMemoryError] is caught as well as [Exception]: the image's bitmap
      * is the realistic failure, and it is this block's own allocation, unreachable once it unwinds,
      * so carrying on is normally safe. The cost is that a heap exhausted for another reason fails
-     * later elsewhere, with this persisted line as the clue. Every other [Error] means a broken build
-     * or VM, not a big image, and still crashes. No CancellationException can arise: [draw] has no
+     * later elsewhere, and the evidence is that later crash: [Utils.d] writes only in dev mode, so a
+     * release build keeps no trace of this one. Every other [Error] means a broken build or VM, not a
+     * big image, and still crashes. No CancellationException can arise: [draw] has no
      * suspension point, and the job is never cancelled.
      */
     private inline fun nullIfDrawingFails(draw: () -> Uri?): Uri? = try {
