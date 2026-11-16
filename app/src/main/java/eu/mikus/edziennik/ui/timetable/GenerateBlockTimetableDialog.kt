@@ -174,9 +174,9 @@ class GenerateBlockTimetableDialog(
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onApiTaskAllFinishedEvent(event: ApiTaskAllFinishedEvent) {
         // Nothing is left to wait for, but no event says whether this dialog's own sync ran: none
-        // carries a task identity, a task posted into a closing service is dropped unrun before a
-        // drain, and a cancelled Librus task still completes and posts a Finished for its profile.
-        // So the week is read once more and the read decides (see SAY_NO_LESSONS below). It is a
+        // carries a task identity, so a Finished for this profile may be the task ahead's, handled
+        // only after this dialog's task has started, and a task posted into a closing service is
+        // dropped unrun before a drain. So the week is read once more and the read decides (see SAY_NO_LESSONS below). It is a
         // fresh read rather than an earlier rebuild's result, which may predate the sync's write;
         // if it finds lessons, it generates the image.
         val drained = waiting ?: return
