@@ -358,11 +358,20 @@ class GenerateBlockTimetableDialogTest {
         assertTrue("the empty week did not show the wait dialog", showing(R.string.please_wait))
 
         val nextStart = Week.getWeekEnd().clone().stepForward(0, 0, 1)
+        val nextEnd = nextStart.clone().stepForward(0, 0, 6)
         lessons = listOf(lesson(on = nextStart))
         dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID))
         awaitDone(dlg)
 
-        verify { dao.getBetweenDatesNow(match { it.stringY_m_d == nextStart.stringY_m_d }, any()) }
+        // Both ends of both reads: the Save and the rebuild each span the whole week waited for.
+        // `any()` on the end date would let a narrowed range through, and the DAO is a mock that
+        // answers the same rows whatever dates it is given, so nothing else here would notice.
+        verify(exactly = 2) {
+            dao.getBetweenDatesNow(
+                match { it.stringY_m_d == nextStart.stringY_m_d },
+                match { it.stringY_m_d == nextEnd.stringY_m_d },
+            )
+        }
         verify(exactly = 0) {
             dao.getBetweenDatesNow(match { it.stringY_m_d == Week.getWeekStart().stringY_m_d }, any())
         }
