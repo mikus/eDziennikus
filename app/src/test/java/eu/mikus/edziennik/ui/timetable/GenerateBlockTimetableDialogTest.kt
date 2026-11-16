@@ -679,6 +679,24 @@ class GenerateBlockTimetableDialogTest {
     }
 
     @Test
+    fun `another profile's sync finishing proves nothing and says nothing`() {
+        val (dlg, main) = saveEmptyNextWeek()
+        ownTaskStarted()
+
+        // Another profile's task, finishing after this dialog's own task has started.
+        dlg.onApiTaskFinishedEvent(ApiTaskFinishedEvent(PROFILE_ID + 1))
+        awaitDone(dlg)
+        dlg.onApiTaskAllFinishedEvent(ApiTaskAllFinishedEvent())
+        awaitDone(dlg)
+
+        assertEquals("another profile's sync proved this one over", null, ShadowToast.getTextOfLatestToast())
+        assertFalse("the wait dialog outlived the queue", showing(R.string.please_wait))
+        assertTrue("the drain closed the dialog", main.isShowing)
+        // Only the Save's read: another profile's Finished rebuilds nothing.
+        verifyNextWeekReads(1)
+    }
+
+    @Test
     fun `a rebuild that resumes after an unproven drain says nothing`() {
         val (dlg, main) = saveEmptyNextWeek()
         shadowOf(activity.application).clearStartedServices()
