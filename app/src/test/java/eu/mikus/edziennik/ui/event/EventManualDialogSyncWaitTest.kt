@@ -66,8 +66,11 @@ class EventManualDialogSyncWaitTest {
         savedProfile = profileField.get(null)
         profileField.set(null, Profile(OTHER_ID, OTHER_ID, LoginType.DEMO, name = "Current"))
         // The dialog's own profile exists in the database, with no lessons: loadInitial syncs.
-        (activity.application as App).db.profileDao()
-            .add(Profile(PROFILE_ID, PROFILE_ID, LoginType.DEMO, name = "Dialog's"))
+        val profileDao = (activity.application as App).db.profileDao()
+        // Same guard as ProfileSaveTest and LabProfilePersistTest: App.db is one instance for the
+        // whole test JVM, so this both checks nothing leaked in and pins tearDown's own delete.
+        assertNull("profile $PROFILE_ID left over from another test", profileDao.getByIdNow(PROFILE_ID))
+        profileDao.add(Profile(PROFILE_ID, PROFILE_ID, LoginType.DEMO, name = "Dialog's"))
         Spy.refusal = null
     }
 
@@ -77,6 +80,10 @@ class EventManualDialogSyncWaitTest {
         idle()
         EventBus.getDefault().removeAllStickyEvents()
         profileField.set(null, savedProfile)
+        // App.db is a process singleton shared by every Robolectric suite in this JVM, so the row
+        // setUp added has to go: left behind, it is what App.onCreate's profileDao().firstId
+        // fallback would load in a later suite that boots the real App.
+        (activity.application as App).db.profileDao().remove(PROFILE_ID)
     }
 
     @Test
