@@ -57,8 +57,10 @@ class ApiError(val tag: String, var errorCode: Int) {
      * Whether this error may be the failure of a task enqueued for [profileId].
      *
      * [ApiService][eu.mikus.edziennik.data.api.ApiService]'s `onError` stamps every error of a running
-     * task with that task's profile. A stamp of -1 (SzkolnyTask or ErrorReportTask failing, or an
-     * error arriving after its task was cleared) never matches a real profile. An error with no stamp
+     * task with that task's profile. A stamp of -1 is a task that runs without one -- SzkolnyTask,
+     * ErrorReportTask, or the first login, which `onApiTask` queues unexpanded because only
+     * SyncRequest and SyncProfileListRequest are split into per-profile tasks -- or an error
+     * arriving after its task was cleared. None of those ever matches a real profile. An error with no stamp
      * was not attributed to any task, so it may be anyone's: today the only one is
      * [IApiTask.enqueue][eu.mikus.edziennik.data.api.task.IApiTask.enqueue]'s
      * `ERROR_SERVICE_START_REFUSED`, posted inline when the service start is refused. A caller that

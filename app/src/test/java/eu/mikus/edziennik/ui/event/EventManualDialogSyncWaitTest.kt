@@ -41,7 +41,8 @@ import org.robolectric.shadows.ShadowDialog
  * and enqueue a TIMETABLE sync for the dialog's own profile. Only an error that can be that sync's
  * ends the wait: one stamped with the dialog's profile, or one with no profile, which is what the
  * real `IApiTask.enqueue` posts, inline, when the service start is refused. Another profile's error
- * and a `-1` error (SzkolnyTask, ErrorReportTask, a late error) leave it up. The queue draining
+ * and a `-1` error (a task that runs without a profile -- SzkolnyTask, ErrorReportTask, the first
+ * login -- or a late error) leave it up. The queue draining
  * always ends it.
  *
  * The dialog is opened for [PROFILE_ID] while the app's current profile is [OTHER_ID], as it is when
@@ -100,7 +101,8 @@ class EventManualDialogSyncWaitTest {
     fun `an error from no profile's task while waiting leaves the wait up`() {
         val dlg = open()
 
-        // ApiService stamps -1 for SzkolnyTask, ErrorReportTask, or an error after the task was cleared.
+        // ApiService stamps -1 for a task that runs without a profile (SzkolnyTask, ErrorReportTask,
+        // the first login), or for an error arriving after its task was cleared.
         dlg.onApiTaskErrorEvent(error(-1))
         idle()
 
