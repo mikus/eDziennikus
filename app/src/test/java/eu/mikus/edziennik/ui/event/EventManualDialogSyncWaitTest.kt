@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import eu.mikus.edziennik.App
 import eu.mikus.edziennik.R
+import eu.mikus.edziennik.data.api.edziennik.EdziennikTask
 import eu.mikus.edziennik.data.api.events.ApiTaskAllFinishedEvent
 import eu.mikus.edziennik.data.api.events.ApiTaskErrorEvent
 import eu.mikus.edziennik.data.api.models.ApiError
@@ -18,7 +19,9 @@ import eu.mikus.edziennik.data.db.entity.Profile
 import eu.mikus.edziennik.data.db.enums.LoginType
 import org.greenrobot.eventbus.EventBus
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -105,6 +108,25 @@ class EventManualDialogSyncWaitTest {
         idle()
 
         assertFalse("the wait outlived its own sync's error", waitShowing())
+    }
+
+    @Test
+    fun `the wait's sync is enqueued for this dialog's profile, not the current one`() {
+        open()
+
+        // The other half of the filter. onApiTaskErrorEvent decides whose an error is by comparing
+        // it against this dialog's profileId, so the sync it is waiting for has to be the one
+        // enqueued for that same profileId. Enqueue it for App.profileId instead and every other
+        // test in this class stays green, while the dialog's own error is read as foreign and the
+        // uncancelable wait outlives it -- item 109 with the sign reversed. The task is read off
+        // the bus because that is where IApiTask.enqueue posts it, as the block dialog's test does.
+        val task = EventBus.getDefault().getStickyEvent(EdziennikTask::class.java)
+        assertNotNull("no sync task was enqueued", task)
+        assertEquals(
+            "the sync was not enqueued for the profile the dialog filters errors against",
+            PROFILE_ID,
+            task!!.profileId,
+        )
     }
 
     @Test
